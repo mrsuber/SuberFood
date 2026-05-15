@@ -4,28 +4,63 @@ Get up and running with SuberFood in minutes!
 
 ## ⚡ Prerequisites
 - Node.js 18+ and npm 9+
-- Docker Desktop installed and running
+- PostgreSQL 14+ (server deployment)
+- Nginx (for production)
 
-## 🚀 Quick Setup (5 Minutes)
+## 🚀 Production Setup (Server Deployment)
+
+**Server Details:**
+- **IP:** 148.230.118.19
+- **Domain:** suberfoods.com
+- **Database:** PostgreSQL (shared with other applications)
+- **Web Server:** Nginx with SSL
+
+```bash
+# 1. SSH into server
+ssh user@148.230.118.19
+
+# 2. Clone and install
+cd ~/dev/personal
+git clone <repository-url> SuberFood
+cd SuberFood
+npm install
+
+# 3. Set up environment
+cp .env.example .env.production
+# Edit .env.production with production credentials
+
+# 4. Build application
+npm run build
+
+# 5. Start production server
+pm2 start ecosystem.config.js
+```
+
+## 🌐 Access Applications
+
+- **Production Site:** https://suberfoods.com
+- **SSL:** Configured with Let's Encrypt
+- **Database:** PostgreSQL on same server
+
+## 🐳 Local Development (Optional)
+
+For local development with Docker:
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/suberfood/suberfood.git
-cd suberfood
 npm install
 
 # 2. Set up environment
 cp .env.example .env.local
 
-# 3. Start Docker services
+# 3. Start Docker services (optional)
 docker-compose up -d
 
 # 4. Start development servers
 npm run dev
 ```
 
-## 🌐 Access Applications
-
+**Local URLs:**
 - **Landing Page:** http://localhost:3000
 - **pgAdmin (Database):** http://localhost:5050 (admin@suberfood.com / admin)
 - **Mongo Express:** http://localhost:8081

@@ -1,236 +1,183 @@
+import Link from 'next/link'
+import { Navbar } from '@/components/navigation/Navbar'
+import { Footer } from '@/components/navigation/Footer'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { ArrowRight, CheckCircle, Leaf, TrendingUp, Users } from 'lucide-react'
+
 export default function Home() {
   return (
-    <main className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-green-50 to-white py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-gray-900 mb-6">
-              From Our Farm to Your Table
-            </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Experience complete transparency in your food journey. Fresh, sustainable, and traceable from field to fork.
+    <>
+      <Navbar />
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative bg-gradient-to-br from-primary-50 via-white to-emerald-50 py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center">
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-display font-bold text-gray-900 mb-6 animate-fade-in">
+                From Farm to Table
+                <span className="text-primary-600 block mt-2">Excellence</span>
+              </h1>
+              <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                Experience complete transparency in your food journey. Fresh, sustainable,
+                and traceable from our integrated farms to your dining table.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/distribution/retail">
+                  <Button size="lg" className="group">
+                    Shop Now
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+                <Link href="/distribution/restaurants">
+                  <Button variant="outline" size="lg">
+                    Find a Restaurant
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Our Journey Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl sm:text-5xl font-display font-bold text-gray-900 mb-4">
+                Our Integrated Supply Chain
+              </h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                Complete control from seed to plate ensures quality, transparency, and sustainability
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <Link href="/farming">
+                <Card className="cursor-pointer hover:shadow-premium transition-all hover:-translate-y-1 h-full">
+                  <CardHeader>
+                    <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
+                      <span className="text-4xl">🌾</span>
+                    </div>
+                    <CardTitle>Farming</CardTitle>
+                    <CardDescription>
+                      Sustainable practices across crops, livestock, aquaculture, and poultry operations
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+
+              <Link href="/processing">
+                <Card className="cursor-pointer hover:shadow-premium transition-all hover:-translate-y-1 h-full">
+                  <CardHeader>
+                    <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
+                      <span className="text-4xl">🏭</span>
+                    </div>
+                    <CardTitle>Processing</CardTitle>
+                    <CardDescription>
+                      State-of-the-art facilities ensuring quality and food safety standards
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+
+              <Link href="/distribution">
+                <Card className="cursor-pointer hover:shadow-premium transition-all hover:-translate-y-1 h-full">
+                  <CardHeader>
+                    <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
+                      <span className="text-4xl">🚚</span>
+                    </div>
+                    <CardTitle>Distribution</CardTitle>
+                    <CardDescription>
+                      Restaurants, retail stores, and direct-to-consumer delivery services
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="text-4xl font-display font-bold text-gray-900 mb-6">
+                  Why Choose SuberFood?
+                </h2>
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <CheckCircle className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-lg text-gray-900 mb-2">100% Traceable</h3>
+                      <p className="text-gray-600">
+                        Track every product from farm to your table with complete transparency
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <Leaf className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-lg text-gray-900 mb-2">Sustainable Practices</h3>
+                      <p className="text-gray-600">
+                        Environmentally responsible farming and minimal carbon footprint
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <TrendingUp className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-lg text-gray-900 mb-2">Premium Quality</h3>
+                      <p className="text-gray-600">
+                        Rigorous quality controls at every stage of production
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <Users className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-lg text-gray-900 mb-2">Community First</h3>
+                      <p className="text-gray-600">
+                        Supporting local farmers and creating jobs in rural communities
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-primary-100 to-primary-50 rounded-2xl h-96 flex items-center justify-center">
+                <p className="text-gray-500 text-lg">
+                  [Feature Image/Video Placeholder]
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-primary-600 to-primary-700">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl sm:text-5xl font-display font-bold text-white mb-6">
+              Ready to Experience Real Food?
+            </h2>
+            <p className="text-xl text-primary-100 mb-8">
+              Join thousands of families enjoying fresh, traceable, sustainable food.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
-                Explore Our Farms
-              </button>
-              <button className="bg-white hover:bg-gray-50 text-primary-600 font-semibold py-3 px-8 rounded-lg border-2 border-primary-500 transition-colors">
-                Find a Restaurant
-              </button>
+              <Link href="/distribution/retail">
+                <Button size="lg" variant="secondary" className="bg-white hover:bg-gray-100 text-primary-600">
+                  Start Shopping
+                </Button>
+              </Link>
+              <Link href="/distribution/partners">
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-primary-700">
+                  For Business Partners
+                </Button>
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Our Journey Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-display font-bold text-center text-gray-900 mb-12">
-            Our Farm-to-Table Journey
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Farming */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🌾</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Farming</h3>
-              <p className="text-gray-600">
-                Sustainable farming practices across crops, livestock, aquaculture, and poultry
-              </p>
-            </div>
-
-            {/* Processing */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🏭</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Processing</h3>
-              <p className="text-gray-600">
-                State-of-the-art facilities transforming fresh produce into quality products
-              </p>
-            </div>
-
-            {/* Distribution */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🚚</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Distribution</h3>
-              <p className="text-gray-600">
-                Temperature-controlled logistics ensuring freshness from field to your plate
-              </p>
-            </div>
-
-            {/* Dining */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🍽️</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Dining</h3>
-              <p className="text-gray-600">
-                Premium restaurants and online stores bringing our food to your table
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* What We Offer Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-display font-bold text-center text-gray-900 mb-12">
-            What We Offer
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Fresh Products */}
-            <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Fresh Products</h3>
-              <p className="text-gray-600 mb-4">
-                Farm-fresh vegetables, fruits, dairy, meat, and seafood delivered straight to your door or available at our partner supermarkets.
-              </p>
-              <a href="#" className="text-primary-600 font-semibold hover:text-primary-700">
-                Shop Now →
-              </a>
-            </div>
-
-            {/* Processed Foods */}
-            <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Processed Foods</h3>
-              <p className="text-gray-600 mb-4">
-                Quality-assured packaged foods from our processing facilities. From dairy products to canned goods and more.
-              </p>
-              <a href="#" className="text-primary-600 font-semibold hover:text-primary-700">
-                Browse Products →
-              </a>
-            </div>
-
-            {/* Restaurants */}
-            <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Restaurants</h3>
-              <p className="text-gray-600 mb-4">
-                Experience our farm-fresh ingredients at our classical fine dining restaurants or quick-service cafeterias.
-              </p>
-              <a href="#" className="text-primary-600 font-semibold hover:text-primary-700">
-                Find Location →
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Sustainability Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-6">
-              Committed to Sustainability
-            </h2>
-            <p className="text-lg text-gray-700 mb-8">
-              We believe in responsible farming, ethical treatment of animals, and minimizing our environmental footprint.
-              Every product you purchase supports sustainable agriculture and local communities.
-            </p>
-            <button className="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
-              Learn About Our Practices
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Traceability Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="flex-1">
-              <h2 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-6">
-                Complete Traceability
-              </h2>
-              <p className="text-lg text-gray-600 mb-6">
-                Scan any product QR code to see its complete journey - from the specific farm plot where it was grown,
-                through our processing facilities, to your table.
-              </p>
-              <p className="text-lg text-gray-600 mb-8">
-                Know exactly where your food comes from, how it was grown, and who handled it along the way.
-              </p>
-              <button className="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
-                Try Product Tracker
-              </button>
-            </div>
-            <div className="flex-1 bg-gray-100 rounded-xl h-96 flex items-center justify-center">
-              <p className="text-gray-500 text-lg">
-                [Product Traceability Visualization]
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-display font-bold text-white mb-6">
-            Ready to Experience Real Food?
-          </h2>
-          <p className="text-xl text-primary-100 mb-8">
-            Join thousands of families enjoying fresh, traceable, sustainable food.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white hover:bg-gray-100 text-primary-600 font-semibold py-3 px-8 rounded-lg transition-colors">
-              Start Shopping
-            </button>
-            <button className="bg-primary-700 hover:bg-primary-800 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
-              For Business Partners
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="text-white font-semibold text-lg mb-4">SuberFood</h3>
-              <p className="text-sm">
-                Complete farm-to-table transparency. Fresh, sustainable, traceable.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Products</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">Fresh Produce</a></li>
-                <li><a href="#" className="hover:text-white">Dairy Products</a></li>
-                <li><a href="#" className="hover:text-white">Meat & Seafood</a></li>
-                <li><a href="#" className="hover:text-white">Processed Foods</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">About Us</a></li>
-                <li><a href="#" className="hover:text-white">Our Farms</a></li>
-                <li><a href="#" className="hover:text-white">Sustainability</a></li>
-                <li><a href="#" className="hover:text-white">Careers</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white">FAQs</a></li>
-                <li><a href="#" className="hover:text-white">For Partners</a></li>
-                <li><a href="#" className="hover:text-white">Track Order</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 pt-8 text-sm text-center">
-            <p>&copy; 2025 SuberFood. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-    </main>
+        </section>
+      </main>
+      <Footer />
+    </>
   )
 }

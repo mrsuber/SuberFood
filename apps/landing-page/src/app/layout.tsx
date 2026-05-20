@@ -46,7 +46,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className={inter.className}>
-        {children}
+        <div className="flex flex-col min-h-screen">
+          {children}
+        </div>
       </body>
     </html>
   )

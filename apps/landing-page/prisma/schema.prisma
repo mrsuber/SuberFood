@@ -1,0 +1,514 @@
+// SuberFood Monolithic Database Schema
+// Comprehensive schema covering IAM, Distribution, Restaurants, Processing, Farming
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// IDENTITY & ACCESS MANAGEMENT (IAM)
+// ========================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+
+  // Distribution Roles
+  DISTRIBUTION_MANAGER
+  RESTAURANT_MANAGER
+  RESTAURANT_STAFF
+  RETAIL_MANAGER
+  PARTNER_MANAGER
+
+  // Processing Roles
+  PROCESSING_MANAGER
+  QUALITY_CONTROL
+
+  // Farming Roles
+  FARM_MANAGER
+  FARM_WORKER
+
+  // Customer Roles
+  CUSTOMER
+  B2B_PARTNER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  role          UserRole    @default(CUSTOMER)
+  status        UserStatus  @default(PENDING)
+  emailVerified DateTime?
+  image         String?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  sessions      Session[]
+  orders        Order[]
+  reservations  Reservation[]
+  addresses     Address[]
+  cart          CartItem[]
+  reviews       Review[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // BILLING, SHIPPING, BOTH
+  street      String
+  city        String
+  state       String
+  postalCode  String
+  country     String   @default("USA")
+  isDefault   Boolean  @default(false)
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("addresses")
+}
+
+// ========================================
+// DISTRIBUTION - RESTAURANTS
+// ========================================
+
+enum RestaurantType {
+  CLASSICAL_FINE_DINING
+  CAFETERIA
+  QUICK_SERVICE
+}
+
+enum RestaurantStatus {
+  OPEN
+  CLOSED
+  TEMPORARILY_CLOSED
+}
+
+model Restaurant {
+  id            String            @id @default(cuid())
+  name          String
+  slug          String            @unique
+  type          RestaurantType
+  description   String?
+  address       String
+  city          String
+  state         String
+  postalCode    String
+  phone         String
+  email         String
+  status        RestaurantStatus  @default(CLOSED)
+
+  // Operating Hours
+  openingTime   String?           // e.g., "11:00"
+  closingTime   String?           // e.g., "22:00"
+  operatingDays String?           // JSON array of days
+
+  capacity      Int               @default(0)
+  rating        Float             @default(0)
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  menuCategories MenuCategory[]
+  reservations   Reservation[]
+  tables         Table[]
+  orders         Order[]
+
+  @@map("restaurants")
+}
+
+model Table {
+  id            String        @id @default(cuid())
+  restaurantId  String
+  tableNumber   String
+  capacity      Int
+  isAvailable   Boolean       @default(true)
+
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  reservations  Reservation[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([restaurantId, tableNumber])
+  @@map("tables")
+}
+
+model MenuCategory {
+  id            String      @id @default(cuid())
+  restaurantId  String
+  name          String
+  description   String?
+  displayOrder  Int         @default(0)
+  isActive      Boolean     @default(true)
+
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items         MenuItem[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id            String        @id @default(cuid())
+  categoryId    String
+  name          String
+  description   String?
+  price         Float
+  image         String?
+  isAvailable   Boolean       @default(true)
+  isVegetarian  Boolean       @default(false)
+  isVegan       Boolean       @default(false)
+  isGlutenFree  Boolean       @default(false)
+  calories      Int?
+  preparationTime Int?        // in minutes
+
+  category      MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("menu_items")
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Reservation {
+  id              String            @id @default(cuid())
+  restaurantId    String
+  userId          String
+  tableId         String?
+
+  reservationDate DateTime
+  reservationTime String            // e.g., "19:00"
+  partySize       Int
+  status          ReservationStatus @default(PENDING)
+
+  specialRequests String?
+  notes           String?
+
+  restaurant      Restaurant        @relation(fields: [restaurantId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
+  table           Table?            @relation(fields: [tableId], references: [id])
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("reservations")
+}
+
+// ========================================
+// DISTRIBUTION - E-COMMERCE / RETAIL
+// ========================================
+
+enum ProductCategory {
+  FRESH_PRODUCE
+  DAIRY
+  MEAT
+  SEAFOOD
+  POULTRY
+  PROCESSED_FOODS
+  BEVERAGES
+  BAKERY
+  FROZEN
+  PANTRY
+}
+
+enum ProductStatus {
+  ACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+  COMING_SOON
+}
+
+model Product {
+  id            String          @id @default(cuid())
+  sku           String          @unique
+  name          String
+  slug          String          @unique
+  description   String?
+  category      ProductCategory
+  status        ProductStatus   @default(ACTIVE)
+
+  price         Float
+  salePrice     Float?
+  cost          Float?          // For margin calculation
+
+  // Inventory
+  stockQuantity Int             @default(0)
+  lowStockThreshold Int         @default(10)
+
+  // Product Details
+  unit          String          // kg, lbs, piece, etc.
+  weight        Float?
+  dimensions    String?         // JSON: {length, width, height}
+
+  // Images
+  images        String[]        // Array of image URLs
+  thumbnail     String?
+
+  // Traceability
+  farmSource    String?
+  processingLocation String?
+  harvestDate   DateTime?
+  expiryDate    DateTime?
+
+  // SEO & Marketing
+  metaTitle     String?
+  metaDescription String?
+  tags          String[]
+
+  isOrganic     Boolean         @default(false)
+  isFeatured    Boolean         @default(false)
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+
+  @@map("products")
+}
+
+model CartItem {
+  id          String    @id @default(cuid())
+  userId      String
+  productId   String
+  quantity    Int       @default(1)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, productId])
+  @@map("cart_items")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderType {
+  ONLINE_RETAIL   // E-commerce
+  RESTAURANT      // Dine-in/takeout
+  B2B_WHOLESALE   // Partner orders
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+  BANK_TRANSFER
+  DIGITAL_WALLET
+}
+
+model Order {
+  id              String          @id @default(cuid())
+  orderNumber     String          @unique
+  userId          String
+  restaurantId    String?         // Only for restaurant orders
+  type            OrderType
+  status          OrderStatus     @default(PENDING)
+
+  // Payment
+  paymentStatus   PaymentStatus   @default(PENDING)
+  paymentMethod   PaymentMethod?
+
+  // Amounts
+  subtotal        Float
+  tax             Float           @default(0)
+  shippingFee     Float           @default(0)
+  discount        Float           @default(0)
+  total           Float
+
+  // Shipping
+  shippingAddress String?
+  trackingNumber  String?
+
+  // Metadata
+  notes           String?
+  customerNotes   String?
+
+  user            User            @relation(fields: [userId], references: [id])
+  restaurant      Restaurant?     @relation(fields: [restaurantId], references: [id])
+  items           OrderItem[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  productId   String?   // For retail orders
+  menuItemId  String?   // For restaurant orders
+
+  quantity    Int
+  price       Float     // Price at time of order
+
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product?  @relation(fields: [productId], references: [id])
+  menuItem    MenuItem? @relation(fields: [menuItemId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("order_items")
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  userId      String
+  productId   String
+  rating      Int      // 1-5
+  title       String?
+  comment     String?
+  isVerified  Boolean  @default(false)
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, productId])
+  @@map("reviews")
+}
+
+// ========================================
+// PROCESSING
+// ========================================
+
+enum ProcessingType {
+  SARDINE
+  MILK
+  MEAT
+  VEGETABLE
+  FRUIT
+  GRAIN
+}
+
+model ProcessingFacility {
+  id            String         @id @default(cuid())
+  name          String
+  type          ProcessingType
+  location      String
+  capacity      Float          // tons per day
+  status        String         // OPERATIONAL, MAINTENANCE, CLOSED
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("processing_facilities")
+}
+
+// ========================================
+// FARMING
+// ========================================
+
+enum FarmType {
+  AQUACULTURE     // Fish farming
+  POULTRY
+  LIVESTOCK
+  CROPS
+}
+
+model Farm {
+  id            String    @id @default(cuid())
+  name          String
+  type          FarmType
+  location      String
+  size          Float     // in acres
+  status        String    // ACTIVE, INACTIVE
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("farms")
+}
+
+// ========================================
+// ANALYTICS & REPORTING
+// ========================================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String
+  entityId    String?
+  metadata    String?  // JSON
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt   DateTime @default(now())
+
+  @@map("activity_logs")
+}

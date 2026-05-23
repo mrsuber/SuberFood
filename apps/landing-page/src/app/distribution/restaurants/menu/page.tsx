@@ -1,0 +1,67 @@
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { menuApi } from '@/lib/api/restaurant-api';
+import { useMenuStore } from '@/lib/stores/menu-store';
+import { MenuFilters } from '@/components/menu/MenuFilters';
+import { MenuGrid } from '@/components/menu/MenuGrid';
+import { CategoryTabs } from '@/components/menu/CategoryTabs';
+import { Navbar } from '@/components/navigation/Navbar';
+import { Footer } from '@/components/navigation/Footer';
+
+export default function MenuPage() {
+  const { filters } = useMenuStore();
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+
+  // Fetch menu items
+  const { data: menuData, isLoading: menuLoading } = useQuery({
+    queryKey: ['menu', filters, selectedCategory],
+    queryFn: () => menuApi.getMenu({ ...filters, categoryId: selectedCategory }),
+  });
+
+  // Fetch categories
+  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => menuApi.getCategories(),
+  });
+
+  return (
+    <>
+      <Navbar />
+      <main className="flex-grow">
+        <div className="bg-gradient-to-r from-green-600 to-green-700 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 className="text-4xl font-bold mb-4">Our Menu</h1>
+            <p className="text-lg text-green-100">
+              Explore our selection of fresh, farm-to-table dishes crafted with care
+            </p>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Categories */}
+          <CategoryTabs
+            categories={categoriesData?.data || []}
+            loading={categoriesLoading}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
+
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Filters Sidebar */}
+            <div className="lg:col-span-1">
+              <MenuFilters />
+            </div>
+
+            {/* Menu Grid */}
+            <div className="lg:col-span-3">
+              <MenuGrid items={menuData?.data || []} loading={menuLoading} />
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}

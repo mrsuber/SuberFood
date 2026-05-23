@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, Poppins } from 'next/font/google'
 import './globals.css'
+import { QueryProvider } from '@/lib/providers/query-provider'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -46,9 +47,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className={inter.className}>
-        <div className="flex flex-col min-h-screen">
-          {children}
-        </div>
+        <QueryProvider>
+          <div className="flex flex-col min-h-screen">
+            {children}
+          </div>
+        </QueryProvider>
       </body>
     </html>
   )

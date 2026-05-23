@@ -39,14 +39,14 @@ export function Footer() {
                   Restaurants
                 </Link>
               </li>
-              <li>
-                <Link href="/distribution/restaurants/menu" className="hover:text-primary-400 transition-colors">
-                  Menu
+              <li className="ml-2">
+                <Link href="/distribution/restaurants/menu" className="hover:text-primary-400 transition-colors text-xs">
+                  → Menu
                 </Link>
               </li>
-              <li>
-                <Link href="/distribution/restaurants/locations" className="hover:text-primary-400 transition-colors">
-                  Locations
+              <li className="ml-2">
+                <Link href="/distribution/restaurants/locations" className="hover:text-primary-400 transition-colors text-xs">
+                  → Locations
                 </Link>
               </li>
               <li>

@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['cdn.suberfood.com'],
+    domains: ['cdn.suberfood.com', 'images.unsplash.com'],
   },
   // Enable static exports for better SEO
   output: 'standalone',

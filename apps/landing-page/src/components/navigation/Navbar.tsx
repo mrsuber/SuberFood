@@ -26,6 +26,16 @@ const navigationData: NavItem[] = [
         description: 'Classical fine dining experiences'
       },
       {
+        name: 'Menu',
+        href: '/distribution/restaurants/menu',
+        description: 'Browse our delicious menu items'
+      },
+      {
+        name: 'Locations',
+        href: '/distribution/restaurants/locations',
+        description: 'Find restaurants near you'
+      },
+      {
         name: 'Retail & E-commerce',
         href: '/distribution/retail',
         description: 'Shop fresh products online'

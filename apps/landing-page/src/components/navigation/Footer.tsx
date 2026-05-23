@@ -40,6 +40,16 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/distribution/restaurants/menu" className="hover:text-primary-400 transition-colors">
+                  Menu
+                </Link>
+              </li>
+              <li>
+                <Link href="/distribution/restaurants/locations" className="hover:text-primary-400 transition-colors">
+                  Locations
+                </Link>
+              </li>
+              <li>
                 <Link href="/distribution/retail" className="hover:text-primary-400 transition-colors">
                   Retail & E-commerce
                 </Link>

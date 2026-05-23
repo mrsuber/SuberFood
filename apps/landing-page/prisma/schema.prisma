@@ -57,6 +57,13 @@ model User {
   emailVerified DateTime?
   image         String?
 
+  // Phase 1: Customer preferences
+  favoriteMenuItems String[]        // Menu item IDs
+  dietaryRestrictions String[]      // vegetarian, vegan, keto, etc.
+  allergies         String[]        // gluten, dairy, nuts, shellfish, etc.
+  birthdate         DateTime?
+  communicationPrefs Json?          // Email, SMS preferences
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -141,6 +148,24 @@ model Restaurant {
   capacity      Int               @default(0)
   rating        Float             @default(0)
 
+  // Phase 1: Location details
+  latitude      Float?
+  longitude     Float?
+  images        String[]          // Array of image URLs
+  amenities     String[]          // parking, wifi, outdoor seating, etc.
+  parkingInfo   String?
+  accessibilityFeatures String[]  // wheelchair, braille menu, etc.
+  privateRooms  Boolean           @default(false)
+  outdoorSeating Boolean          @default(false)
+  currentWaitTime Int?            // in minutes
+
+  // Phase 1: About/Story
+  story         String?           // Restaurant history
+  chefBios      Json?             // Array of chef profiles
+  awards        String[]          // Awards and recognition
+  sustainabilityInfo String?      // Sustainability practices
+  pressMedia    Json?             // Press coverage links
+
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -193,13 +218,38 @@ model MenuItem {
   name          String
   description   String?
   price         Float
+  salePrice     Float?        // For promotional pricing
   image         String?
+  images        String[]      // Multiple images for gallery
   isAvailable   Boolean       @default(true)
+
+  // Phase 1: Dietary information
   isVegetarian  Boolean       @default(false)
   isVegan       Boolean       @default(false)
   isGlutenFree  Boolean       @default(false)
+  isKeto        Boolean       @default(false)
+  isHalal       Boolean       @default(false)
+  isKosher      Boolean       @default(false)
+
+  // Phase 1: Enhanced details
   calories      Int?
   preparationTime Int?        // in minutes
+  spiceLevel    Int?          // 0-5 scale
+  allergens     String[]      // gluten, dairy, nuts, shellfish, etc.
+  ingredients   String?       // Comma-separated or JSON
+
+  // Phase 1: Marketing
+  winePairing   String?       // Suggested wine/drink pairing
+  isChefRecommended Boolean   @default(false)
+  isSeasonal    Boolean       @default(false)
+  isPopular     Boolean       @default(false)
+
+  // Phase 1: Customer ratings
+  averageRating Decimal?      @default(0)
+  reviewCount   Int           @default(0)
+
+  // Phase 1: Customization options
+  customizationOptions Json?  // JSON object for modifiers
 
   category      MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems    OrderItem[]

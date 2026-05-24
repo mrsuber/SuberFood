@@ -48,12 +48,13 @@ enum UserStatus {
 model User {
   id            String     @id @default(cuid())
   email         String     @unique
-  password      String
-  firstName     String
-  lastName      String
+  password      String? // Made optional for OAuth users
+  firstName     String? // Made optional for OAuth
+  lastName      String? // Made optional for OAuth
+  name          String? // Full name for OAuth
   phone         String?
   role          UserRole   @default(CUSTOMER)
-  status        UserStatus @default(PENDING)
+  status        UserStatus @default(ACTIVE) // Changed default to ACTIVE for easier onboarding
   emailVerified DateTime?
   image         String?
 
@@ -64,18 +65,48 @@ model User {
   birthdate           DateTime?
   communicationPrefs  Json? // Email, SMS preferences
 
+  // Phase 2: Enhanced tracking
+  lastLoginAt         DateTime?
+  loginCount          Int       @default(0)
+  preferredRestaurant String? // Restaurant ID
+  lifetimeValue       Float     @default(0) // Total spending
+  pointsBalance       Int       @default(0) // Loyalty points
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   sessions     Session[]
+  accounts     Account[]
   orders       Order[]
   reservations Reservation[]
   addresses    Address[]
   cart         CartItem[]
   reviews      Review[]
+  orderHistory UserOrderHistory[]
 
   @@map("users")
+}
+
+// Account model for OAuth providers
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
 }
 
 model Session {
@@ -89,6 +120,33 @@ model Session {
   updatedAt DateTime @updatedAt
 
   @@map("sessions")
+}
+
+// Verification tokens for email verification
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// User order history for personalization
+model UserOrderHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  menuItemId String? // If restaurant order
+  productId  String? // If retail order
+  orderId    String
+  quantity   Int      @default(1)
+  orderedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([menuItemId])
+  @@map("user_order_history")
 }
 
 model Address {

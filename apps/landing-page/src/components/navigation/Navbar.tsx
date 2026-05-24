@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Menu, X, ShoppingCart, User } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
+import { ChevronDown, Menu, X, ShoppingCart, User, LogOut, Settings, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface SubNavItem {
@@ -157,9 +158,11 @@ const navigationData: NavItem[] = [
 ]
 
 export function Navbar() {
+  const { data: session, status } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeMainNav, setActiveMainNav] = useState<string | null>(null)
   const [activeSubDropdown, setActiveSubDropdown] = useState<string | null>(null)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const pathname = usePathname()
 
   // Determine active main nav based on current path
@@ -212,12 +215,79 @@ export function Navbar() {
               <Button variant="ghost" size="icon">
                 <ShoppingCart className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="icon">
-                <User className="w-5 h-5" />
-              </Button>
-              <Button size="sm">
-                Shop Now
-              </Button>
+
+              {status === 'authenticated' && session?.user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold">
+                      {session.user.name?.charAt(0) || session.user.email?.charAt(0) || 'U'}
+                    </div>
+                    <span className="text-sm font-medium">{session.user.name?.split(' ')[0] || 'User'}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 py-2 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">{session.user.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
+                      </div>
+                      <Link
+                        href="/profile"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <User className="w-4 h-4 mr-3" />
+                        My Profile
+                      </Link>
+                      <Link
+                        href="/profile/favorites"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Heart className="w-4 h-4 mr-3" />
+                        Favorites
+                      </Link>
+                      <Link
+                        href="/profile/settings"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Settings className="w-4 h-4 mr-3" />
+                        Settings
+                      </Link>
+                      <div className="border-t border-gray-100 mt-2 pt-2">
+                        <button
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            signOut({ callbackUrl: '/' });
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <LogOut className="w-4 h-4 mr-3" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <Link href="/auth/signin">
+                    <Button variant="ghost" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/auth/signup">
+                    <Button size="sm">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}

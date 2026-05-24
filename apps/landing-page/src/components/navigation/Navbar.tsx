@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -164,6 +164,23 @@ export function Navbar() {
   const [activeSubDropdown, setActiveSubDropdown] = useState<string | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const pathname = usePathname()
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [userMenuOpen])
 
   // Determine active main nav based on current path
   const getActiveMainNav = () => {
@@ -217,7 +234,7 @@ export function Navbar() {
               </Button>
 
               {status === 'authenticated' && session?.user ? (
-                <div className="relative">
+                <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"

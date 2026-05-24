@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Navbar } from '@/components/navigation/Navbar';
 import { Footer } from '@/components/navigation/Footer';
-import { Fish, Bird, Cow, Wheat, ArrowRight } from 'lucide-react';
+import { Fish, Bird, Beef, Wheat, ArrowRight } from 'lucide-react';
 
 const farmingOperations = [
   {
@@ -21,7 +21,7 @@ const farmingOperations = [
     color: 'yellow'
   },
   {
-    icon: Cow,
+    icon: Beef,
     title: 'Livestock',
     description: 'Grass-fed cattle and dairy farming with focus on animal welfare and quality.',
     href: '/farming/livestock',

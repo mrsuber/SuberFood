@@ -454,8 +454,10 @@ enum OrderStatus {
 }
 
 enum OrderType {
-  ONLINE_RETAIL // E-commerce
-  RESTAURANT // Dine-in/takeout
+  DINE_IN // Customer is at restaurant, food served to table
+  TAKEAWAY // Customer picks up from restaurant
+  DELIVERY // Food delivered to customer address
+  ONLINE_RETAIL // E-commerce retail products
   B2B_WHOLESALE // Partner orders
 }
 
@@ -479,7 +481,7 @@ model Order {
   id           String      @id @default(cuid())
   orderNumber  String      @unique
   userId       String
-  restaurantId String? // Only for restaurant orders
+  restaurantId String? // Required for DINE_IN, TAKEAWAY, DELIVERY
   type         OrderType
   status       OrderStatus @default(PENDING)
 
@@ -494,9 +496,16 @@ model Order {
   discount    Float @default(0)
   total       Float
 
-  // Shipping
-  shippingAddress String?
+  // Dine-in specific
+  tableNumber String? // For DINE_IN orders
+
+  // Delivery/Shipping
+  deliveryAddress String? // For DELIVERY orders
+  shippingAddress String? // For ONLINE_RETAIL orders
   trackingNumber  String?
+
+  // Pickup details
+  pickupTime DateTime? // Scheduled pickup time for TAKEAWAY
 
   // Metadata
   notes         String?

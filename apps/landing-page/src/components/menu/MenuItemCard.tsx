@@ -4,6 +4,7 @@ import type { MenuItem } from '@/lib/types/restaurant';
 import { useMenuStore } from '@/lib/stores/menu-store';
 import { Heart, Star, Flame, Leaf, Award, Clock } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -17,7 +18,8 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
   const hasDiscount = item.salePrice && item.salePrice < item.price;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+    <Link href={`/distribution/restaurants/menu/${item.id}`}>
+      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
       {/* Image */}
       <div className="relative h-48 bg-gray-200">
         {item.image || item.images?.[0] ? (
@@ -35,8 +37,11 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
 
         {/* Favorite Button */}
         <button
-          onClick={() => toggleFavorite(item.id)}
-          className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            toggleFavorite(item.id);
+          }}
+          className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors z-10"
         >
           <Heart
             className={`w-5 h-5 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
@@ -144,6 +149,7 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </Link>
   );
 }

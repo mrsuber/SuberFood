@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,7 @@ const restaurants = [
     capacity: 80,
     openingTime: '17:00',
     closingTime: '23:00',
-    image: '/images/restaurant-classical.jpg',
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop',
     priceRange: '$$$$',
     features: ['Fine Dining', 'Wine Pairing', 'Private Events'],
   },
@@ -43,7 +44,7 @@ const restaurants = [
     capacity: 120,
     openingTime: '11:00',
     closingTime: '22:00',
-    image: '/images/restaurant-bistro.jpg',
+    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=600&fit=crop',
     priceRange: '$$',
     features: ['Family Friendly', 'Quick Service', 'Outdoor Seating'],
   },
@@ -94,8 +95,13 @@ export default function RestaurantsPage() {
               {restaurants.map((restaurant) => (
                 <Card key={restaurant.id} className="overflow-hidden hover:shadow-premium-lg transition-all">
                   {/* Restaurant Image */}
-                  <div className="h-64 bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
-                    <p className="text-gray-400">[Restaurant Image]</p>
+                  <div className="relative h-64 overflow-hidden">
+                    <Image
+                      src={restaurant.image}
+                      alt={restaurant.name}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
 
                   <CardContent className="p-6">

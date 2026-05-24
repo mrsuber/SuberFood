@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,7 @@ const getRestaurant = (slug: string) => {
       openingTime: '17:00',
       closingTime: '23:00',
       priceRange: '$$$$',
+      heroImage: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&h=900&fit=crop',
       features: ['Fine Dining', 'Wine Pairing', 'Private Events', 'Chef\'s Table', 'Valet Parking'],
       dressCode: 'Business Casual',
       menuCategories: [
@@ -123,6 +125,7 @@ const getRestaurant = (slug: string) => {
       openingTime: '11:00',
       closingTime: '22:00',
       priceRange: '$$',
+      heroImage: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1600&h=900&fit=crop',
       features: ['Family Friendly', 'Quick Service', 'Outdoor Seating', 'Takeout Available'],
       dressCode: 'Casual',
       menuCategories: [],
@@ -157,7 +160,7 @@ export default function RestaurantDetailPage({ params }: { params: { slug: strin
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 bg-gray-50">
         {/* Header with Back Button */}
         <div className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -170,8 +173,15 @@ export default function RestaurantDetailPage({ params }: { params: { slug: strin
 
         {/* Restaurant Hero */}
         <section className="relative">
-          <div className="h-96 bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
-            <p className="text-gray-400 text-lg">[Restaurant Hero Image]</p>
+          <div className="relative h-96 overflow-hidden">
+            <Image
+              src={restaurant.heroImage}
+              alt={restaurant.name}
+              fill
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
         </section>
 

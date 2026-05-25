@@ -26,12 +26,14 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useMenuStore } from '@/lib/stores/menu-store';
+import { OrderTypeModal } from '@/components/orders/OrderTypeModal';
 
 export default function MenuItemDetailPage() {
   const params = useParams();
   const router = useRouter();
   const menuItemId = params.menuItemId as string;
   const [quantity, setQuantity] = useState(1);
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
 
   const { isFavorite, toggleFavorite } = useMenuStore();
   const favorite = isFavorite(menuItemId);
@@ -437,16 +439,13 @@ export default function MenuItemDetailPage() {
                       className="w-full"
                       size="lg"
                       disabled={!menuItem.isAvailable}
+                      onClick={() => setOrderModalOpen(true)}
                     >
-                      Add to Cart - ${(displayPrice * quantity).toFixed(2)}
+                      Place Order - ${(displayPrice * quantity).toFixed(2)}
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      disabled={!menuItem.isAvailable}
-                    >
-                      Order for Delivery
-                    </Button>
+                    <p className="text-xs text-center text-gray-500">
+                      Choose dine-in, takeaway, or delivery
+                    </p>
                   </div>
 
                   {/* Additional Info */}
@@ -469,6 +468,18 @@ export default function MenuItemDetailPage() {
         </div>
       </main>
       <Footer />
+
+      {/* Order Type Modal */}
+      <OrderTypeModal
+        open={orderModalOpen}
+        onClose={() => setOrderModalOpen(false)}
+        menuItemId={menuItemId}
+        menuItemName={menuItem.name}
+        restaurantId={menuItem.categoryId} // TODO: Get actual restaurant ID
+        restaurantName="SuberFood Restaurant" // TODO: Get actual restaurant name
+        price={displayPrice}
+        quantity={quantity}
+      />
     </>
   );
 }

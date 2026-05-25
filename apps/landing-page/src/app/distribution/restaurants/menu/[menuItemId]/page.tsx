@@ -38,14 +38,13 @@ export default function MenuItemDetailPage() {
   const { isFavorite, toggleFavorite } = useMenuStore();
   const favorite = isFavorite(menuItemId);
 
-  // Fetch menu item details
+  // Fetch menu item details with restaurant info
   const { data: menuItem, isLoading } = useQuery({
     queryKey: ['menu-item', menuItemId],
     queryFn: async () => {
-      const response = await menuApi.getMenu({});
-      const item = response.data.find(item => item.id === menuItemId);
-      if (!item) throw new Error('Menu item not found');
-      return item;
+      const response = await fetch(`/api/menu/${menuItemId}`);
+      if (!response.ok) throw new Error('Failed to fetch menu item');
+      return response.json();
     },
   });
 
@@ -475,8 +474,8 @@ export default function MenuItemDetailPage() {
         onClose={() => setOrderModalOpen(false)}
         menuItemId={menuItemId}
         menuItemName={menuItem.name}
-        restaurantId={menuItem.categoryId} // TODO: Get actual restaurant ID
-        restaurantName="SuberFood Restaurant" // TODO: Get actual restaurant name
+        restaurantId={menuItem.restaurantId}
+        restaurantName={menuItem.restaurantName}
         price={displayPrice}
         quantity={quantity}
       />

@@ -69,7 +69,6 @@ export function OrderTypeModal({
 
     setIsSubmitting(true);
     try {
-      // TODO: Implement API call to create order
       const orderData = {
         menuItemId,
         quantity,
@@ -83,12 +82,19 @@ export function OrderTypeModal({
         total: price * quantity
       };
 
-      console.log('Creating order:', orderData);
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
 
-      // Redirect to order confirmation or orders page
+      // Redirect to orders page
       router.push('/orders');
       onClose();
     } catch (error) {

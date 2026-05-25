@@ -34,9 +34,19 @@ export default function MenuItemDetailPage() {
   const menuItemId = params.menuItemId as string;
   const [quantity, setQuantity] = useState(1);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
+  const [specialInstructions, setSpecialInstructions] = useState('');
 
   const { isFavorite, toggleFavorite } = useMenuStore();
   const favorite = isFavorite(menuItemId);
+
+  const toggleIngredient = (ingredient: string) => {
+    setRemovedIngredients(prev =>
+      prev.includes(ingredient)
+        ? prev.filter(i => i !== ingredient)
+        : [...prev, ingredient]
+    );
+  };
 
   // Fetch menu item details with restaurant info
   const { data: menuItem, isLoading } = useQuery({
@@ -281,14 +291,37 @@ export default function MenuItemDetailPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Uncheck any ingredients you'd like to remove from your order
+                      </p>
                       <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {detailedIngredients.map((ingredient: string, index: number) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-2" />
-                            <span className="text-gray-700">{ingredient}</span>
-                          </li>
-                        ))}
+                        {detailedIngredients.map((ingredient: string, index: number) => {
+                          const isRemoved = removedIngredients.includes(ingredient);
+                          return (
+                            <li key={index} className="flex items-start gap-3">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={!isRemoved}
+                                  onChange={() => toggleIngredient(ingredient)}
+                                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                />
+                                <span className={`text-gray-700 ${isRemoved ? 'line-through text-gray-400' : ''}`}>
+                                  {ingredient}
+                                </span>
+                              </label>
+                            </li>
+                          );
+                        })}
                       </ul>
+
+                      {removedIngredients.length > 0 && (
+                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm text-red-800">
+                            <strong>Removed:</strong> {removedIngredients.join(', ')}
+                          </p>
+                        </div>
+                      )}
 
                       {menuItem.allergens && menuItem.allergens.length > 0 && (
                         <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -432,6 +465,21 @@ export default function MenuItemDetailPage() {
                     </p>
                   </div>
 
+                  {/* Special Instructions */}
+                  <div className="space-y-2">
+                    <label htmlFor="specialInstructions" className="text-sm font-medium text-gray-700">
+                      Special Instructions (Optional)
+                    </label>
+                    <textarea
+                      id="specialInstructions"
+                      value={specialInstructions}
+                      onChange={(e) => setSpecialInstructions(e.target.value)}
+                      placeholder="Any special requests? (e.g., extra spicy, no salt, etc.)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      rows={3}
+                    />
+                  </div>
+
                   {/* Action Buttons */}
                   <div className="space-y-3">
                     <Button
@@ -478,6 +526,8 @@ export default function MenuItemDetailPage() {
         restaurantName={menuItem.restaurantName}
         price={displayPrice}
         quantity={quantity}
+        removedIngredients={removedIngredients}
+        specialInstructions={specialInstructions}
       />
     </>
   );

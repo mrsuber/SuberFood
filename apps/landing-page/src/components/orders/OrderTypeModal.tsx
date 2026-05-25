@@ -27,6 +27,8 @@ interface OrderTypeModalProps {
   restaurantName: string;
   price: number;
   quantity: number;
+  removedIngredients?: string[];
+  specialInstructions?: string;
 }
 
 export function OrderTypeModal({
@@ -37,7 +39,9 @@ export function OrderTypeModal({
   restaurantId,
   restaurantName,
   price,
-  quantity
+  quantity,
+  removedIngredients = [],
+  specialInstructions = ''
 }: OrderTypeModalProps) {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<OrderType | null>(null);
@@ -102,6 +106,16 @@ export function OrderTypeModal({
 
     setIsSubmitting(true);
     try {
+      // Build customer notes with customizations
+      let customerNotes = '';
+      if (removedIngredients.length > 0) {
+        customerNotes += `No: ${removedIngredients.join(', ')}`;
+      }
+      if (specialInstructions) {
+        if (customerNotes) customerNotes += '\n';
+        customerNotes += specialInstructions;
+      }
+
       const orderData = {
         menuItemId,
         quantity,
@@ -112,7 +126,8 @@ export function OrderTypeModal({
         ...(selectedType === 'TAKEAWAY' && { pickupTime }),
         customerName,
         phoneNumber,
-        total: price * quantity
+        total: price * quantity,
+        ...(customerNotes && { customerNotes })
       };
 
       const response = await fetch('/api/orders', {

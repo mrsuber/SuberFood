@@ -3,9 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { Clock, MapPin, User, Phone, Utensils, ShoppingBag, Truck, Store } from 'lucide-react';
+import { Clock, MapPin, User, Phone, Utensils, ShoppingBag, Truck, Store, FileText } from 'lucide-react';
 import { Navbar } from '@/components/navigation/Navbar';
 import { Footer } from '@/components/navigation/Footer';
+import Image from 'next/image';
 
 async function getOrders(userId: string) {
   const orders = await prisma.order.findMany({
@@ -152,14 +153,58 @@ async function OrdersContent() {
               </div>
 
               {/* Order Items */}
-              <div className="space-y-3 mb-4">
+              <div className="space-y-4 mb-4">
                 {order.items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center">
+                  <div key={item.id} className="flex gap-4 p-3 bg-gray-50 rounded-lg">
+                    {/* Meal Image */}
+                    {item.menuItem?.image && (
+                      <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden">
+                        <Image
+                          src={item.menuItem.image}
+                          alt={item.menuItem.name}
+                          fill
+                          className="object-cover"
+                          sizes="96px"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{item.menuItem?.name || 'Unknown Item'}</p>
-                      <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-gray-900">{item.menuItem?.name || 'Unknown Item'}</p>
+                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                        </div>
+                        <p className="font-medium text-gray-900">${item.price.toFixed(2)}</p>
+                      </div>
+
+                      {/* Customizations from customerNotes */}
+                      {order.customerNotes && (
+                        <div className="mt-2 text-sm">
+                          <div className="text-gray-700 whitespace-pre-line">
+                            {order.customerNotes.split('\n').map((line, idx) => {
+                              if (line.startsWith('No:')) {
+                                const removedItems = line.replace('No:', '').trim();
+                                return (
+                                  <div key={idx} className="flex items-start gap-1 text-red-600 mb-1">
+                                    <span className="font-medium">Removed:</span>
+                                    <span className="line-through">{removedItems}</span>
+                                  </div>
+                                );
+                              } else if (line.trim()) {
+                                return (
+                                  <div key={idx} className="flex items-start gap-1 text-gray-600 italic">
+                                    <FileText className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                    <span>{line}</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="font-medium text-gray-900">${item.price.toFixed(2)}</p>
                   </div>
                 ))}
               </div>

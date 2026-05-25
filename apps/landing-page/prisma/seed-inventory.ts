@@ -321,56 +321,110 @@ async function main() {
 
   console.log('✅ Created 1 compound ingredient and preparation recipe')
 
-  // Create sample menu item recipe to test order integration
-  console.log('\n📋 Creating sample recipe for menu item...')
+  // Create sample menu item recipes to test order integration
+  console.log('\n📋 Creating recipes for menu items...')
 
-  // First check if there's a menu item we can link to
-  const sampleMenuItem = await prisma.menuItem.findFirst()
+  // Get all menu items
+  const allMenuItems = await prisma.menuItem.findMany({
+    include: { recipe: true }
+  })
 
-  if (sampleMenuItem) {
-    // Check if recipe already exists
-    const existingRecipe = await prisma.recipe.findUnique({
-      where: { menuItemId: sampleMenuItem.id }
-    })
+  let recipesCreated = 0
 
-    if (!existingRecipe) {
-      const sampleRecipe = await prisma.recipe.create({
+  if (allMenuItems.length > 0) {
+    // Recipe 1: Chocolate Cake (uses flour, sugar, eggs, chocolate, butter, cocoa, baking powder)
+    const cakeItem = allMenuItems.find(item =>
+      item.name.toLowerCase().includes('cake') ||
+      item.name.toLowerCase().includes('chocolate') ||
+      item.name.toLowerCase().includes('dessert')
+    ) || allMenuItems[0]
+
+    if (cakeItem && !cakeItem.recipe) {
+      await prisma.recipe.create({
         data: {
-          menuItemId: sampleMenuItem.id,
-          name: 'Sample Dish Recipe',
+          menuItemId: cakeItem.id,
+          name: 'Rich Chocolate Cake Recipe',
           servingSize: 1,
-          prepTime: 15,
-          cookTime: 20,
-          instructions: '1. Prepare ingredients\n2. Cook\n3. Serve',
+          prepTime: 20,
+          cookTime: 35,
+          instructions: '1. Preheat oven to 180°C\n2. Mix dry ingredients (flour, cocoa, baking powder)\n3. Beat butter and sugar until fluffy\n4. Add eggs one at a time\n5. Fold in flour mixture\n6. Add melted chocolate\n7. Bake for 35 minutes',
           ingredients: {
             create: [
-              {
-                inventoryItemId: flour.id,
-                quantity: 0.5,
-                unit: 'KG',
-                notes: 'For the base',
-              },
-              {
-                inventoryItemId: eggs.id,
-                quantity: 2,
-                unit: 'PCS',
-                notes: 'For binding',
-              },
-              {
-                inventoryItemId: sugar.id,
-                quantity: 0.2,
-                unit: 'KG',
-                notes: 'For sweetness',
-              },
+              { inventoryItemId: flour.id, quantity: 0.25, unit: 'KG', notes: 'Sifted' },
+              { inventoryItemId: sugar.id, quantity: 0.2, unit: 'KG', notes: 'For sweetness' },
+              { inventoryItemId: eggs.id, quantity: 3, unit: 'PCS', notes: 'Room temperature' },
+              { inventoryItemId: chocolate.id, quantity: 0.15, unit: 'KG', notes: 'Melted' },
+              { inventoryItemId: butter.id, quantity: 0.125, unit: 'KG', notes: 'Softened' },
+              { inventoryItemId: cocoa.id, quantity: 50, unit: 'G', notes: 'Dutch-process' },
+              { inventoryItemId: bakingPowder.id, quantity: 10, unit: 'G', notes: 'Fresh' },
             ],
           },
         },
       })
-      console.log(`✅ Created sample recipe for ${sampleMenuItem.name}`)
-      console.log(`   - Uses: Flour (0.5 KG), Eggs (2 PCS), Sugar (0.2 KG)`)
-    } else {
-      console.log(`ℹ️  Recipe already exists for ${sampleMenuItem.name}`)
+      recipesCreated++
+      console.log(`✅ Created recipe for ${cakeItem.name}`)
     }
+
+    // Recipe 2: Banana Bread (uses bananas, flour, sugar, eggs, butter, baking powder)
+    const breadItem = allMenuItems.find(item =>
+      item.name.toLowerCase().includes('bread') ||
+      item.name.toLowerCase().includes('banana') ||
+      item.name.toLowerCase().includes('muffin')
+    ) || allMenuItems[1] || allMenuItems[0]
+
+    if (breadItem && !breadItem.recipe && breadItem.id !== cakeItem.id) {
+      await prisma.recipe.create({
+        data: {
+          menuItemId: breadItem.id,
+          name: 'Classic Banana Bread Recipe',
+          servingSize: 1,
+          prepTime: 15,
+          cookTime: 50,
+          instructions: '1. Preheat oven to 175°C\n2. Mash bananas\n3. Mix butter and sugar\n4. Add eggs and mashed bananas\n5. Fold in flour and baking powder\n6. Pour into loaf pan\n7. Bake for 50 minutes',
+          ingredients: {
+            create: [
+              { inventoryItemId: bananas.id, quantity: 0.4, unit: 'KG', notes: 'Very ripe' },
+              { inventoryItemId: flour.id, quantity: 0.3, unit: 'KG', notes: 'All-purpose' },
+              { inventoryItemId: sugar.id, quantity: 0.15, unit: 'KG', notes: 'Granulated' },
+              { inventoryItemId: eggs.id, quantity: 2, unit: 'PCS', notes: 'Large eggs' },
+              { inventoryItemId: butter.id, quantity: 0.1, unit: 'KG', notes: 'Melted' },
+              { inventoryItemId: bakingPowder.id, quantity: 8, unit: 'G', notes: 'Double-acting' },
+            ],
+          },
+        },
+      })
+      recipesCreated++
+      console.log(`✅ Created recipe for ${breadItem.name}`)
+    }
+
+    // Recipe 3: Simple dish with minimal ingredients (flour, eggs, milk)
+    const simpleItem = allMenuItems.find(item =>
+      !item.recipe && item.id !== cakeItem.id && item.id !== breadItem.id
+    ) || allMenuItems[2]
+
+    if (simpleItem && !simpleItem.recipe) {
+      await prisma.recipe.create({
+        data: {
+          menuItemId: simpleItem.id,
+          name: `${simpleItem.name} Recipe`,
+          servingSize: 1,
+          prepTime: 10,
+          cookTime: 15,
+          instructions: '1. Mix flour and eggs\n2. Add milk gradually\n3. Cook until done',
+          ingredients: {
+            create: [
+              { inventoryItemId: flour.id, quantity: 0.2, unit: 'KG', notes: 'For base' },
+              { inventoryItemId: eggs.id, quantity: 2, unit: 'PCS', notes: 'For binding' },
+              { inventoryItemId: milk.id, quantity: 0.25, unit: 'L', notes: 'Room temperature' },
+            ],
+          },
+        },
+      })
+      recipesCreated++
+      console.log(`✅ Created recipe for ${simpleItem.name}`)
+    }
+
+    console.log(`\n📋 Total recipes created: ${recipesCreated}`)
   } else {
     console.log('ℹ️  No menu items found, skipping recipe creation')
   }

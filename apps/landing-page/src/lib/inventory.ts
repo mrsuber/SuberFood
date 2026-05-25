@@ -313,15 +313,20 @@ export async function checkRecipeAvailability(recipeId: string, servings: number
     },
   })
 
-  if (!recipe) return { available: false, missing: [] }
+  if (!recipe) return { available: false, missing: [], maxServings: 0 }
 
   const multiplier = servings / recipe.servingSize
   const missing: Array<{ name: string; need: number; have: number; unit: string }> = []
+  let maxServings = Infinity
 
   for (const ingredient of recipe.ingredients) {
     const required = ingredient.quantity * multiplier
     const item = ingredient.inventoryItem
     const available = item.isCompound ? item.wipStock : item.rawStock
+
+    // Calculate max possible servings based on this ingredient
+    const possibleServings = Math.floor((available / ingredient.quantity) * recipe.servingSize)
+    maxServings = Math.min(maxServings, possibleServings)
 
     if (available < required) {
       missing.push({
@@ -336,5 +341,56 @@ export async function checkRecipeAvailability(recipeId: string, servings: number
   return {
     available: missing.length === 0,
     missing,
+    maxServings: maxServings === Infinity ? 0 : maxServings,
   }
+}
+
+/**
+ * Get all available menu items with their stock status
+ */
+export async function getAvailableMenuItems(restaurantId?: string) {
+  const menuItems = await prisma.menuItem.findMany({
+    where: restaurantId ? {
+      category: {
+        restaurantId,
+      },
+    } : undefined,
+    include: {
+      category: true,
+      recipe: {
+        include: {
+          ingredients: {
+            include: {
+              inventoryItem: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  const itemsWithAvailability = await Promise.all(
+    menuItems.map(async (item) => {
+      if (!item.recipe) {
+        // If no recipe, assume always available
+        return {
+          ...item,
+          available: true,
+          maxServings: 999,
+          missingIngredients: [],
+        }
+      }
+
+      const availability = await checkRecipeAvailability(item.recipe.id, 1)
+
+      return {
+        ...item,
+        available: availability.available,
+        maxServings: availability.maxServings,
+        missingIngredients: availability.missing,
+      }
+    })
+  )
+
+  return itemsWithAvailability
 }

@@ -49,6 +49,7 @@ const navigationItems: NavItem[] = [
       { name: 'Menu Items', href: '/admin/menus' },
       { name: 'Categories', href: '/admin/menus/categories' },
       { name: 'Add Item', href: '/admin/menus/new' },
+      { name: 'Dish Availability', href: '/admin/menus/availability' },
     ]
   },
   {

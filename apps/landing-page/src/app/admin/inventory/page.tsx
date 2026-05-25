@@ -22,12 +22,15 @@ type InventoryItem = {
   id: string
   name: string
   category: string
-  currentStock: number
+  rawStock: number
+  wipStock: number
+  consumedStock: number
   unit: string
   minimumStock: number
   costPerUnit: number
   supplier: string
   storageLocation: string
+  isCompound: boolean
   status: 'OK' | 'LOW' | 'CRITICAL' | 'OUT'
 }
 
@@ -42,72 +45,135 @@ export default function InventoryPage() {
       id: '1',
       name: 'All-Purpose Flour',
       category: 'FLOUR_GRAIN',
-      currentStock: 25,
+      rawStock: 25,
+      wipStock: 0,
+      consumedStock: 0,
       unit: 'KG',
       minimumStock: 50,
       costPerUnit: 2.50,
       supplier: 'Grain Mills Inc',
       storageLocation: 'Pantry A',
+      isCompound: false,
       status: 'LOW',
     },
     {
       id: '2',
       name: 'Granulated Sugar',
       category: 'SUGAR_SWEETENER',
-      currentStock: 80,
+      rawStock: 80,
+      wipStock: 0,
+      consumedStock: 0,
       unit: 'KG',
       minimumStock: 30,
       costPerUnit: 1.80,
       supplier: 'Sweet Supply Co',
       storageLocation: 'Pantry A',
+      isCompound: false,
       status: 'OK',
     },
     {
       id: '3',
       name: 'Dark Chocolate (70%)',
       category: 'CHOCOLATE_COCOA',
-      currentStock: 5,
+      rawStock: 5,
+      wipStock: 0,
+      consumedStock: 0,
       unit: 'KG',
       minimumStock: 10,
       costPerUnit: 12.50,
       supplier: 'Cocoa Traders',
       storageLocation: 'Pantry B',
+      isCompound: false,
       status: 'CRITICAL',
     },
     {
       id: '4',
       name: 'Fresh Eggs',
       category: 'EGGS',
-      currentStock: 120,
+      rawStock: 120,
+      wipStock: 0,
+      consumedStock: 0,
       unit: 'PCS',
       minimumStock: 100,
       costPerUnit: 0.30,
       supplier: 'Farm Fresh Eggs',
       storageLocation: 'Fridge 1',
+      isCompound: false,
       status: 'OK',
     },
     {
       id: '5',
       name: 'Whole Milk',
       category: 'DAIRY',
-      currentStock: 15,
+      rawStock: 15,
+      wipStock: 0,
+      consumedStock: 0,
       unit: 'L',
       minimumStock: 20,
       costPerUnit: 1.50,
       supplier: 'Dairy Best',
       storageLocation: 'Fridge 2',
+      isCompound: false,
       status: 'LOW',
     },
     {
       id: '6',
       name: 'Vanilla Extract',
       category: 'BAKING_SUPPLIES',
-      currentStock: 0,
+      rawStock: 0,
+      wipStock: 0,
+      consumedStock: 0,
       unit: 'ML',
       minimumStock: 500,
       costPerUnit: 0.05,
       supplier: 'Flavor House',
       storageLocation: 'Pantry B',
+      isCompound: false,
+      status: 'OUT',
+    },
+    {
+      id: '7',
+      name: 'Dry Beans',
+      category: 'VEGETABLES',
+      rawStock: 10,
+      wipStock: 0,
+      consumedStock: 0,
+      unit: 'KG',
+      minimumStock: 5,
+      costPerUnit: 3.50,
+      supplier: 'Grain & Bean Co',
+      storageLocation: 'Pantry A',
+      isCompound: false,
+      status: 'OK',
+    },
+    {
+      id: '8',
+      name: 'Table Salt',
+      category: 'SPICES_HERBS',
+      rawStock: 1000,
+      wipStock: 0,
+      consumedStock: 0,
+      unit: 'G',
+      minimumStock: 500,
+      costPerUnit: 0.002,
+      supplier: 'Spice Traders',
+      storageLocation: 'Pantry A',
+      isCompound: false,
+      status: 'OK',
+    },
+    {
+      id: '9',
+      name: 'Pre-boiled Salted Beans',
+      category: 'VEGETABLES',
+      rawStock: 0,
+      wipStock: 0,
+      consumedStock: 0,
+      unit: 'KG',
+      minimumStock: 2,
+      costPerUnit: 0,
+      supplier: '-',
+      storageLocation: 'Freezer 1',
+      isCompound: true,
       status: 'OUT',
     },
   ]
@@ -160,8 +226,8 @@ export default function InventoryPage() {
       bgColor: 'bg-red-100',
     },
     {
-      title: 'Total Value',
-      value: `$${inventoryItems.reduce((sum, item) => sum + (item.currentStock * item.costPerUnit), 0).toFixed(2)}`,
+      title: 'Total Value (Raw)',
+      value: `$${inventoryItems.reduce((sum, item) => sum + (item.rawStock * item.costPerUnit), 0).toFixed(2)}`,
       icon: Package,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
@@ -274,10 +340,12 @@ export default function InventoryPage() {
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Item Name</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Category</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Current Stock</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      <div>Stock Breakdown</div>
+                      <div className="text-xs font-normal text-gray-500">Raw / WIP / Consumed</div>
+                    </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Min Stock</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Location</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Value</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
                     <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
                   </tr>
@@ -295,23 +363,46 @@ export default function InventoryPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {item.category.replace('_', ' ')}
+                        <div>{item.category.replace('_', ' ')}</div>
+                        {item.isCompound && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+                            Compound
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`font-semibold ${
-                          item.currentStock < item.minimumStock ? 'text-red-600' : 'text-gray-900'
-                        }`}>
-                          {item.currentStock} {item.unit}
-                        </span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-20">Raw:</span>
+                            <span className={`font-semibold ${
+                              item.rawStock < item.minimumStock ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {item.rawStock} {item.unit}
+                            </span>
+                          </div>
+                          {item.wipStock > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 w-20">WIP:</span>
+                              <span className="font-semibold text-yellow-600">
+                                {item.wipStock} {item.unit}
+                              </span>
+                            </div>
+                          )}
+                          {item.consumedStock > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 w-20">Consumed:</span>
+                              <span className="text-sm text-gray-500">
+                                {item.consumedStock} {item.unit}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {item.minimumStock} {item.unit}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {item.storageLocation}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        ${(item.currentStock * item.costPerUnit).toFixed(2)}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
@@ -354,7 +445,7 @@ export default function InventoryPage() {
                       .filter(item => item.status !== 'OK')
                       .map(item => (
                         <li key={item.id}>
-                          • <strong>{item.name}</strong>: {item.currentStock} {item.unit} ({item.status})
+                          • <strong>{item.name}</strong>: {item.rawStock} {item.unit} raw ({item.status})
                         </li>
                       ))}
                   </ul>

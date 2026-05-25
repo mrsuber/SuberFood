@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, InventoryUnit } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -224,7 +224,7 @@ async function deductFromWIP(itemId: string, quantity: number): Promise<Inventor
             inventoryItemId: ingredientId,
             type: 'USAGE',
             quantity: -consumedQty,
-            unit,
+            unit: unit as InventoryUnit,
             affectedState: 'WIP',
             previousRaw: rawItem.rawStock,
             newRaw: rawItem.rawStock,

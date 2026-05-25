@@ -80,6 +80,7 @@ const navigationItems: NavItem[] = [
     submenu: [
       { name: 'All Ingredients', href: '/admin/inventory' },
       { name: 'Add Ingredient', href: '/admin/inventory/new' },
+      { name: 'Bulk Preparation', href: '/admin/inventory/prepare' },
       { name: 'Recipes', href: '/admin/inventory/recipes' },
       { name: 'Stock Movements', href: '/admin/inventory/movements' },
     ]

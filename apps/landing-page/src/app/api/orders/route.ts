@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
             {
               menuItemId,
               quantity,
-              price: menuItem.price || menuItem.basePrice,
+              price: menuItem.price,
             }
           ]
         }

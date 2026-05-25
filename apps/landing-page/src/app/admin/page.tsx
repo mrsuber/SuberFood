@@ -1,6 +1,7 @@
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { TrendingUp, TrendingDown, Users, ShoppingCart, Calendar, DollarSign } from 'lucide-react'
+import { RevenueChart } from '@/components/admin/RevenueChart'
 
 export default function AdminDashboard() {
   // Mock data - will be replaced with real data from API
@@ -155,17 +156,10 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Chart Placeholder */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-              <p className="text-gray-400">Revenue chart will be displayed here</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Revenue Chart */}
+        <div className="mt-6">
+          <RevenueChart />
+        </div>
       </div>
     </div>
   )

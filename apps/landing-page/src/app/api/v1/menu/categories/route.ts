@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const restaurantId = searchParams.get('restaurantId')
 
-    const categories = await prisma.category.findMany({
+    const categories = await prisma.menuCategory.findMany({
       where: restaurantId ? { restaurantId } : undefined,
       orderBy: { name: 'asc' },
     })

@@ -311,6 +311,7 @@ model MenuItem {
 
   category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
+  recipe     Recipe? // One-to-one relationship with Recipe
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -613,6 +614,164 @@ model Farm {
   updatedAt DateTime @updatedAt
 
   @@map("farms")
+}
+
+// ========================================
+// INVENTORY MANAGEMENT
+// ========================================
+
+enum InventoryUnit {
+  KG // Kilograms
+  G // Grams
+  L // Liters
+  ML // Milliliters
+  PCS // Pieces
+  DOZEN
+  LBS // Pounds
+  OZ // Ounces
+  CUPS
+  TBSP // Tablespoons
+  TSP // Teaspoons
+}
+
+enum InventoryCategory {
+  FLOUR_GRAIN // Flour, wheat, rice, etc.
+  SUGAR_SWEETENER // Sugar, honey, syrup
+  DAIRY // Milk, butter, cheese, cream
+  EGGS
+  OILS_FATS // Cooking oil, butter, lard
+  SPICES_HERBS
+  VEGETABLES
+  FRUITS
+  MEAT
+  SEAFOOD
+  POULTRY
+  CHOCOLATE_COCOA
+  NUTS_SEEDS
+  BAKING_SUPPLIES // Baking powder, yeast, vanilla
+  CONDIMENTS
+  BEVERAGES
+  CANNED_GOODS
+  FROZEN
+  OTHER
+}
+
+model InventoryItem {
+  id          String            @id @default(cuid())
+  name        String
+  category    InventoryCategory
+  unit        InventoryUnit
+
+  // Stock levels
+  currentStock     Float  @default(0)
+  minimumStock     Float  @default(0) // Alert when below this
+  maximumStock     Float? // Optional max capacity
+  reorderPoint     Float? // Automatic reorder trigger
+  reorderQuantity  Float? // How much to reorder
+
+  // Pricing
+  costPerUnit Float? // Cost price
+  supplier    String?
+
+  // Storage & expiry
+  storageLocation String? // Pantry, Fridge, Freezer
+  expiryDate      DateTime?
+  batchNumber     String?
+
+  // Metadata
+  description String?
+  notes       String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  recipeIngredients RecipeIngredient[]
+  stockMovements    StockMovement[]
+
+  @@map("inventory_items")
+}
+
+model Recipe {
+  id           String  @id @default(cuid())
+  menuItemId   String  @unique
+  name         String
+  servingSize  Int     @default(1) // Number of servings this recipe makes
+
+  instructions String? // Cooking instructions
+  prepTime     Int? // in minutes
+  cookTime     Int? // in minutes
+
+  // Cost calculation
+  totalCost Float? // Auto-calculated from ingredients
+  costPerServing Float?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  menuItem    MenuItem           @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id              String @id @default(cuid())
+  recipeId        String
+  inventoryItemId String
+
+  quantity Float // Amount needed
+  unit     InventoryUnit
+
+  notes String? // e.g., "chopped", "melted", "optional"
+
+  recipe        Recipe        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([recipeId, inventoryItemId])
+  @@map("recipe_ingredients")
+}
+
+enum StockMovementType {
+  PURCHASE // Buying new stock
+  USAGE // Used for cooking
+  WASTE // Spoiled/damaged
+  ADJUSTMENT // Manual correction
+  RETURN // Returned to supplier
+  TRANSFER // Moved between locations
+}
+
+model StockMovement {
+  id              String            @id @default(cuid())
+  inventoryItemId String
+  type            StockMovementType
+
+  quantity     Float
+  unit         InventoryUnit
+  previousStock Float // Stock before movement
+  newStock     Float // Stock after movement
+
+  // Reference
+  referenceType String? // e.g., "Order", "Recipe", "Purchase"
+  referenceId   String? // Order ID, Recipe ID, etc.
+
+  // Details
+  reason      String?
+  notes       String?
+  performedBy String? // User ID
+
+  createdAt DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@map("stock_movements")
 }
 
 // ========================================

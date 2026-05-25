@@ -71,7 +71,17 @@ const navigationItems: NavItem[] = [
       { name: 'All Products', href: '/admin/products' },
       { name: 'Add Product', href: '/admin/products/new' },
       { name: 'Categories', href: '/admin/products/categories' },
-      { name: 'Inventory', href: '/admin/products/inventory' },
+    ]
+  },
+  {
+    name: 'Kitchen Inventory',
+    href: '/admin/inventory',
+    icon: Package,
+    submenu: [
+      { name: 'All Ingredients', href: '/admin/inventory' },
+      { name: 'Add Ingredient', href: '/admin/inventory/new' },
+      { name: 'Recipes', href: '/admin/inventory/recipes' },
+      { name: 'Stock Movements', href: '/admin/inventory/movements' },
     ]
   },
   {

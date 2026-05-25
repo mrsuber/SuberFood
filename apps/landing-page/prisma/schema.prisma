@@ -535,6 +535,10 @@ model OrderItem {
   quantity Int
   price    Float // Price at time of order
 
+  // Customizations (e.g., "no salt", "extra chocolate")
+  // JSON: { "removed": ["salt"], "added": ["chocolate"], "notes": "less spicy" }
+  customizations Json?
+
   order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product  Product?  @relation(fields: [productId], references: [id])
   menuItem MenuItem? @relation(fields: [menuItemId], references: [id])
@@ -662,12 +666,20 @@ model InventoryItem {
   category    InventoryCategory
   unit        InventoryUnit
 
-  // Stock levels
-  currentStock     Float  @default(0)
-  minimumStock     Float  @default(0) // Alert when below this
-  maximumStock     Float? // Optional max capacity
-  reorderPoint     Float? // Automatic reorder trigger
-  reorderQuantity  Float? // How much to reorder
+  // THREE-STATE STOCK TRACKING
+  rawStock            Float @default(0) // Available for use/preparation
+  wipStock            Float @default(0) // Locked in pre-prepared items
+  consumedStock       Float @default(0) // Served to customers (historical)
+  totalPurchased      Float @default(0) // All-time purchases for tracking
+
+  minimumStock        Float @default(0) // Alert when raw stock below this
+  maximumStock        Float? // Optional max capacity
+  reorderPoint        Float? // Automatic reorder trigger
+  reorderQuantity     Float? // How much to reorder
+
+  // Compound/Pre-prepared ingredient tracking
+  isCompound          Boolean @default(false) // Is this a pre-prepared item?
+  preparationRecipeId String? @unique // Link to preparation recipe if compound
 
   // Pricing
   costPerUnit Float? // Cost price
@@ -687,8 +699,10 @@ model InventoryItem {
   updatedAt DateTime @updatedAt
 
   // Relations
-  recipeIngredients RecipeIngredient[]
-  stockMovements    StockMovement[]
+  recipeIngredients     RecipeIngredient[]
+  stockMovements        StockMovement[]
+  preparationRecipe     PreparationRecipe? @relation("OutputItem")
+  usedInPreparations    PreparationRecipeInput[]
 
   @@map("inventory_items")
 }
@@ -740,8 +754,9 @@ model RecipeIngredient {
 }
 
 enum StockMovementType {
-  PURCHASE // Buying new stock
-  USAGE // Used for cooking
+  PURCHASE // Buying new stock (affects RAW)
+  PRODUCTION // Raw → WIP (bulk preparation)
+  USAGE // WIP → Consumed (order served)
   WASTE // Spoiled/damaged
   ADJUSTMENT // Manual correction
   RETURN // Returned to supplier
@@ -755,12 +770,21 @@ model StockMovement {
 
   quantity     Float
   unit         InventoryUnit
-  previousStock Float // Stock before movement
-  newStock     Float // Stock after movement
+
+  // Track which state is affected
+  affectedState String // "RAW", "WIP", or "CONSUMED"
+
+  // Snapshot of all three states before and after
+  previousRaw      Float?
+  newRaw           Float?
+  previousWip      Float?
+  newWip           Float?
+  previousConsumed Float?
+  newConsumed      Float?
 
   // Reference
-  referenceType String? // e.g., "Order", "Recipe", "Purchase"
-  referenceId   String? // Order ID, Recipe ID, etc.
+  referenceType String? // e.g., "PreparationBatch", "Order", "Purchase"
+  referenceId   String? // Batch ID, Order ID, etc.
 
   // Details
   reason      String?
@@ -772,6 +796,85 @@ model StockMovement {
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
 
   @@map("stock_movements")
+}
+
+// Preparation Recipe: Defines how to make a compound/pre-prepared ingredient
+// Example: "Pre-boiled Salted Beans" = Beans (raw) + Salt (raw) + Water
+model PreparationRecipe {
+  id   String @id @default(cuid())
+  name String
+
+  // Output: The compound ingredient this recipe creates
+  outputItemId   String        @unique
+  outputQuantity Float // How much is produced per batch
+  outputUnit     InventoryUnit
+
+  // Preparation details
+  prepTime        Int? // in minutes
+  instructions    String?
+  storageLocation String? // Where to store prepared item
+  shelfLifeDays   Int? // How long it lasts
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  outputItem InventoryItem            @relation("OutputItem", fields: [outputItemId], references: [id])
+  inputs     PreparationRecipeInput[]
+  batches    PreparationBatch[]
+
+  @@map("preparation_recipes")
+}
+
+// Inputs for a preparation recipe (raw ingredients)
+model PreparationRecipeInput {
+  id                  String @id @default(cuid())
+  preparationRecipeId String
+  inventoryItemId     String
+
+  quantity Float
+  unit     InventoryUnit
+
+  notes String? // e.g., "rinsed", "soaked overnight"
+
+  preparationRecipe PreparationRecipe @relation(fields: [preparationRecipeId], references: [id], onDelete: Cascade)
+  inventoryItem     InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([preparationRecipeId, inventoryItemId])
+  @@map("preparation_recipe_inputs")
+}
+
+// Individual batch of prepared ingredients
+// Tracks exactly what raw ingredients were used and how much is left
+model PreparationBatch {
+  id                  String @id @default(cuid())
+  preparationRecipeId String
+  batchNumber         String @unique
+
+  quantityProduced  Float // Total amount made
+  quantityRemaining Float // How much is left (WIP)
+  quantityConsumed  Float @default(0) // How much was used (moved to CONSUMED)
+
+  // JSON snapshot of exactly what raw ingredients were used
+  // Example: { "salt": { "quantity": 50, "unit": "G" }, "beans": { "quantity": 2, "unit": "KG" } }
+  ingredientsUsed Json
+
+  productionDate DateTime  @default(now())
+  expiryDate     DateTime? // Based on shelfLifeDays
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  preparationRecipe PreparationRecipe @relation(fields: [preparationRecipeId], references: [id])
+
+  @@map("preparation_batches")
 }
 
 // ========================================

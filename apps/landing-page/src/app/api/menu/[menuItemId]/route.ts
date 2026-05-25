@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * PATCH /api/menu/[menuItemId]
- * Update menu item properties (isAvailable, etc.)
+ * Update menu item properties
  */
 export async function PATCH(
   req: NextRequest,
@@ -15,18 +15,29 @@ export async function PATCH(
   try {
     const { menuItemId } = params
     const body = await req.json()
-    const { isAvailable } = body
+    const {
+      name,
+      description,
+      price,
+      salePrice,
+      image,
+      gallery,
+      isAvailable,
+    } = body
 
-    if (typeof isAvailable !== 'boolean') {
-      return NextResponse.json(
-        { error: 'isAvailable must be a boolean' },
-        { status: 400 }
-      )
-    }
+    // Build update data object, only including provided fields
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (description !== undefined) updateData.description = description
+    if (price !== undefined) updateData.price = price
+    if (salePrice !== undefined) updateData.salePrice = salePrice
+    if (image !== undefined) updateData.image = image
+    if (gallery !== undefined) updateData.gallery = gallery
+    if (isAvailable !== undefined) updateData.isAvailable = isAvailable
 
     const menuItem = await prisma.menuItem.update({
       where: { id: menuItemId },
-      data: { isAvailable },
+      data: updateData,
     })
 
     return NextResponse.json({

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -285,13 +286,20 @@ export default function MenuAvailabilityPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleAvailability(item.id, item.isAvailable)}
-                          >
-                            {item.isAvailable ? 'Hide' : 'Show'}
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link href={`/admin/menus/${item.id}`}>
+                              <Button variant="outline" size="sm">
+                                Edit
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleAvailability(item.id, item.isAvailable)}
+                            >
+                              {item.isAvailable ? 'Hide' : 'Show'}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

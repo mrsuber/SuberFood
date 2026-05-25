@@ -70,12 +70,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate unique order number
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     // Create the order
     const order = await prisma.order.create({
       data: {
+        orderNumber,
         userId: session.user.id,
+        restaurantId,
         type,
         status: 'PENDING',
+        subtotal: total,
         total,
         customerName,
         phoneNumber,
@@ -87,7 +93,7 @@ export async function POST(request: NextRequest) {
             {
               menuItemId,
               quantity,
-              price: menuItem.basePrice,
+              price: menuItem.price || menuItem.basePrice,
             }
           ]
         }

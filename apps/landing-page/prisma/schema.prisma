@@ -507,6 +507,10 @@ model Order {
   // Pickup details
   pickupTime DateTime? // Scheduled pickup time for TAKEAWAY
 
+  // Customer details (for restaurant orders)
+  customerName String? // Customer name for the order
+  phoneNumber  String? // Customer phone for order updates
+
   // Metadata
   notes         String?
   customerNotes String?

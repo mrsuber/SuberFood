@@ -282,7 +282,7 @@ export default function MenuItemDetailPage() {
                     </CardHeader>
                     <CardContent>
                       <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {detailedIngredients.map((ingredient, index) => (
+                        {detailedIngredients.map((ingredient: string, index: number) => (
                           <li key={index} className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-2" />
                             <span className="text-gray-700">{ingredient}</span>

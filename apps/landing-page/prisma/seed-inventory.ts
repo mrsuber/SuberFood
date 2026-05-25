@@ -321,6 +321,60 @@ async function main() {
 
   console.log('✅ Created 1 compound ingredient and preparation recipe')
 
+  // Create sample menu item recipe to test order integration
+  console.log('\n📋 Creating sample recipe for menu item...')
+
+  // First check if there's a menu item we can link to
+  const sampleMenuItem = await prisma.menuItem.findFirst()
+
+  if (sampleMenuItem) {
+    // Check if recipe already exists
+    const existingRecipe = await prisma.recipe.findUnique({
+      where: { menuItemId: sampleMenuItem.id }
+    })
+
+    if (!existingRecipe) {
+      const sampleRecipe = await prisma.recipe.create({
+        data: {
+          menuItemId: sampleMenuItem.id,
+          name: 'Sample Dish Recipe',
+          servingSize: 1,
+          prepTime: 15,
+          cookTime: 20,
+          instructions: '1. Prepare ingredients\n2. Cook\n3. Serve',
+          ingredients: {
+            create: [
+              {
+                inventoryItemId: flour.id,
+                quantity: 0.5,
+                unit: 'KG',
+                notes: 'For the base',
+              },
+              {
+                inventoryItemId: eggs.id,
+                quantity: 2,
+                unit: 'PCS',
+                notes: 'For binding',
+              },
+              {
+                inventoryItemId: sugar.id,
+                quantity: 0.2,
+                unit: 'KG',
+                notes: 'For sweetness',
+              },
+            ],
+          },
+        },
+      })
+      console.log(`✅ Created sample recipe for ${sampleMenuItem.name}`)
+      console.log(`   - Uses: Flour (0.5 KG), Eggs (2 PCS), Sugar (0.2 KG)`)
+    } else {
+      console.log(`ℹ️  Recipe already exists for ${sampleMenuItem.name}`)
+    }
+  } else {
+    console.log('ℹ️  No menu items found, skipping recipe creation')
+  }
+
   console.log('\n✅ Inventory seeding complete!')
   console.log('\n📦 RAW INGREDIENTS (12 items):')
   console.log('- All-Purpose Flour: 25 KG raw (LOW STOCK)')

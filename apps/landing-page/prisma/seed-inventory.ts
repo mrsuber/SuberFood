@@ -5,10 +5,12 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Seeding inventory data...')
 
-  // Clear existing data
+  // Clear existing data (order matters due to foreign key constraints)
   await prisma.preparationBatch.deleteMany()
   await prisma.preparationRecipeInput.deleteMany()
   await prisma.preparationRecipe.deleteMany()
+  await prisma.recipeIngredient.deleteMany()
+  await prisma.recipe.deleteMany()
   await prisma.stockMovement.deleteMany()
   await prisma.inventoryItem.deleteMany()
 

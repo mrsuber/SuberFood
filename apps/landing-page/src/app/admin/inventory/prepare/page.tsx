@@ -11,8 +11,9 @@ import {
   CheckCircle,
   Clock,
   Thermometer,
+  Loader2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 type IngredientInput = {
@@ -44,9 +45,38 @@ type PreparationRecipe = {
 export default function PreparePage() {
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null)
   const [batchQuantity, setBatchQuantity] = useState(1)
+  const [recipes, setRecipes] = useState<PreparationRecipe[]>([])
+  const [loading, setLoading] = useState(true)
+  const [preparing, setPreparing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data - will be replaced with API
-  const recipes: PreparationRecipe[] = [
+  // Fetch preparation recipes from API
+  useEffect(() => {
+    fetchRecipes()
+  }, [])
+
+  const fetchRecipes = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch('/api/inventory/prepare')
+      const result = await response.json()
+
+      if (result.success) {
+        setRecipes(result.data)
+      } else {
+        setError(result.error || 'Failed to load recipes')
+      }
+    } catch (err) {
+      setError('Failed to connect to server')
+      console.error('Error fetching recipes:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Mock data for fallback - will be replaced with API
+  const mockRecipes: PreparationRecipe[] = [
     {
       id: '1',
       name: 'Pre-boiled Salted Beans',
@@ -96,14 +126,49 @@ export default function PreparePage() {
     }
   }
 
-  const handlePrepare = (recipeId: string) => {
-    console.log(`Preparing ${batchQuantity} batch(es) of recipe ${recipeId}`)
-    // TODO: Implement API call to create preparation batch
-    // This will:
-    // 1. Deduct raw ingredients (rawStock → wipStock)
-    // 2. Create PreparationBatch record
-    // 3. Create StockMovement records
-    // 4. Update compound ingredient wipStock
+  const handlePrepare = async (recipeId: string) => {
+    try {
+      setPreparing(true)
+      setError(null)
+
+      const response = await fetch('/api/inventory/prepare', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          preparationRecipeId: recipeId,
+          batchQuantity,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Show success message
+        alert(`✅ ${result.message}\n\nBatch Number: ${result.data.batchNumber}\nQuantity: ${result.data.quantityProduced}`)
+
+        // Reset selection
+        setSelectedRecipe(null)
+        setBatchQuantity(1)
+
+        // Refresh recipes to show updated stock
+        await fetchRecipes()
+      } else {
+        setError(result.error || 'Failed to prepare batch')
+        if (result.details) {
+          console.error('Preparation error details:', result.details)
+          alert(`❌ Error: ${result.error}\n\n${Array.isArray(result.details) ? result.details.join('\n') : result.details}`)
+        }
+      }
+    } catch (err) {
+      const errorMsg = 'Failed to prepare batch'
+      setError(errorMsg)
+      console.error('Error preparing batch:', err)
+      alert(`❌ ${errorMsg}`)
+    } finally {
+      setPreparing(false)
+    }
   }
 
   return (
@@ -118,8 +183,37 @@ export default function PreparePage() {
           </p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <div>
+                  <p className="font-semibold text-red-900">Error</p>
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchRecipes} className="ml-auto">
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Loader2 className="w-12 h-12 text-primary-600 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-600">Loading preparation recipes...</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Preparation Recipes */}
-        <div className="space-y-6">
+        {!loading && recipes.length > 0 && (
+          <div className="space-y-6">
           {recipes.map((recipe) => {
             const selected = selectedRecipe === recipe.id
             const totalOutput = recipe.outputQuantity * batchQuantity
@@ -305,14 +399,24 @@ export default function PreparePage() {
                           <Button
                             onClick={() => handlePrepare(recipe.id)}
                             className="flex-1"
-                            disabled={!recipe.canPrepare}
+                            disabled={!recipe.canPrepare || preparing}
                           >
-                            <ChefHat className="w-4 h-4 mr-2" />
-                            Start Preparation ({batchQuantity} {batchQuantity === 1 ? 'Batch' : 'Batches'})
+                            {preparing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Preparing...
+                              </>
+                            ) : (
+                              <>
+                                <ChefHat className="w-4 h-4 mr-2" />
+                                Start Preparation ({batchQuantity} {batchQuantity === 1 ? 'Batch' : 'Batches'})
+                              </>
+                            )}
                           </Button>
                           <Button
                             variant="outline"
                             onClick={() => setSelectedRecipe(null)}
+                            disabled={preparing}
                           >
                             Cancel
                           </Button>
@@ -333,10 +437,11 @@ export default function PreparePage() {
               </Card>
             )
           })}
-        </div>
+          </div>
+        )}
 
         {/* No recipes available */}
-        {recipes.length === 0 && (
+        {!loading && recipes.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
               <ChefHat className="w-12 h-12 text-gray-400 mx-auto mb-4" />

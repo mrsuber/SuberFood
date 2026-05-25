@@ -258,18 +258,18 @@ export function OrderTypeModal({
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Item:</span>
-                  <span className="font-medium">{menuItemName}</span>
+                  <span className="font-medium text-gray-900">{menuItemName}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Quantity:</span>
-                  <span className="font-medium">{quantity}</span>
+                  <span className="font-medium text-gray-900">{quantity}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Unit Price:</span>
-                  <span className="font-medium">${price.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">${price.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                  <span>Total:</span>
+                <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
+                  <span className="text-gray-900">Total:</span>
                   <span className="text-green-600">${(price * quantity).toFixed(2)}</span>
                 </div>
               </div>

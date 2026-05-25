@@ -147,7 +147,7 @@ async function OrdersContent() {
                 {order.items.map((item) => (
                   <div key={item.id} className="flex justify-between items-center">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{item.menuItem.name}</p>
+                      <p className="font-medium text-gray-900">{item.menuItem?.name || 'Unknown Item'}</p>
                       <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                     </div>
                     <p className="font-medium text-gray-900">${item.price.toFixed(2)}</p>

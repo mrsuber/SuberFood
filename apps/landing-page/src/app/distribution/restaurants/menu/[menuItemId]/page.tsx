@@ -96,7 +96,7 @@ export default function MenuItemDetailPage() {
   };
 
   const detailedIngredients = menuItem.ingredients ?
-    menuItem.ingredients.split(',').map(i => i.trim()) :
+    menuItem.ingredients.split(',').map((i: string) => i.trim()) :
     ['Fresh ingredients', 'Seasonal vegetables', 'Premium quality'];
 
   const cookingProcedure = [

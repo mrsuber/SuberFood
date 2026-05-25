@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { Clock, MapPin, User, Phone, Utensils, ShoppingBag, Truck } from 'lucide-react';
 
 async function getOrders(userId: string) {

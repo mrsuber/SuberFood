@@ -3,7 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { Clock, MapPin, User, Phone, Utensils, ShoppingBag, Truck } from 'lucide-react';
+import { Clock, MapPin, User, Phone, Utensils, ShoppingBag, Truck, Store } from 'lucide-react';
+import { Navbar } from '@/components/navigation/Navbar';
+import { Footer } from '@/components/navigation/Footer';
 
 async function getOrders(userId: string) {
   const orders = await prisma.order.findMany({
@@ -18,7 +20,8 @@ async function getOrders(userId: string) {
         include: {
           menuItem: true
         }
-      }
+      },
+      restaurant: true
     },
     orderBy: {
       createdAt: 'desc'
@@ -89,32 +92,38 @@ async function OrdersContent() {
 
   if (orders.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-50">
+          <div className="container mx-auto px-4 py-12">
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShoppingBag className="w-12 h-12 text-gray-400" />
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingBag className="w-12 h-12 text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">No orders yet</h2>
+              <p className="text-gray-600 mb-6">Start ordering from your favorite restaurants!</p>
+              <a
+                href="/distribution/restaurants"
+                className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                Browse Restaurants
+              </a>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No orders yet</h2>
-            <p className="text-gray-600 mb-6">Start ordering from your favorite restaurants!</p>
-            <a
-              href="/distribution/restaurants"
-              className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              Browse Restaurants
-            </a>
           </div>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-12">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
 
         <div className="space-y-6">
           {orders.map((order) => (
@@ -157,8 +166,22 @@ async function OrdersContent() {
 
               {/* Order Details */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                {order.restaurant && (
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 pb-2 border-b border-gray-200">
+                    <Store className="w-4 h-4" />
+                    <span>{order.restaurant.name}</span>
+                  </div>
+                )}
+
+                {order.restaurant && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <MapPin className="w-4 h-4" />
+                    <span>{order.restaurant.address}, {order.restaurant.city}, {order.restaurant.state}</span>
+                  </div>
+                )}
+
                 {order.customerName && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <div className="flex items-center gap-2 text-sm text-gray-700 pt-2">
                     <User className="w-4 h-4" />
                     <span>{order.customerName}</span>
                   </div>
@@ -201,8 +224,10 @@ async function OrdersContent() {
             </div>
           ))}
         </div>
+        </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 }
 

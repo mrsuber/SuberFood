@@ -1,14 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Utensils, ShoppingBag, Truck, MapPin, Clock, User } from 'lucide-react';
+import { Utensils, ShoppingBag, Truck, MapPin, Clock, User, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
+
+interface Restaurant {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+}
 
 interface OrderTypeModalProps {
   open: boolean;
@@ -33,12 +41,37 @@ export function OrderTypeModal({
 }: OrderTypeModalProps) {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<OrderType | null>(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>(restaurantId);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [tableNumber, setTableNumber] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [pickupTime, setPickupTime] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(false);
+
+  // Fetch restaurants when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchRestaurants();
+    }
+  }, [open]);
+
+  const fetchRestaurants = async () => {
+    setIsLoadingRestaurants(true);
+    try {
+      const response = await fetch('/api/restaurants');
+      if (response.ok) {
+        const data = await response.json();
+        setRestaurants(data);
+      }
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+    } finally {
+      setIsLoadingRestaurants(false);
+    }
+  };
 
   const orderTypes = [
     {
@@ -73,7 +106,7 @@ export function OrderTypeModal({
         menuItemId,
         quantity,
         type: selectedType,
-        restaurantId,
+        restaurantId: selectedRestaurantId,
         ...(selectedType === 'DINE_IN' && { tableNumber }),
         ...(selectedType === 'DELIVERY' && { deliveryAddress }),
         ...(selectedType === 'TAKEAWAY' && { pickupTime }),
@@ -151,6 +184,58 @@ export function OrderTypeModal({
               );
             })}
           </div>
+
+          {/* Restaurant Location Selection */}
+          {selectedType && (
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Store className="w-5 h-5" />
+                Select Restaurant Location
+              </h3>
+              <p className="text-sm text-gray-600">
+                {selectedType === 'DINE_IN' && 'Choose the restaurant where you are dining'}
+                {selectedType === 'TAKEAWAY' && 'Choose the restaurant where you will pick up your order'}
+                {selectedType === 'DELIVERY' && 'Choose the restaurant closest to your delivery address'}
+              </p>
+
+              {isLoadingRestaurants ? (
+                <div className="text-center py-4">
+                  <div className="inline-block w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-sm text-gray-600 mt-2">Loading locations...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3">
+                  {restaurants.map((restaurant) => (
+                    <button
+                      key={restaurant.id}
+                      onClick={() => setSelectedRestaurantId(restaurant.id)}
+                      className={`p-4 rounded-lg border-2 text-left transition-all ${
+                        selectedRestaurantId === restaurant.id
+                          ? 'border-green-600 bg-green-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{restaurant.name}</h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {restaurant.address}, {restaurant.city}, {restaurant.state}
+                          </p>
+                        </div>
+                        {selectedRestaurantId === restaurant.id && (
+                          <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Customer Details */}
           {selectedType && (

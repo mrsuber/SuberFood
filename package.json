@@ -35,5 +35,8 @@
     "url": "https://github.com/suberfood/suberfood"
   },
   "author": "SuberFood Team",
-  "license": "PROPRIETARY"
+  "license": "PROPRIETARY",
+  "dependencies": {
+    "recharts": "^3.8.1"
+  }
 }

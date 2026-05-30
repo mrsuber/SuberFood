@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Utensils, ShoppingBag, Truck, MapPin, Clock, User, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 
 type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
 
@@ -44,6 +46,7 @@ export function OrderTypeModal({
   specialInstructions = ''
 }: OrderTypeModalProps) {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [selectedType, setSelectedType] = useState<OrderType | null>(null);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>(restaurantId);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -61,6 +64,31 @@ export function OrderTypeModal({
       fetchRestaurants();
     }
   }, [open]);
+
+  // Restore pending order after sign-in
+  useEffect(() => {
+    if (session && open) {
+      const pendingOrderStr = localStorage.getItem('pendingOrder');
+      if (pendingOrderStr) {
+        try {
+          const pendingOrder = JSON.parse(pendingOrderStr);
+
+          // Only restore if it matches this menu item
+          if (pendingOrder.menuItemId === menuItemId) {
+            setSelectedType(pendingOrder.selectedType);
+            setSelectedRestaurantId(pendingOrder.restaurantId || restaurantId);
+            setTableNumber(pendingOrder.tableNumber || '');
+            setDeliveryAddress(pendingOrder.deliveryAddress || '');
+            setPickupTime(pendingOrder.pickupTime || '');
+            setCustomerName(pendingOrder.customerName || '');
+            setPhoneNumber(pendingOrder.phoneNumber || '');
+          }
+        } catch (error) {
+          console.error('Error restoring pending order:', error);
+        }
+      }
+    }
+  }, [session, open, menuItemId, restaurantId]);
 
   const fetchRestaurants = async () => {
     setIsLoadingRestaurants(true);
@@ -104,6 +132,33 @@ export function OrderTypeModal({
   const handleSubmitOrder = async () => {
     if (!selectedType) return;
 
+    // Check if user is authenticated
+    if (!session) {
+      // Save order state to localStorage
+      const orderState = {
+        menuItemId,
+        menuItemName,
+        restaurantId: selectedRestaurantId,
+        restaurantName,
+        price,
+        quantity,
+        removedIngredients,
+        specialInstructions,
+        selectedType,
+        tableNumber,
+        deliveryAddress,
+        pickupTime,
+        customerName,
+        phoneNumber
+      };
+
+      localStorage.setItem('pendingOrder', JSON.stringify(orderState));
+
+      // Redirect to sign in with return URL
+      signIn(undefined, { callbackUrl: window.location.pathname });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Build customer notes with customizations
@@ -139,15 +194,19 @@ export function OrderTypeModal({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create order');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create order');
       }
+
+      // Clear pending order from localStorage
+      localStorage.removeItem('pendingOrder');
 
       // Redirect to orders page
       router.push('/orders');
       onClose();
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('Failed to create order. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to create order. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

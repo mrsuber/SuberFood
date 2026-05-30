@@ -8,6 +8,13 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: 'Authentication required', message: 'Please sign in to place an order' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       menuItemId,
@@ -113,29 +120,11 @@ export async function POST(request: NextRequest) {
     // Generate unique order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Get or create user for the order
-    let userId: string;
-    if (session?.user?.id) {
-      // Use authenticated user
-      userId = session.user.id;
-    } else {
-      // Create guest user for this order
-      const guestEmail = `guest-${Date.now()}@suberfoods.com`;
-      const guestUser = await prisma.user.create({
-        data: {
-          email: guestEmail,
-          name: customerName,
-          // role defaults to CUSTOMER
-        }
-      });
-      userId = guestUser.id;
-    }
-
     // Create the order
     const order = await prisma.order.create({
       data: {
         orderNumber,
-        userId,
+        userId: session.user.id,
         restaurantId,
         type,
         status: 'PENDING',

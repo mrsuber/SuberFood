@@ -5,6 +5,79 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 /**
+ * GET /api/menu/[menuItemId]
+ * Get menu item details with all related data
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { menuItemId: string } }
+) {
+  try {
+    const { menuItemId } = params
+
+    const menuItem = await prisma.menuItem.findUnique({
+      where: { id: menuItemId },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        recipe: {
+          include: {
+            ingredients: {
+              include: {
+                inventoryItem: {
+                  select: {
+                    id: true,
+                    name: true,
+                    unit: true,
+                    category: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!menuItem) {
+      return NextResponse.json(
+        { error: 'Menu item not found' },
+        { status: 404 }
+      )
+    }
+
+    // Flatten restaurant fields for frontend compatibility
+    const response = {
+      ...menuItem,
+      restaurantId: menuItem.restaurant?.id,
+      restaurantName: menuItem.restaurant?.name,
+    }
+
+    // Return the menu item directly (not wrapped in success/data)
+    return NextResponse.json(response)
+  } catch (error) {
+    console.error('Error fetching menu item:', error)
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch menu item',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+/**
  * PATCH /api/menu/[menuItemId]
  * Update menu item properties
  */

@@ -24,12 +24,6 @@ export async function GET(
             name: true,
           },
         },
-        restaurant: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
         recipe: {
           include: {
             ingredients: {
@@ -56,15 +50,8 @@ export async function GET(
       )
     }
 
-    // Flatten restaurant fields for frontend compatibility
-    const response = {
-      ...menuItem,
-      restaurantId: menuItem.restaurant?.id,
-      restaurantName: menuItem.restaurant?.name,
-    }
-
     // Return the menu item directly (not wrapped in success/data)
-    return NextResponse.json(response)
+    return NextResponse.json(menuItem)
   } catch (error) {
     console.error('Error fetching menu item:', error)
     return NextResponse.json(

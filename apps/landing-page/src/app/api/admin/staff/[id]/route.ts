@@ -73,7 +73,7 @@ export async function GET(
             id: true,
             orderNumber: true,
             status: true,
-            totalAmount: true,
+            total: true,
             createdAt: true,
           },
           take: 10,

@@ -95,9 +95,6 @@ export async function GET(
             ingredients: {
               include: {
                 inventoryItem: {
-                  where: {
-                    restaurantId: restaurantId, // Only check inventory for THIS location
-                  },
                   select: {
                     id: true,
                     name: true,
@@ -123,12 +120,13 @@ export async function GET(
         const inventoryItem = recipeIngredient.inventoryItem;
 
         // If no inventory item found for this location, item is not available
-        if (!inventoryItem || inventoryItem.length === 0) return false;
+        if (!inventoryItem) return false;
 
-        const locationInventory = inventoryItem[0];
+        // Filter to match this restaurant's inventory
+        if (inventoryItem.restaurantId !== restaurantId) return false;
 
         // Check if we have enough raw stock
-        return locationInventory.rawStock >= recipeIngredient.quantity;
+        return inventoryItem.rawStock >= recipeIngredient.quantity;
       });
 
       return allIngredientsAvailable;
@@ -138,9 +136,9 @@ export async function GET(
     const menuWithAvailability = availableMenuItems.map(item => {
       const availabilityDetails = item.recipe
         ? item.recipe.ingredients.map(ri => {
-            const inv = ri.inventoryItem[0];
+            const inv = ri.inventoryItem;
             return {
-              ingredient: ri.inventoryItem[0]?.name || 'Unknown',
+              ingredient: ri.inventoryItem?.name || 'Unknown',
               required: ri.quantity,
               available: inv?.rawStock || 0,
               unit: ri.unit,

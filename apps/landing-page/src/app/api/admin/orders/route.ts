@@ -135,9 +135,9 @@ export async function GET(req: NextRequest) {
 
       if (stat.status === 'PENDING') {
         stats.pending = count
-      } else if (stat.status === 'CONFIRMED' || stat.status === 'PREPARING') {
+      } else if (stat.status === 'CONFIRMED' || stat.status === 'PROCESSING') {
         stats.processing += count
-      } else if (stat.status === 'COMPLETED' || stat.status === 'DELIVERED') {
+      } else if (stat.status === 'DELIVERED') {
         stats.delivered += count
       }
 

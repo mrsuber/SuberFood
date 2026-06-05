@@ -81,20 +81,39 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account, trigger }) {
+      // On initial sign in, set the user ID and fetch role
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        // Fetch role from database for new logins
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+        }
+        // Set last role check timestamp
+        token.roleCheckedAt = Date.now();
       }
-      // Refresh role from database on each request to pick up role changes
-      if (token.id && !user) {
+
+      // Refresh role from database only every 5 minutes to reduce DB load
+      // This ensures role changes are picked up without querying on every request
+      const fiveMinutes = 5 * 60 * 1000;
+      const shouldRefreshRole =
+        token.id &&
+        (!token.roleCheckedAt || Date.now() - (token.roleCheckedAt as number) > fiveMinutes);
+
+      if (shouldRefreshRole) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: { role: true },
         });
         if (dbUser) {
           token.role = dbUser.role;
+          token.roleCheckedAt = Date.now();
         }
       }
+
       return token;
     },
     async session({ session, token }) {

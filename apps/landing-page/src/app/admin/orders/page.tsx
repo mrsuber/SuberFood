@@ -4,8 +4,15 @@ import { useQuery } from '@tanstack/react-query'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Package, DollarSign, Calendar, User, MapPin, Eye, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Package, DollarSign, Calendar, User, MapPin, Eye, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useCallback } from 'react'
 
 interface OrderItem {
   id: string
@@ -59,18 +66,30 @@ interface OrdersResponse {
     delivered: number
     totalRevenue: number
   }
+  pagination: {
+    page: number
+    limit: number
+    totalPages: number
+    totalCount: number
+  }
 }
 
 export default function OrdersPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const limit = 20
 
   const { data, isLoading, error } = useQuery<OrdersResponse>({
-    queryKey: ['admin-orders', typeFilter, statusFilter],
+    queryKey: ['admin-orders', typeFilter, statusFilter, page],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (typeFilter !== 'all') params.set('type', typeFilter)
       if (statusFilter !== 'all') params.set('status', statusFilter)
+      params.set('page', page.toString())
+      params.set('limit', limit.toString())
 
       const res = await fetch(`/api/admin/orders?${params}`)
       if (!res.ok) {
@@ -79,7 +98,35 @@ export default function OrdersPage() {
       }
       return res.json()
     },
+    staleTime: 30000, // Cache for 30 seconds
+    refetchOnWindowFocus: false,
   })
+
+  // Fetch order details only when dialog opens
+  const { data: orderDetails, isLoading: isLoadingDetails } = useQuery<Order>({
+    queryKey: ['admin-order-details', selectedOrderId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/orders/${selectedOrderId}`)
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.message || 'Failed to fetch order details')
+      }
+      return res.json()
+    },
+    enabled: !!selectedOrderId && isDetailsOpen,
+    staleTime: 60000, // Cache for 1 minute
+  })
+
+  // Reset to page 1 when filters change
+  const handleTypeFilterChange = useCallback((value: string) => {
+    setTypeFilter(value)
+    setPage(1)
+  }, [])
+
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value)
+    setPage(1)
+  }, [])
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
@@ -166,6 +213,12 @@ export default function OrdersPage() {
     delivered: 0,
     totalRevenue: 0,
   }
+  const pagination = data?.pagination || {
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+    totalCount: 0,
+  }
 
   return (
     <div>
@@ -203,33 +256,38 @@ export default function OrdersPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 mb-6">
-          <select
-            className="px-4 py-2 border border-gray-300 rounded-lg"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="all">All Orders</option>
-            <option value="DINE_IN">Dine In</option>
-            <option value="TAKEAWAY">Takeaway</option>
-            <option value="DELIVERY">Delivery</option>
-            <option value="ONLINE_RETAIL">Online Retail</option>
-            <option value="B2B_WHOLESALE">B2B Wholesale</option>
-          </select>
-          <select
-            className="px-4 py-2 border border-gray-300 rounded-lg"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="PREPARING">Preparing</option>
-            <option value="READY">Ready</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="DELIVERED">Delivered</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <select
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+              value={typeFilter}
+              onChange={(e) => handleTypeFilterChange(e.target.value)}
+            >
+              <option value="all">All Orders</option>
+              <option value="DINE_IN">Dine In</option>
+              <option value="TAKEAWAY">Takeaway</option>
+              <option value="DELIVERY">Delivery</option>
+              <option value="ONLINE_RETAIL">Online Retail</option>
+              <option value="B2B_WHOLESALE">B2B Wholesale</option>
+            </select>
+            <select
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+              value={statusFilter}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
+            >
+              <option value="all">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="PREPARING">Preparing</option>
+              <option value="READY">Ready</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+          <div className="text-sm text-gray-600">
+            Showing {((page - 1) * limit) + 1}-{Math.min(page * limit, pagination.totalCount)} of {pagination.totalCount}
+          </div>
         </div>
 
         {/* Orders List */}
@@ -266,7 +324,7 @@ export default function OrdersPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Package className="w-4 h-4" />
-                          {order.items.length} items
+                          {(order as any).itemCount || order.items?.length || 0} items
                         </div>
                       </div>
                     </div>
@@ -287,7 +345,14 @@ export default function OrdersPage() {
                       {order.user.email || order.phoneNumber || 'No contact info'}
                     </p>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedOrderId(order.id)
+                          setIsDetailsOpen(true)
+                        }}
+                      >
                         <Eye className="w-4 h-4 mr-1" />
                         View Details
                       </Button>
@@ -298,7 +363,134 @@ export default function OrdersPage() {
             ))}
           </div>
         )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                Page {page} of {pagination.totalPages}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Order Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>
+              {orderDetails?.orderNumber || 'Loading...'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingDetails ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+          ) : orderDetails ? (
+            <div className="space-y-6">
+              {/* Order Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Status</p>
+                  <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(orderDetails.status)}`}>
+                    {orderDetails.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Type</p>
+                  <p className="mt-1">{getOrderTypeLabel(orderDetails.type)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Date</p>
+                  <p className="mt-1">{new Date(orderDetails.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total</p>
+                  <p className="mt-1 text-lg font-bold">${orderDetails.total.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">Customer Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Name</p>
+                    <p className="mt-1">{orderDetails.customerName || orderDetails.user.name || 'Guest'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Email</p>
+                    <p className="mt-1">{orderDetails.user.email || 'N/A'}</p>
+                  </div>
+                  {orderDetails.phoneNumber && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Phone</p>
+                      <p className="mt-1">{orderDetails.phoneNumber}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">
+                  {orderDetails.type === 'DINE_IN' ? 'Location' : 'Address'}
+                </h3>
+                <p className="text-gray-700">{getOrderAddress(orderDetails)}</p>
+              </div>
+
+              {/* Items */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">Order Items</h3>
+                <div className="space-y-3">
+                  {orderDetails.items.map((item) => {
+                    const itemName = item.menuItem?.name || item.product?.name || 'Unknown Item'
+                    const itemPrice = item.menuItem?.price || item.product?.price || item.price
+
+                    return (
+                      <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                        <div className="flex-1">
+                          <p className="font-medium">{itemName}</p>
+                          <p className="text-sm text-gray-500">
+                            ${itemPrice.toFixed(2)} × {item.quantity}
+                          </p>
+                        </div>
+                        <p className="font-semibold">
+                          ${(itemPrice * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                  <p className="font-bold text-lg">Total</p>
+                  <p className="font-bold text-lg">${orderDetails.total.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

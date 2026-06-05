@@ -2,7 +2,8 @@
 // Comprehensive schema covering IAM, Distribution, Restaurants, Processing, Farming
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "darwin"]
 }
 
 datasource db {
@@ -84,6 +85,7 @@ model User {
   cart         CartItem[]
   reviews      Review[]
   orderHistory UserOrderHistory[]
+  staff        Staff? // One-to-one: User can be a staff member
 
   @@map("users")
 }
@@ -227,11 +229,25 @@ model Restaurant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Multi-branch support
+  parentRestaurantId String? // For multi-branch chains
+  isMainBranch       Boolean @default(false)
+  branchCode         String? @unique // e.g., "NYC-001", "LA-001"
+
   // Relations
   menuCategories MenuCategory[]
   reservations   Reservation[]
   tables         Table[]
   orders         Order[]
+
+  // Multi-branch relations
+  parentRestaurant Restaurant?  @relation("BranchHierarchy", fields: [parentRestaurantId], references: [id])
+  branches         Restaurant[] @relation("BranchHierarchy")
+
+  // Location-specific resources
+  staff     Staff[]
+  inventory InventoryItem[]
+  equipment Equipment[]
 
   @@map("restaurants")
 }
@@ -483,6 +499,7 @@ model Order {
   orderNumber  String      @unique
   userId       String
   restaurantId String? // Required for DINE_IN, TAKEAWAY, DELIVERY
+  waiterId     String? // Staff member who served the order
   type         OrderType
   status       OrderStatus @default(PENDING)
 
@@ -516,13 +533,23 @@ model Order {
   notes         String?
   customerNotes String?
 
-  user       User        @relation(fields: [userId], references: [id])
-  restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
-  items      OrderItem[]
+  user        User              @relation(fields: [userId], references: [id])
+  restaurant  Restaurant?       @relation(fields: [restaurantId], references: [id])
+  waiter      Staff?            @relation("WaiterAssignments", fields: [waiterId], references: [id])
+  items       OrderItem[]
+  preparation OrderPreparation?
+  delivery    Delivery?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([restaurantId])
+  @@index([status, createdAt])
+  @@index([type, createdAt])
   @@map("orders")
 }
 
@@ -661,21 +688,22 @@ enum InventoryCategory {
 }
 
 model InventoryItem {
-  id          String            @id @default(cuid())
-  name        String
-  category    InventoryCategory
-  unit        InventoryUnit
+  id           String            @id @default(cuid())
+  restaurantId String? // Location-specific inventory (nullable for migration)
+  name         String
+  category     InventoryCategory
+  unit         InventoryUnit
 
   // THREE-STATE STOCK TRACKING
-  rawStock            Float @default(0) // Available for use/preparation
-  wipStock            Float @default(0) // Locked in pre-prepared items
-  consumedStock       Float @default(0) // Served to customers (historical)
-  totalPurchased      Float @default(0) // All-time purchases for tracking
+  rawStock       Float @default(0) // Available for use/preparation
+  wipStock       Float @default(0) // Locked in pre-prepared items
+  consumedStock  Float @default(0) // Served to customers (historical)
+  totalPurchased Float @default(0) // All-time purchases for tracking
 
-  minimumStock        Float @default(0) // Alert when raw stock below this
-  maximumStock        Float? // Optional max capacity
-  reorderPoint        Float? // Automatic reorder trigger
-  reorderQuantity     Float? // How much to reorder
+  minimumStock    Float  @default(0) // Alert when raw stock below this
+  maximumStock    Float? // Optional max capacity
+  reorderPoint    Float? // Automatic reorder trigger
+  reorderQuantity Float? // How much to reorder
 
   // Compound/Pre-prepared ingredient tracking
   isCompound          Boolean @default(false) // Is this a pre-prepared item?
@@ -699,26 +727,27 @@ model InventoryItem {
   updatedAt DateTime @updatedAt
 
   // Relations
-  recipeIngredients     RecipeIngredient[]
-  stockMovements        StockMovement[]
-  preparationRecipe     PreparationRecipe? @relation("OutputItem")
-  usedInPreparations    PreparationRecipeInput[]
+  restaurant         Restaurant?              @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  recipeIngredients  RecipeIngredient[]
+  stockMovements     StockMovement[]
+  preparationRecipe  PreparationRecipe?       @relation("OutputItem")
+  usedInPreparations PreparationRecipeInput[]
 
   @@map("inventory_items")
 }
 
 model Recipe {
-  id           String  @id @default(cuid())
-  menuItemId   String  @unique
-  name         String
-  servingSize  Int     @default(1) // Number of servings this recipe makes
+  id          String @id @default(cuid())
+  menuItemId  String @unique
+  name        String
+  servingSize Int    @default(1) // Number of servings this recipe makes
 
   instructions String? // Cooking instructions
   prepTime     Int? // in minutes
   cookTime     Int? // in minutes
 
   // Cost calculation
-  totalCost Float? // Auto-calculated from ingredients
+  totalCost      Float? // Auto-calculated from ingredients
   costPerServing Float?
 
   isActive Boolean @default(true)
@@ -768,8 +797,8 @@ model StockMovement {
   inventoryItemId String
   type            StockMovementType
 
-  quantity     Float
-  unit         InventoryUnit
+  quantity Float
+  unit     InventoryUnit
 
   // Track which state is affected
   affectedState String // "RAW", "WIP", or "CONSUMED"
@@ -875,6 +904,272 @@ model PreparationBatch {
   preparationRecipe PreparationRecipe @relation(fields: [preparationRecipeId], references: [id])
 
   @@map("preparation_batches")
+}
+
+// ========================================
+// STAFF MANAGEMENT
+// ========================================
+
+enum StaffRole {
+  CHEF
+  SOUS_CHEF
+  LINE_COOK
+  WAITER
+  HOST
+  DELIVERY_DRIVER
+  MANAGER
+  CASHIER
+}
+
+enum StaffStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+  TERMINATED
+}
+
+model Staff {
+  id           String      @id @default(cuid())
+  userId       String      @unique // Link to User table
+  restaurantId String // Which branch they work at
+  role         StaffRole
+  status       StaffStatus @default(ACTIVE)
+
+  // Employment details
+  employeeId      String    @unique
+  hireDate        DateTime
+  terminationDate DateTime?
+  hourlyRate      Float?
+  salary          Float?
+
+  // Work schedule
+  workSchedule Json? // { "monday": ["09:00-17:00"], "tuesday": ["09:00-17:00"] }
+
+  // Performance tracking
+  ordersCompleted     Int   @default(0) // For chefs/waiters
+  deliveriesCompleted Int   @default(0) // For delivery drivers
+  averageRating       Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  ordersAsChef   OrderPreparation[] @relation("ChefAssignments")
+  ordersAsWaiter Order[]            @relation("WaiterAssignments")
+  deliveries     Delivery[]
+
+  @@map("staff")
+}
+
+// ========================================
+// EQUIPMENT & MAINTENANCE
+// ========================================
+
+enum EquipmentType {
+  COOKING_APPLIANCE // Oven, stove, grill
+  REFRIGERATION // Fridge, freezer, walk-in
+  FOOD_PREP // Blender, mixer, food processor
+  DISHWASHING // Dishwasher
+  MEASUREMENT // Scale, thermometer
+  OTHER
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  MAINTENANCE_REQUIRED
+  UNDER_MAINTENANCE
+  OUT_OF_SERVICE
+  RETIRED
+}
+
+model Equipment {
+  id           String          @id @default(cuid())
+  restaurantId String
+  name         String
+  type         EquipmentType
+  status       EquipmentStatus @default(OPERATIONAL)
+
+  // Details
+  manufacturer   String?
+  model          String?
+  serialNumber   String?
+  purchaseDate   DateTime?
+  purchasePrice  Float?
+  warrantyExpiry DateTime?
+
+  // Maintenance
+  lastMaintenanceDate   DateTime?
+  nextMaintenanceDate   DateTime?
+  maintenanceCostBudget Float? // Allocated budget for maintenance
+
+  // Usage tracking
+  totalUsageHours Float @default(0)
+  usageCount      Int   @default(0) // Number of times used
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  restaurant      Restaurant          @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  maintenanceLogs MaintenanceLog[]
+  usageLogs       EquipmentUsageLog[]
+
+  @@map("equipment")
+}
+
+model MaintenanceLog {
+  id          String @id @default(cuid())
+  equipmentId String
+
+  maintenanceType String // ROUTINE, REPAIR, EMERGENCY, INSPECTION
+  description     String
+  cost            Float
+  performedBy     String? // Technician name or company
+  performedById   String? // Staff ID if internal
+
+  startDate     DateTime
+  completedDate DateTime?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@map("maintenance_logs")
+}
+
+model EquipmentUsageLog {
+  id          String  @id @default(cuid())
+  equipmentId String
+  orderId     String? // Link to order if applicable
+  recipeId    String? // Link to recipe
+
+  usedAt          DateTime @default(now())
+  durationMinutes Int? // How long it was used
+
+  notes String?
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@map("equipment_usage_logs")
+}
+
+// ========================================
+// DELIVERY & TRACKING
+// ========================================
+
+enum DeliveryStatus {
+  ASSIGNED // Assigned to driver
+  PICKED_UP // Driver picked up from restaurant
+  IN_TRANSIT // On the way to customer
+  ARRIVED // Driver arrived at location
+  DELIVERED // Successfully delivered
+  FAILED // Failed delivery attempt
+  CANCELLED
+}
+
+model Delivery {
+  id       String         @id @default(cuid())
+  orderId  String         @unique
+  driverId String
+  status   DeliveryStatus @default(ASSIGNED)
+
+  // Tracking
+  assignedAt  DateTime  @default(now())
+  pickedUpAt  DateTime?
+  inTransitAt DateTime?
+  arrivedAt   DateTime?
+  deliveredAt DateTime?
+
+  // Location tracking (store last known coordinates)
+  currentLatitude    Float?
+  currentLongitude   Float?
+  lastLocationUpdate DateTime?
+
+  // Delivery details
+  estimatedDeliveryTime DateTime?
+  actualDeliveryTime    DateTime?
+  deliveryNotes         String?
+
+  // Payment tracking
+  isPaid          Boolean   @default(false)
+  paidAt          DateTime?
+  paymentMethod   String? // CASH, CARD, ONLINE
+  amountCollected Float?
+
+  // Failed delivery tracking
+  failureReason String?
+  failureNotes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order  Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driver Staff @relation(fields: [driverId], references: [id])
+
+  locationHistory DeliveryLocationHistory[]
+
+  @@map("deliveries")
+}
+
+model DeliveryLocationHistory {
+  id         String @id @default(cuid())
+  deliveryId String
+
+  latitude  Float
+  longitude Float
+  timestamp DateTime @default(now())
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@map("delivery_location_history")
+}
+
+// ========================================
+// ORDER PREPARATION & KITCHEN WORKFLOW
+// ========================================
+
+enum PreparationStatus {
+  PENDING // Order received, not started
+  PREPARING // Chef is cooking
+  READY // Food is ready
+  SERVED // Served to customer (dine-in) or picked up
+}
+
+model OrderPreparation {
+  id      String            @id @default(cuid())
+  orderId String            @unique
+  chefId  String?
+  status  PreparationStatus @default(PENDING)
+
+  // Timeline
+  startedAt DateTime?
+  readyAt   DateTime?
+  servedAt  DateTime?
+
+  // Photo updates during preparation
+  photos String[] // Array of image URLs
+
+  // Notes
+  chefNotes    String?
+  kitchenNotes String?
+
+  // Estimated time
+  estimatedReadyTime DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  chef  Staff? @relation("ChefAssignments", fields: [chefId], references: [id])
+
+  @@map("order_preparations")
 }
 
 // ========================================

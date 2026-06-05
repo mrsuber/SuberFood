@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/admin/orders
- * Fetch all orders for admin dashboard
+ * Fetch paginated orders for admin dashboard with optimized queries
  */
 export async function GET(req: NextRequest) {
   try {
@@ -29,10 +29,12 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // Get query parameters for filtering
+    // Get query parameters for filtering and pagination
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type')
     const status = searchParams.get('status')
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '20', 10)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
@@ -57,62 +59,108 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Fetch orders with related data
-    const orders = await prisma.order.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        restaurant: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            city: true,
-            state: true,
-          },
-        },
-        items: {
-          include: {
-            menuItem: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-              },
-            },
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-              },
+    // Run queries in parallel for better performance
+    const [orders, totalCount, statsData] = await Promise.all([
+      // Fetch paginated orders with minimal data for list view
+      prisma.order.findMany({
+        where,
+        select: {
+          id: true,
+          orderNumber: true,
+          type: true,
+          status: true,
+          total: true,
+          createdAt: true,
+          customerName: true,
+          phoneNumber: true,
+          deliveryAddress: true,
+          shippingAddress: true,
+          tableNumber: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              address: true,
+              city: true,
+              state: true,
+            },
+          },
+          _count: {
+            select: {
+              items: true,
+            },
+          },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
 
-    // Calculate stats
+      // Get total count for pagination
+      prisma.order.count({ where }),
+
+      // Calculate stats using database aggregations (much faster)
+      prisma.order.groupBy({
+        by: ['status'],
+        _count: {
+          id: true,
+        },
+        _sum: {
+          total: true,
+        },
+      }),
+    ])
+
+    // Process stats from aggregation
     const stats = {
-      totalOrders: orders.length,
-      pending: orders.filter(o => o.status === 'PENDING').length,
-      processing: orders.filter(o => o.status === 'CONFIRMED' || o.status === 'PREPARING').length,
-      delivered: orders.filter(o => o.status === 'COMPLETED' || o.status === 'DELIVERED').length,
-      totalRevenue: orders.reduce((sum, o) => sum + o.total, 0),
+      totalOrders: totalCount,
+      pending: 0,
+      processing: 0,
+      delivered: 0,
+      totalRevenue: 0,
     }
 
+    statsData.forEach((stat) => {
+      const count = stat._count.id
+      const revenue = stat._sum.total || 0
+
+      if (stat.status === 'PENDING') {
+        stats.pending = count
+      } else if (stat.status === 'CONFIRMED' || stat.status === 'PREPARING') {
+        stats.processing += count
+      } else if (stat.status === 'COMPLETED' || stat.status === 'DELIVERED') {
+        stats.delivered += count
+      }
+
+      stats.totalRevenue += revenue
+    })
+
+    // Transform orders to include itemCount instead of full items array
+    const transformedOrders = orders.map((order) => ({
+      ...order,
+      items: [], // Empty for list view
+      itemCount: order._count.items,
+      _count: undefined, // Remove from response
+    }))
+
     return NextResponse.json({
-      orders,
+      orders: transformedOrders,
       stats,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
+      },
     })
   } catch (error) {
     console.error('Error fetching admin orders:', error)

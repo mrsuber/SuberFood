@@ -75,21 +75,21 @@ export async function GET(request: NextRequest) {
         currentWaitTime: true,
         // Multi-branch fields
         parentRestaurantId: true,
-        isMainBranch: true,
-        branchCode: true,
+        // isMainBranch: true,  // Temporarily commented for Prisma client compatibility
+        // branchCode: true,    // Temporarily commented for Prisma client compatibility
         createdAt: true,
         updatedAt: true,
       },
       orderBy: [
-        { isMainBranch: 'desc' }, // Main branches first
+        // { isMainBranch: 'desc' }, // Temporarily commented for Prisma client compatibility
         { city: 'asc' },
         { name: 'asc' },
       ],
     });
 
     // Group by parent restaurant if needed
-    const mainBranches = locations.filter(loc => loc.isMainBranch || !loc.parentRestaurantId);
-    const branchesWithParents = locations.filter(loc => !loc.isMainBranch && loc.parentRestaurantId);
+    const mainBranches = locations.filter(loc => !loc.parentRestaurantId);
+    const branchesWithParents = locations.filter(loc => loc.parentRestaurantId);
 
     return NextResponse.json({
       total: locations.length,

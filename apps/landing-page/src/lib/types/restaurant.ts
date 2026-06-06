@@ -30,6 +30,14 @@ export interface MenuItem {
   customizationOptions: any | null;
   createdAt: string;
   updatedAt: string;
+  // Location information (when viewing menu from all locations)
+  location?: {
+    id: string;
+    name: string;
+    slug: string;
+    city: string;
+    state: string;
+  };
 }
 
 export interface MenuCategory {

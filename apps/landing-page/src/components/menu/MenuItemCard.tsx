@@ -2,7 +2,7 @@
 
 import type { MenuItem } from '@/lib/types/restaurant';
 import { useMenuStore } from '@/lib/stores/menu-store';
-import { Heart, Star, Flame, Leaf, Award, Clock } from 'lucide-react';
+import { Heart, Star, Flame, Leaf, Award, Clock, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -72,6 +72,14 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
       {/* Content */}
       <div className="p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">{item.name}</h3>
+
+        {/* Location Badge (when viewing from all locations) */}
+        {item.location && (
+          <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md mb-2 w-fit">
+            <MapPin className="w-3 h-3" />
+            <span>{item.location.name}, {item.location.city}</span>
+          </div>
+        )}
 
         {item.description && (
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>

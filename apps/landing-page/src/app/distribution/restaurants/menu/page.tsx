@@ -1,7 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { menuApi } from '@/lib/api/restaurant-api';
 import { useMenuStore } from '@/lib/stores/menu-store';
 import { MenuFilters } from '@/components/menu/MenuFilters';
@@ -9,10 +11,25 @@ import { MenuGrid } from '@/components/menu/MenuGrid';
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { Navbar } from '@/components/navigation/Navbar';
 import { Footer } from '@/components/navigation/Footer';
+import { ChevronRight, MapPin } from 'lucide-react';
 
 export default function MenuPage() {
+  const searchParams = useSearchParams();
+  const locationId = searchParams.get('location');
+  const [locationName, setLocationName] = useState<string | null>(null);
+
   const { filters } = useMenuStore();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+
+  // Fetch location details if locationId is provided
+  useEffect(() => {
+    if (locationId) {
+      fetch(`/api/locations/${locationId}`)
+        .then(res => res.json())
+        .then(data => setLocationName(data.name))
+        .catch(() => setLocationName(null));
+    }
+  }, [locationId]);
 
   // Fetch menu items
   const { data: menuData, isLoading: menuLoading } = useQuery({
@@ -32,10 +49,37 @@ export default function MenuPage() {
       <main className="flex-grow bg-gray-50">
         <div className="bg-gradient-to-r from-green-600 to-green-700 text-white py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-4xl font-bold mb-4">Our Menu</h1>
+            {/* Breadcrumbs */}
+            {locationId && locationName && (
+              <nav className="mb-4 flex items-center gap-2 text-sm text-green-100">
+                <Link href="/distribution/restaurants/locations" className="hover:text-white">
+                  Locations
+                </Link>
+                <ChevronRight size={16} />
+                <Link href={`/distribution/restaurants/locations`} className="hover:text-white">
+                  {locationName}
+                </Link>
+                <ChevronRight size={16} />
+                <span className="text-white">Menu</span>
+              </nav>
+            )}
+
+            <h1 className="text-4xl font-bold mb-4">
+              {locationId && locationName ? `${locationName} Menu` : 'Our Menu'}
+            </h1>
             <p className="text-lg text-green-100">
-              Explore our selection of fresh, farm-to-table dishes crafted with care
+              {locationId && locationName
+                ? `Explore delicious dishes available at ${locationName}`
+                : 'Explore our selection of fresh, farm-to-table dishes crafted with care'
+              }
             </p>
+
+            {!locationId && (
+              <div className="mt-4 flex items-center gap-2 text-sm bg-green-800/30 px-4 py-2 rounded-lg inline-flex">
+                <MapPin size={16} />
+                <span>Showing menu items from all locations</span>
+              </div>
+            )}
           </div>
         </div>
 

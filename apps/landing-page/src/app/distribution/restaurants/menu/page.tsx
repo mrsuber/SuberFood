@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { menuApi } from '@/lib/api/restaurant-api';
@@ -13,7 +13,7 @@ import { Navbar } from '@/components/navigation/Navbar';
 import { Footer } from '@/components/navigation/Footer';
 import { ChevronRight, MapPin } from 'lucide-react';
 
-export default function MenuPage() {
+function MenuPageContent() {
   const searchParams = useSearchParams();
   const locationId = searchParams.get('location');
   const [locationName, setLocationName] = useState<string | null>(null);
@@ -107,5 +107,20 @@ export default function MenuPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function MenuPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading menu...</p>
+        </div>
+      </div>
+    }>
+      <MenuPageContent />
+    </Suspense>
   );
 }

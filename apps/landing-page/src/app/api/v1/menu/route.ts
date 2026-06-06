@@ -37,6 +37,16 @@ export async function GET(req: NextRequest) {
         category: item.category.name,
         categoryId: item.category.id,
         isAvailable: item.isAvailable,
+        // Include location information (only when not filtered by restaurant)
+        ...(!restaurantId && item.category.restaurant ? {
+          location: {
+            id: item.category.restaurant.id,
+            name: item.category.restaurant.name,
+            slug: item.category.restaurant.slug,
+            city: item.category.restaurant.city,
+            state: item.category.restaurant.state,
+          },
+        } : {}),
       })),
     })
   } catch (error) {

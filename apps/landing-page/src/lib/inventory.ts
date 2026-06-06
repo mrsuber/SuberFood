@@ -356,7 +356,11 @@ export async function getAvailableMenuItems(restaurantId?: string) {
       },
     } : undefined,
     include: {
-      category: true,
+      category: {
+        include: {
+          restaurant: true,
+        },
+      },
       recipe: {
         include: {
           ingredients: {

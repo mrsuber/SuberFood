@@ -37,6 +37,7 @@
   "author": "SuberFood Team",
   "license": "PROPRIETARY",
   "dependencies": {
+    "@prisma/client": "^5.7.0",
     "recharts": "^3.8.1"
   }
 }

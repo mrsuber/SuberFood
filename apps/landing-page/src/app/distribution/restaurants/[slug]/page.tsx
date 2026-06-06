@@ -1,339 +1,459 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import { Navbar } from '@/components/navigation/Navbar'
-import { Footer } from '@/components/navigation/Footer'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { MapPin, Clock, Star, Phone, Mail, Calendar, ChevronLeft } from 'lucide-react'
+'use client';
 
-// Mock data - will be replaced with database query
-const getRestaurant = (slug: string) => {
-  const restaurants: Record<string, any> = {
-    'suberfood-classical': {
-      id: '1',
-      name: 'SuberFood Classical',
-      slug: 'suberfood-classical',
-      type: 'Classical Fine Dining',
-      description: 'Experience farm-to-table excellence in an elegant setting. Our seasonal menu showcases the finest ingredients from our farms.',
-      longDescription: 'SuberFood Classical represents the pinnacle of farm-to-table dining. Our commitment to quality begins at our farms and ends at your table. Every dish is crafted with precision, showcasing seasonal ingredients at their peak freshness. Our wine list features carefully selected bottles that complement our ever-changing menu.',
-      address: '123 Gourmet Avenue',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94102',
-      phone: '+1 (555) 123-4567',
-      email: 'classical@suberfoods.com',
-      rating: 4.8,
-      reviewCount: 324,
-      capacity: 80,
-      openingTime: '17:00',
-      closingTime: '23:00',
-      priceRange: '$$$$',
-      heroImage: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&h=900&fit=crop',
-      features: ['Fine Dining', 'Wine Pairing', 'Private Events', 'Chef\'s Table', 'Valet Parking'],
-      dressCode: 'Business Casual',
-      menuCategories: [
-        {
-          id: '1',
-          name: 'Appetizers',
-          items: [
-            {
-              id: '1',
-              name: 'Farm Greens Salad',
-              description: 'Organic mixed greens from our farm with house vinaigrette',
-              price: 18,
-              isVegetarian: true,
-              isGlutenFree: true,
-            },
-            {
-              id: '2',
-              name: 'Grilled Octopus',
-              description: 'Mediterranean-style with lemon and herbs',
-              price: 24,
-            },
-            {
-              id: '3',
-              name: 'Beef Carpaccio',
-              description: 'Thinly sliced grass-fed beef with arugula and parmesan',
-              price: 22,
-            },
-          ],
-        },
-        {
-          id: '2',
-          name: 'Main Courses',
-          items: [
-            {
-              id: '4',
-              name: 'Pan-Seared Sea Bass',
-              description: 'Fresh catch from our aquaculture farm with seasonal vegetables',
-              price: 48,
-              isGlutenFree: true,
-            },
-            {
-              id: '5',
-              name: 'Grass-Fed Ribeye',
-              description: '16oz premium cut with truffle butter',
-              price: 62,
-            },
-            {
-              id: '6',
-              name: 'Wild Mushroom Risotto',
-              description: 'Creamy arborio rice with foraged mushrooms',
-              price: 38,
-              isVegetarian: true,
-            },
-          ],
-        },
-        {
-          id: '3',
-          name: 'Desserts',
-          items: [
-            {
-              id: '7',
-              name: 'Chocolate Lava Cake',
-              description: 'Warm chocolate cake with vanilla ice cream',
-              price: 14,
-              isVegetarian: true,
-            },
-            {
-              id: '8',
-              name: 'Seasonal Fruit Tart',
-              description: 'Fresh fruit from our orchards',
-              price: 12,
-              isVegetarian: true,
-            },
-          ],
-        },
-      ],
-    },
-    'suberfood-bistro': {
-      id: '2',
-      name: 'SuberFood Bistro',
-      slug: 'suberfood-bistro',
-      type: 'Cafeteria',
-      description: 'Casual dining with fresh, locally-sourced ingredients.',
-      longDescription: 'SuberFood Bistro offers a relaxed atmosphere perfect for lunch or casual dinner.',
-      address: '456 Market Street',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94103',
-      phone: '+1 (555) 234-5678',
-      email: 'bistro@suberfoods.com',
-      rating: 4.6,
-      reviewCount: 189,
-      capacity: 120,
-      openingTime: '11:00',
-      closingTime: '22:00',
-      priceRange: '$$',
-      heroImage: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1600&h=900&fit=crop',
-      features: ['Family Friendly', 'Quick Service', 'Outdoor Seating', 'Takeout Available'],
-      dressCode: 'Casual',
-      menuCategories: [],
-    },
-  }
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Star,
+  Users,
+  ArrowLeft,
+  ChevronRight,
+  Utensils,
+  Wrench,
+  MapPinned,
+} from 'lucide-react';
+import { Navbar } from '@/components/navigation/Navbar';
+import { Footer } from '@/components/navigation/Footer';
 
-  return restaurants[slug] || null
+interface LocationDetail {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  description: string | null;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  phone: string;
+  email: string;
+  status: string;
+  openingTime: string | null;
+  closingTime: string | null;
+  operatingDays: string | null;
+  capacity: number;
+  rating: number;
+  latitude: number | null;
+  longitude: number | null;
+  images: string[];
+  amenities: string[];
+  parkingInfo: string | null;
+  accessibilityFeatures: string[];
+  privateRooms: boolean;
+  outdoorSeating: boolean;
+  currentWaitTime: number | null;
+  story: string | null;
+  awards: string[];
+  branches: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    city: string;
+    state: string;
+    address: string;
+    status: string;
+    phone: string;
+  }>;
+  stats: {
+    staff: Record<string, number>;
+    equipment: {
+      operational: number;
+      maintenanceRequired: number;
+      total: number;
+    };
+    totalStaff: number;
+    totalBranches: number;
+  };
 }
 
-export default function RestaurantDetailPage({ params }: { params: { slug: string } }) {
-  const restaurant = getRestaurant(params.slug)
+export default function RestaurantDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [location, setLocation] = useState<LocationDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!restaurant) {
+  useEffect(() => {
+    if (params.slug) {
+      fetchRestaurantBySlug(params.slug as string);
+    }
+  }, [params.slug]);
+
+  const fetchRestaurantBySlug = async (slug: string) => {
+    try {
+      setLoading(true);
+      // First fetch all locations to find the one with matching slug
+      const response = await fetch('/api/locations');
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch locations');
+      }
+
+      const data = await response.json();
+      const restaurant = data.locations.find((loc: any) => loc.slug === slug);
+
+      if (!restaurant) {
+        throw new Error('Restaurant not found');
+      }
+
+      // Now fetch full details using the ID
+      const detailsResponse = await fetch(`/api/locations/${restaurant.id}`);
+
+      if (!detailsResponse.ok) {
+        throw new Error('Failed to fetch restaurant details');
+      }
+
+      const details = await detailsResponse.json();
+      setLocation(details);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatType = (type: string) => {
+    return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatStaffRole = (role: string) => {
+    return role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  if (loading) {
     return (
       <>
         <Navbar />
-        <main className="flex-1 py-20 px-4">
-          <div className="max-w-7xl mx-auto text-center">
-            <h1 className="text-4xl font-display font-bold text-gray-900 mb-4">
-              Restaurant Not Found
-            </h1>
-            <Link href="/distribution/restaurants">
-              <Button>Back to Restaurants</Button>
-            </Link>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading restaurant details...</p>
           </div>
-        </main>
+        </div>
         <Footer />
       </>
-    )
+    );
+  }
+
+  if (error || !location) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <p className="text-red-600">Error: {error || 'Restaurant not found'}</p>
+            <button
+              onClick={() => router.push('/distribution/restaurants/locations')}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Back to Locations
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
   }
 
   return (
     <>
       <Navbar />
-      <main className="flex-1 bg-gray-50">
-        {/* Header with Back Button */}
+      <main className="min-h-screen bg-gray-50">
+        {/* Back Button */}
         <div className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <Link href="/distribution/restaurants" className="inline-flex items-center text-primary-600 hover:text-primary-700">
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Back to Restaurants
-            </Link>
+            <button
+              onClick={() => router.push('/distribution/restaurants/locations')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft size={20} />
+              Back to Locations
+            </button>
           </div>
         </div>
 
-        {/* Restaurant Hero */}
-        <section className="relative">
-          <div className="relative h-96 overflow-hidden">
-            <Image
-              src={restaurant.heroImage}
-              alt={restaurant.name}
-              fill
-              className="object-cover"
-              priority
+        {/* Hero Image */}
+        <div className="relative h-96 bg-gray-200">
+          {location.images && location.images.length > 0 ? (
+            <img
+              src={location.images[0]}
+              alt={location.name}
+              className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <Utensils size={96} />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+            <div className="max-w-7xl mx-auto">
+              <h1 className="text-4xl font-bold mb-2">{location.name}</h1>
+              <p className="text-lg">{formatType(location.type)}</p>
+              {location.status !== 'OPEN' && (
+                <span className="inline-block mt-2 px-3 py-1 bg-red-600 text-sm rounded">
+                  {location.status.replace('_', ' ')}
+                </span>
+              )}
+            </div>
           </div>
-        </section>
+        </div>
 
-        {/* Restaurant Info */}
-        <section className="py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-              {/* Main Content */}
-              <div className="lg:col-span-2">
-                <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                    <span className="text-2xl font-semibold text-gray-900">{restaurant.rating}</span>
-                    <span className="text-gray-500">({restaurant.reviewCount} reviews)</span>
-                  </div>
-                  <h1 className="text-5xl font-display font-bold text-gray-900 mb-4">
-                    {restaurant.name}
-                  </h1>
-                  <p className="text-xl text-primary-600 font-medium mb-4">
-                    {restaurant.type} • {restaurant.priceRange}
-                  </p>
-                  <p className="text-lg text-gray-700 leading-relaxed">
-                    {restaurant.longDescription}
-                  </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Description */}
+              {location.description && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-2xl font-semibold mb-4">About</h2>
+                  <p className="text-gray-700">{location.description}</p>
                 </div>
+              )}
 
-                {/* Features */}
-                <div className="mb-12">
-                  <h2 className="text-2xl font-display font-bold text-gray-900 mb-4">
-                    Features & Amenities
-                  </h2>
-                  <div className="flex flex-wrap gap-2">
-                    {restaurant.features.map((feature: string) => (
-                      <span
-                        key={feature}
-                        className="px-4 py-2 bg-primary-50 text-primary-700 rounded-lg"
+              {/* Story */}
+              {location.story && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-2xl font-semibold mb-4">Our Story</h2>
+                  <p className="text-gray-700 whitespace-pre-line">{location.story}</p>
+                </div>
+              )}
+
+              {/* Awards */}
+              {location.awards && location.awards.length > 0 && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-2xl font-semibold mb-4">Awards & Recognition</h2>
+                  <ul className="space-y-2">
+                    {location.awards.map((award, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <Star size={20} className="text-yellow-500 fill-yellow-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-700">{award}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Amenities */}
+              {location.amenities && location.amenities.length > 0 && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    {location.amenities.map((amenity, index) => (
+                      <div key={index} className="flex items-center gap-2 text-gray-700">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <span className="capitalize">{amenity}</span>
+                      </div>
+                    ))}
+                    {location.privateRooms && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <span>Private Rooms Available</span>
+                      </div>
+                    )}
+                    {location.outdoorSeating && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <span>Outdoor Seating</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Branches */}
+              {location.branches && location.branches.length > 0 && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-2xl font-semibold mb-4">Other Locations</h2>
+                  <div className="space-y-3">
+                    {location.branches.map((branch) => (
+                      <Link
+                        key={branch.id}
+                        href={`/distribution/restaurants/${branch.slug}`}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition"
                       >
-                        {feature}
-                      </span>
+                        <div>
+                          <p className="font-medium">{branch.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {branch.city}, {branch.state}
+                          </p>
+                        </div>
+                        <ChevronRight size={20} className="text-gray-400" />
+                      </Link>
                     ))}
                   </div>
                 </div>
+              )}
 
-                {/* Menu */}
-                <div>
-                  <h2 className="text-3xl font-display font-bold text-gray-900 mb-8">
-                    Our Menu
-                  </h2>
-                  {restaurant.menuCategories.map((category: any) => (
-                    <div key={category.id} className="mb-10">
-                      <h3 className="text-2xl font-semibold text-gray-900 mb-6">
-                        {category.name}
-                      </h3>
-                      <div className="space-y-6">
-                        {category.items.map((item: any) => (
-                          <div key={item.id} className="border-b border-gray-200 pb-6 last:border-0">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex-1">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                                  {item.name}
-                                  {item.isVegetarian && (
-                                    <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                      V
-                                    </span>
-                                  )}
-                                  {item.isGlutenFree && (
-                                    <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                      GF
-                                    </span>
-                                  )}
-                                </h4>
-                                <p className="text-gray-600">{item.description}</p>
-                              </div>
-                              <span className="text-lg font-semibold text-gray-900 ml-4">
-                                ${item.price}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+              {/* View Menu CTA */}
+              <Link
+                href={`/distribution/restaurants/menu?location=${location.id}`}
+                className="block w-full bg-blue-600 text-white text-center py-4 rounded-lg font-semibold hover:bg-blue-700 transition"
+              >
+                View Menu & Order
+              </Link>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Contact Info */}
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <MapPin size={20} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-600">Address</p>
+                      <p className="font-medium">{location.address}</p>
+                      <p className="text-sm text-gray-600">
+                        {location.city}, {location.state} {location.postalCode}
+                      </p>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Phone size={20} className="text-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-600">Phone</p>
+                      <a href={`tel:${location.phone}`} className="font-medium hover:text-blue-600">
+                        {location.phone}
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Mail size={20} className="text-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-600">Email</p>
+                      <a href={`mailto:${location.email}`} className="font-medium hover:text-blue-600">
+                        {location.email}
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Sidebar */}
-              <div className="lg:col-span-1">
-                <Card className="sticky top-24">
-                  <CardHeader>
-                    <CardTitle>Restaurant Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
-                      <div>
-                        <p className="font-medium text-gray-900">Address</p>
-                        <p className="text-sm text-gray-600">
-                          {restaurant.address}<br />
-                          {restaurant.city}, {restaurant.state} {restaurant.postalCode}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Clock className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
-                      <div>
-                        <p className="font-medium text-gray-900">Hours</p>
-                        <p className="text-sm text-gray-600">
-                          {restaurant.openingTime} - {restaurant.closingTime}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Phone className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
-                      <div>
-                        <p className="font-medium text-gray-900">Phone</p>
-                        <a href={`tel:${restaurant.phone}`} className="text-sm text-primary-600 hover:text-primary-700">
-                          {restaurant.phone}
-                        </a>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Mail className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
-                      <div>
-                        <p className="font-medium text-gray-900">Email</p>
-                        <a href={`mailto:${restaurant.email}`} className="text-sm text-primary-600 hover:text-primary-700">
-                          {restaurant.email}
-                        </a>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t">
-                      <Link href={`/distribution/restaurants/${restaurant.slug}/reserve`}>
-                        <Button className="w-full mb-3">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Make a Reservation
-                        </Button>
-                      </Link>
-                      <Button variant="outline" className="w-full">
-                        View on Map
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Hours */}
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Clock size={20} />
+                  Hours
+                </h3>
+                {location.openingTime && location.closingTime ? (
+                  <>
+                    <p className="text-gray-700">
+                      {location.openingTime} - {location.closingTime}
+                    </p>
+                    {location.operatingDays && (
+                      <p className="text-sm text-gray-600 mt-1">{location.operatingDays}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-500">Hours not available</p>
+                )}
+                {location.currentWaitTime && location.currentWaitTime > 0 && (
+                  <p className="mt-2 text-sm text-orange-600">
+                    Current wait: ~{location.currentWaitTime} min
+                  </p>
+                )}
               </div>
+
+              {/* Rating */}
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4">Rating</h3>
+                <div className="flex items-center gap-2">
+                  <Star size={32} className="text-yellow-500 fill-yellow-500" />
+                  <span className="text-3xl font-bold">{location.rating.toFixed(1)}</span>
+                  <span className="text-gray-600">/ 5.0</span>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4">Location Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Users size={20} />
+                      <span>Capacity</span>
+                    </div>
+                    <span className="font-medium">{location.capacity} guests</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Users size={20} />
+                      <span>Staff</span>
+                    </div>
+                    <span className="font-medium">{location.stats.totalStaff}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Wrench size={20} />
+                      <span>Equipment</span>
+                    </div>
+                    <span className="font-medium">{location.stats.equipment.total}</span>
+                  </div>
+
+                  {location.stats.totalBranches > 0 && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPinned size={20} />
+                        <span>Branches</span>
+                      </div>
+                      <span className="font-medium">{location.stats.totalBranches}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Staff Breakdown */}
+                {Object.keys(location.stats.staff).length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Staff Breakdown</p>
+                    <div className="space-y-1">
+                      {Object.entries(location.stats.staff).map(([role, count]) => (
+                        <div key={role} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">{formatStaffRole(role)}</span>
+                          <span className="font-medium">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Parking */}
+              {location.parkingInfo && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-2">Parking</h3>
+                  <p className="text-gray-700 text-sm">{location.parkingInfo}</p>
+                </div>
+              )}
+
+              {/* Accessibility */}
+              {location.accessibilityFeatures && location.accessibilityFeatures.length > 0 && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-3">Accessibility</h3>
+                  <div className="space-y-2">
+                    {location.accessibilityFeatures.map((feature, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-gray-700">
+                        <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                        <span className="capitalize">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </section>
+        </div>
       </main>
       <Footer />
     </>
-  )
+  );
 }

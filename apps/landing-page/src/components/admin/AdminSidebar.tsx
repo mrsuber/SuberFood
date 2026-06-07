@@ -70,6 +70,11 @@ const navigationSections: NavSection[] = [
           { name: 'Menu Items', href: '/admin/menus' },
           { name: 'Add Menu Item', href: '/admin/menus/new' },
           { name: 'Dish Availability', href: '/admin/menus/availability' },
+          { name: 'Kitchen Inventory', href: '/admin/inventory' },
+          { name: 'Add Ingredient', href: '/admin/inventory/new' },
+          { name: 'Bulk Preparation', href: '/admin/inventory/prepare' },
+          { name: 'Recipes', href: '/admin/inventory/recipes' },
+          { name: 'Stock Movements', href: '/admin/inventory/movements' },
           { name: 'Staff & Chefs', href: '/admin/staff' },
           { name: 'Equipment', href: '/admin/equipment' },
           { name: 'Reservations', href: '/admin/reservations' },
@@ -112,18 +117,6 @@ const navigationSections: NavSection[] = [
   {
     title: 'Processing',
     items: [
-      {
-        name: 'Kitchen Operations',
-        href: '/admin/processing/kitchen',
-        icon: ChefHat,
-        submenu: [
-          { name: 'Inventory', href: '/admin/inventory' },
-          { name: 'Add Ingredient', href: '/admin/inventory/new' },
-          { name: 'Bulk Preparation', href: '/admin/inventory/prepare' },
-          { name: 'Recipes', href: '/admin/inventory/recipes' },
-          { name: 'Stock Movements', href: '/admin/inventory/movements' },
-        ]
-      },
       {
         name: 'Food Processing',
         href: '/admin/processing/facilities',

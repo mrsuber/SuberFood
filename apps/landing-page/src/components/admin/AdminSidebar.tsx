@@ -13,7 +13,17 @@ import {
   TrendingUp,
   Settings,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Building2,
+  ShoppingBag,
+  Handshake,
+  Factory,
+  Wheat,
+  Sprout,
+  ChefHat,
+  UtensilsCrossed,
+  Beef,
+  ClipboardList
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -25,81 +35,155 @@ interface NavItem {
   submenu?: { name: string; href: string }[]
 }
 
-const navigationItems: NavItem[] = [
+interface NavSection {
+  title: string
+  items: NavItem[]
+}
+
+const navigationSections: NavSection[] = [
   {
-    name: 'Dashboard',
-    href: '/admin',
-    icon: LayoutDashboard,
-  },
-  {
-    name: 'Restaurants',
-    href: '/admin/restaurants',
-    icon: Store,
-    submenu: [
-      { name: 'All Restaurants', href: '/admin/restaurants' },
-      { name: 'Add New', href: '/admin/restaurants/new' },
-      { name: 'Tables', href: '/admin/restaurants/tables' },
+    title: 'Overview',
+    items: [
+      {
+        name: 'Dashboard',
+        href: '/admin',
+        icon: LayoutDashboard,
+      },
+      {
+        name: 'Analytics',
+        href: '/admin/analytics',
+        icon: TrendingUp,
+      },
     ]
   },
   {
-    name: 'Menus',
-    href: '/admin/menus',
-    icon: MenuIcon,
-    submenu: [
-      { name: 'Menu Items', href: '/admin/menus' },
-      { name: 'Categories', href: '/admin/menus/categories' },
-      { name: 'Add Item', href: '/admin/menus/new' },
-      { name: 'Dish Availability', href: '/admin/menus/availability' },
+    title: 'Distribution',
+    items: [
+      {
+        name: 'Restaurants',
+        href: '/admin/distribution/restaurants',
+        icon: Building2,
+        submenu: [
+          { name: 'All Locations', href: '/admin/distribution/restaurants' },
+          { name: 'Add Location', href: '/admin/distribution/restaurants/new' },
+          { name: 'Menus', href: '/admin/distribution/restaurants/menus' },
+          { name: 'Menu Items', href: '/admin/menus' },
+          { name: 'Add Menu Item', href: '/admin/menus/new' },
+          { name: 'Dish Availability', href: '/admin/menus/availability' },
+          { name: 'Staff & Chefs', href: '/admin/staff' },
+          { name: 'Equipment', href: '/admin/equipment' },
+          { name: 'Reservations', href: '/admin/reservations' },
+        ]
+      },
+      {
+        name: 'Orders',
+        href: '/admin/orders',
+        icon: ShoppingCart,
+        badge: 12,
+      },
+      {
+        name: 'E-commerce',
+        href: '/admin/distribution/ecommerce',
+        icon: ShoppingBag,
+        submenu: [
+          { name: 'Products', href: '/admin/products' },
+          { name: 'Add Product', href: '/admin/products/new' },
+          { name: 'Categories', href: '/admin/products/categories' },
+          { name: 'Online Orders', href: '/admin/distribution/ecommerce/orders' },
+        ]
+      },
+      {
+        name: 'B2B Partners',
+        href: '/admin/distribution/partners',
+        icon: Handshake,
+        submenu: [
+          { name: 'All Partners', href: '/admin/distribution/partners' },
+          { name: 'Add Partner', href: '/admin/distribution/partners/new' },
+          { name: 'Bulk Orders', href: '/admin/distribution/partners/orders' },
+        ]
+      },
+      {
+        name: 'Customers',
+        href: '/admin/customers',
+        icon: Users,
+      },
     ]
   },
   {
-    name: 'Reservations',
-    href: '/admin/reservations',
-    icon: Calendar,
-    badge: 5,
-  },
-  {
-    name: 'Orders',
-    href: '/admin/orders',
-    icon: ShoppingCart,
-    badge: 12,
-  },
-  {
-    name: 'Products',
-    href: '/admin/products',
-    icon: Package,
-    submenu: [
-      { name: 'All Products', href: '/admin/products' },
-      { name: 'Add Product', href: '/admin/products/new' },
-      { name: 'Categories', href: '/admin/products/categories' },
+    title: 'Processing',
+    items: [
+      {
+        name: 'Kitchen Operations',
+        href: '/admin/processing/kitchen',
+        icon: ChefHat,
+        submenu: [
+          { name: 'Inventory', href: '/admin/inventory' },
+          { name: 'Add Ingredient', href: '/admin/inventory/new' },
+          { name: 'Bulk Preparation', href: '/admin/inventory/prepare' },
+          { name: 'Recipes', href: '/admin/inventory/recipes' },
+          { name: 'Stock Movements', href: '/admin/inventory/movements' },
+        ]
+      },
+      {
+        name: 'Food Processing',
+        href: '/admin/processing/facilities',
+        icon: Factory,
+        submenu: [
+          { name: 'Facilities', href: '/admin/processing/facilities' },
+          { name: 'Production Batches', href: '/admin/processing/batches' },
+          { name: 'Quality Control', href: '/admin/processing/quality' },
+        ]
+      },
     ]
   },
   {
-    name: 'Kitchen Inventory',
-    href: '/admin/inventory',
-    icon: Package,
-    submenu: [
-      { name: 'All Ingredients', href: '/admin/inventory' },
-      { name: 'Add Ingredient', href: '/admin/inventory/new' },
-      { name: 'Bulk Preparation', href: '/admin/inventory/prepare' },
-      { name: 'Recipes', href: '/admin/inventory/recipes' },
-      { name: 'Stock Movements', href: '/admin/inventory/movements' },
+    title: 'Farming & Production',
+    items: [
+      {
+        name: 'Farm Management',
+        href: '/admin/farming/farms',
+        icon: Wheat,
+        submenu: [
+          { name: 'All Farms', href: '/admin/farming/farms' },
+          { name: 'Add Farm', href: '/admin/farming/farms/new' },
+          { name: 'Crops', href: '/admin/farming/crops' },
+        ]
+      },
+      {
+        name: 'Livestock',
+        href: '/admin/farming/livestock',
+        icon: Beef,
+        submenu: [
+          { name: 'All Animals', href: '/admin/farming/livestock' },
+          { name: 'Add Animal', href: '/admin/farming/livestock/new' },
+          { name: 'Health Records', href: '/admin/farming/livestock/health' },
+        ]
+      },
+      {
+        name: 'Harvest & Supply',
+        href: '/admin/farming/supply',
+        icon: Sprout,
+        submenu: [
+          { name: 'Harvests', href: '/admin/farming/harvests' },
+          { name: 'Supply Chain', href: '/admin/farming/supply-chain' },
+        ]
+      },
     ]
   },
   {
-    name: 'Customers',
-    href: '/admin/customers',
-    icon: Users,
-  },
-  {
-    name: 'Analytics',
-    href: '/admin/analytics',
-    icon: TrendingUp,
-  },
-  {
-    name: 'Settings',
-    href: '/admin/settings',
-    icon: Settings,
+    title: 'System',
+    items: [
+      {
+        name: 'Settings',
+        href: '/admin/settings',
+        icon: Settings,
+      },
+      {
+        name: 'Activity Logs',
+        href: '/admin/activity-logs',
+        icon: ClipboardList,
+      },
+    ]
   },
 ]
 
@@ -124,74 +208,86 @@ export function AdminSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6">
-        <div className="space-y-1 px-3">
-          {navigationItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            const hasSubmenu = item.submenu && item.submenu.length > 0
-            const isSubmenuOpen = openSubmenu === item.name
+      <nav className="flex-1 overflow-y-auto py-4">
+        <div className="space-y-6 px-3">
+          {navigationSections.map((section) => (
+            <div key={section.title}>
+              {/* Section Title */}
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2">
+                {section.title}
+              </h3>
 
-            return (
-              <div key={item.name}>
-                {hasSubmenu ? (
-                  <button
-                    onClick={() => toggleSubmenu(item.name)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-5 h-5" />
-                      <span className="font-medium">{item.name}</span>
+              {/* Section Items */}
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                  const hasSubmenu = item.submenu && item.submenu.length > 0
+                  const isSubmenuOpen = openSubmenu === item.name
+
+                  return (
+                    <div key={item.name}>
+                      {hasSubmenu ? (
+                        <button
+                          onClick={() => toggleSubmenu(item.name)}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-primary-600 text-white'
+                              : 'text-gray-300 hover:bg-gray-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <item.icon className="w-5 h-5" />
+                            <span className="font-medium text-sm">{item.name}</span>
+                          </div>
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform ${
+                              isSubmenuOpen ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+                      ) : (
+                        <Link
+                          href={item.href}
+                          className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-primary-600 text-white'
+                              : 'text-gray-300 hover:bg-gray-800'
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span className="font-medium text-sm">{item.name}</span>
+                          {item.badge && (
+                            <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                              {item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      )}
+
+                      {/* Submenu */}
+                      {hasSubmenu && isSubmenuOpen && (
+                        <div className="mt-1 ml-9 space-y-1">
+                          {item.submenu?.map((subItem) => (
+                            <Link
+                              key={subItem.href}
+                              href={subItem.href}
+                              className={`block px-4 py-2 rounded-lg text-xs transition-colors ${
+                                pathname === subItem.href
+                                  ? 'bg-gray-800 text-primary-400'
+                                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                              }`}
+                            >
+                              {subItem.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${
-                        isSubmenuOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                ) : (
-                  <Link
-                    href={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-800'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
-                    {item.badge && (
-                      <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                )}
-
-                {/* Submenu */}
-                {hasSubmenu && isSubmenuOpen && (
-                  <div className="mt-1 ml-12 space-y-1">
-                    {item.submenu?.map((subItem) => (
-                      <Link
-                        key={subItem.href}
-                        href={subItem.href}
-                        className={`block px-4 py-2 rounded-lg text-sm transition-colors ${
-                          pathname === subItem.href
-                            ? 'bg-gray-800 text-primary-400'
-                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                        }`}
-                      >
-                        {subItem.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  )
+                })}
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
       </nav>
 

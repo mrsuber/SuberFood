@@ -87,8 +87,8 @@ async function main() {
           ],
         },
       ]
-    } else if (restaurant.type === 'FOOD_COURT' || restaurant.type === 'QUICK_SERVICE') {
-      // Food Court / Quick Service Menu
+    } else if (restaurant.type === 'QUICK_SERVICE') {
+      // Quick Service Menu
       menuData = [
         {
           category: 'Quick Bites',

@@ -30,7 +30,6 @@ async function main() {
               name: 'Foie Gras Terrine',
               description: 'Luxurious foie gras with brioche toast and fig compote',
               price: 28.00,
-              image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600',
               isChefRecommended: true,
             },
             {

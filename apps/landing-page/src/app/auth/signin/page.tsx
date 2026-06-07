@@ -36,7 +36,16 @@ function SignInForm() {
       if (result?.error) {
         setErrorMessage('Invalid email or password');
       } else {
-        router.push(callbackUrl);
+        // Fetch user session to check role
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+
+        // Redirect based on user role
+        if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push(callbackUrl);
+        }
         router.refresh();
       }
     } catch (error) {
@@ -48,7 +57,9 @@ function SignInForm() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    await signIn('google', { callbackUrl });
+    // For Google sign-in, we can't check role before redirect
+    // The redirect will be handled by middleware or a callback page
+    await signIn('google', { callbackUrl: '/auth/callback' });
   };
 
   return (

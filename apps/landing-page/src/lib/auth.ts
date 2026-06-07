@@ -136,6 +136,25 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
+    async redirect({ url, baseUrl }) {
+      // If user just signed in, check if they're an admin
+      // This handles redirects after OAuth signin
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        // Try to get user from database to check role
+        // Note: This is called during OAuth flow, so we need to extract user info
+        const urlObj = new URL(url);
+
+        // For OAuth callbacks, NextAuth handles the redirect
+        // We'll let the normal flow continue and handle admin redirect client-side
+        return url;
+      }
+
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
   },
   events: {
     async signIn(message) {

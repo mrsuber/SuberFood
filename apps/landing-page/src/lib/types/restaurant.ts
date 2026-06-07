@@ -92,6 +92,7 @@ export interface ApiResponse<T> {
 
 export interface MenuFilters {
   categoryId?: string;
+  restaurantId?: string;
   vegetarian?: boolean;
   vegan?: boolean;
   glutenFree?: boolean;

@@ -45,8 +45,12 @@ export const menuApi = {
     return data.data;
   },
 
-  getCategories: async (): Promise<ApiResponse<MenuCategory>> => {
-    const { data } = await api.get<ApiResponse<MenuCategory>>('/menu/categories');
+  getCategories: async (restaurantId?: string): Promise<ApiResponse<MenuCategory>> => {
+    const params = new URLSearchParams();
+    if (restaurantId) {
+      params.append('restaurantId', restaurantId);
+    }
+    const { data } = await api.get<ApiResponse<MenuCategory>>('/menu/categories', { params });
     return data;
   },
 

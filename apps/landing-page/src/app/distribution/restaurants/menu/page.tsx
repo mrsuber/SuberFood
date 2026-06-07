@@ -33,14 +33,18 @@ function MenuPageContent() {
 
   // Fetch menu items
   const { data: menuData, isLoading: menuLoading } = useQuery({
-    queryKey: ['menu', filters, selectedCategory],
-    queryFn: () => menuApi.getMenu({ ...filters, categoryId: selectedCategory }),
+    queryKey: ['menu', filters, selectedCategory, locationId],
+    queryFn: () => menuApi.getMenu({
+      ...filters,
+      categoryId: selectedCategory,
+      restaurantId: locationId || undefined
+    }),
   });
 
   // Fetch categories
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => menuApi.getCategories(),
+    queryKey: ['categories', locationId],
+    queryFn: () => menuApi.getCategories(locationId || undefined),
   });
 
   return (

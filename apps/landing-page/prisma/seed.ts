@@ -1,5 +1,10 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(__dirname, '../.env') })
 
 const prisma = new PrismaClient()
 

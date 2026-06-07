@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Plus, Edit, Trash2, MapPin, Phone, Clock, Star, Users, ChefHat, UtensilsCrossed } from 'lucide-react'
+import { Plus, Edit, Trash2, MapPin, Phone, Clock, Star, Users, ChefHat, UtensilsCrossed, Power, Eye, EyeOff, Settings, Package } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +20,7 @@ async function getRestaurants() {
         },
       },
       orderBy: {
+        status: 'asc', // Show OPEN first, then CLOSED, then TEMPORARILY_CLOSED
         createdAt: 'desc',
       },
     })
@@ -30,28 +31,86 @@ async function getRestaurants() {
   }
 }
 
+async function getLocationStats(restaurants: any[]) {
+  const stats = {
+    total: restaurants.length,
+    open: restaurants.filter(r => r.status === 'OPEN').length,
+    closed: restaurants.filter(r => r.status === 'CLOSED').length,
+    temporarilyClosed: restaurants.filter(r => r.status === 'TEMPORARILY_CLOSED').length,
+    totalStaff: restaurants.reduce((acc, r) => acc + r._count.staff, 0),
+    totalEquipment: restaurants.reduce((acc, r) => acc + r._count.equipment, 0),
+    totalCapacity: restaurants.reduce((acc, r) => acc + r.capacity, 0),
+  }
+  return stats
+}
+
 export default async function RestaurantsManagementPage() {
   const restaurants = await getRestaurants()
+  const stats = await getLocationStats(restaurants)
 
   return (
     <div>
-      <AdminHeader title="Restaurant Management" />
+      <AdminHeader title="Restaurant Locations" />
 
       <div className="p-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Locations</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+                </div>
+                <MapPin className="w-10 h-10 text-blue-500 opacity-20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Currently Open</p>
+                  <p className="text-3xl font-bold text-green-600">{stats.open}</p>
+                </div>
+                <Power className="w-10 h-10 text-green-500 opacity-20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Staff</p>
+                  <p className="text-3xl font-bold text-purple-600">{stats.totalStaff}</p>
+                </div>
+                <ChefHat className="w-10 h-10 text-purple-500 opacity-20" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Capacity</p>
+                  <p className="text-3xl font-bold text-orange-600">{stats.totalCapacity}</p>
+                </div>
+                <Users className="w-10 h-10 text-orange-500 opacity-20" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Header Actions */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-gray-600">Manage all restaurant locations, menus, staff, and operations</p>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-              <span>{restaurants.length} Total Locations</span>
-              <span>•</span>
-              <span>{restaurants.filter(r => r.status === 'OPEN').length} Currently Open</span>
-            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">All Locations</h2>
+            <p className="text-gray-600">Manage individual restaurant locations, their menus, staff, kitchen, and equipment</p>
           </div>
           <Link href="/admin/distribution/restaurants/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Add Restaurant Location
+              Add New Location
             </Button>
           </Link>
         </div>
@@ -112,29 +171,53 @@ export default async function RestaurantsManagementPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className={`px-3 py-1 rounded-full font-medium ${
+                {/* Location Management Actions */}
+                <div className="pt-4 border-t mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`px-3 py-1 rounded-full font-medium text-sm ${
                       restaurant.status === 'OPEN'
                         ? 'bg-green-100 text-green-700'
                         : restaurant.status === 'CLOSED'
                         ? 'bg-red-100 text-red-700'
                         : 'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {restaurant.status}
+                      {restaurant.status === 'TEMPORARILY_CLOSED' ? 'TEMP. CLOSED' : restaurant.status}
                     </span>
+
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/distribution/restaurants/${restaurant.id}`}>
+                        <Button variant="ghost" size="sm">
+                          <Settings className="w-4 h-4 mr-1" />
+                          Settings
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/admin/distribution/restaurants/${restaurant.id}`}>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                    </Link>
-                    <Link href={`/admin/distribution/restaurants/menus?restaurant=${restaurant.id}`}>
-                      <Button variant="ghost" size="sm">
+
+                  {/* Quick Access Grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href={`/admin/menus?location=${restaurant.id}`}>
+                      <Button variant="outline" size="sm" className="w-full">
                         <UtensilsCrossed className="w-4 h-4 mr-1" />
                         Menu
+                      </Button>
+                    </Link>
+                    <Link href={`/admin/inventory?location=${restaurant.id}`}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Package className="w-4 h-4 mr-1" />
+                        Kitchen
+                      </Button>
+                    </Link>
+                    <Link href={`/admin/staff?location=${restaurant.id}`}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <ChefHat className="w-4 h-4 mr-1" />
+                        Staff
+                      </Button>
+                    </Link>
+                    <Link href={`/admin/equipment?location=${restaurant.id}`}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <UtensilsCrossed className="w-4 h-4 mr-1" />
+                        Equipment
                       </Button>
                     </Link>
                   </div>

@@ -60,24 +60,68 @@ const navigationSections: NavSection[] = [
     title: 'Distribution',
     items: [
       {
-        name: 'Restaurants',
+        name: 'Restaurant Locations',
         href: '/admin/distribution/restaurants',
         icon: Building2,
         submenu: [
           { name: 'All Locations', href: '/admin/distribution/restaurants' },
-          { name: 'Add Location', href: '/admin/distribution/restaurants/new' },
-          { name: 'Menus', href: '/admin/distribution/restaurants/menus' },
-          { name: 'Menu Items', href: '/admin/menus' },
+          { name: 'Add New Location', href: '/admin/distribution/restaurants/new' },
+        ]
+      },
+      {
+        name: 'Menus & Dishes',
+        href: '/admin/menus',
+        icon: MenuIcon,
+        submenu: [
+          { name: 'All Menu Items', href: '/admin/menus' },
           { name: 'Add Menu Item', href: '/admin/menus/new' },
           { name: 'Dish Availability', href: '/admin/menus/availability' },
-          { name: 'Kitchen Inventory', href: '/admin/inventory' },
+          { name: 'By Location', href: '/admin/menus/by-location' },
+        ]
+      },
+      {
+        name: 'Kitchen Inventory',
+        href: '/admin/inventory',
+        icon: Package,
+        submenu: [
+          { name: 'All Ingredients', href: '/admin/inventory' },
           { name: 'Add Ingredient', href: '/admin/inventory/new' },
           { name: 'Bulk Preparation', href: '/admin/inventory/prepare' },
           { name: 'Recipes', href: '/admin/inventory/recipes' },
           { name: 'Stock Movements', href: '/admin/inventory/movements' },
-          { name: 'Staff & Chefs', href: '/admin/staff' },
-          { name: 'Equipment', href: '/admin/equipment' },
-          { name: 'Reservations', href: '/admin/reservations' },
+          { name: 'By Location', href: '/admin/inventory/by-location' },
+        ]
+      },
+      {
+        name: 'Staff & Chefs',
+        href: '/admin/staff',
+        icon: ChefHat,
+        submenu: [
+          { name: 'All Staff', href: '/admin/staff' },
+          { name: 'Add Staff Member', href: '/admin/staff/new' },
+          { name: 'By Location', href: '/admin/staff/by-location' },
+          { name: 'Schedules', href: '/admin/staff/schedules' },
+        ]
+      },
+      {
+        name: 'Equipment & Assets',
+        href: '/admin/equipment',
+        icon: UtensilsCrossed,
+        submenu: [
+          { name: 'All Equipment', href: '/admin/equipment' },
+          { name: 'Add Equipment', href: '/admin/equipment/new' },
+          { name: 'By Location', href: '/admin/equipment/by-location' },
+          { name: 'Maintenance', href: '/admin/equipment/maintenance' },
+        ]
+      },
+      {
+        name: 'Reservations',
+        href: '/admin/reservations',
+        icon: Calendar,
+        submenu: [
+          { name: 'All Reservations', href: '/admin/reservations' },
+          { name: 'By Location', href: '/admin/reservations/by-location' },
+          { name: 'Pending', href: '/admin/reservations/pending' },
         ]
       },
       {

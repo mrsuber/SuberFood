@@ -19,10 +19,10 @@ async function getRestaurants() {
           },
         },
       },
-      orderBy: {
-        status: 'asc', // Show OPEN first, then CLOSED, then TEMPORARILY_CLOSED
-        createdAt: 'desc',
-      },
+      orderBy: [
+        { status: 'asc' }, // Show OPEN first, then CLOSED, then TEMPORARILY_CLOSED
+        { createdAt: 'desc' },
+      ],
     })
     return restaurants
   } catch (error) {

@@ -37,6 +37,7 @@ function NewMenuItemForm() {
     name: '',
     categoryId: '',
     description: '',
+    image: '',
     price: '',
     salePrice: '',
     preparationTime: '',
@@ -247,6 +248,23 @@ function NewMenuItemForm() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Describe the dish..."
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image URL
+                    </label>
+                    <input
+                      type="url"
+                      name="image"
+                      value={formData.image}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="https://example.com/dish-image.jpg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Paste a URL to an image of this dish (optional)
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -2,14 +2,19 @@ import Link from 'next/link'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Plus, Edit, Trash2, DollarSign, Clock, MapPin } from 'lucide-react'
+import { Plus, Edit, Trash2, DollarSign, Clock, MapPin, X } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-async function getMenuItems() {
+async function getMenuItems(locationId?: string) {
   try {
     const menuItems = await prisma.menuItem.findMany({
+      where: locationId ? {
+        category: {
+          restaurantId: locationId,
+        },
+      } : undefined,
       include: {
         category: {
           include: {
@@ -64,10 +69,20 @@ async function getCategories() {
   }
 }
 
-export default async function MenusPage() {
-  const menuItems = await getMenuItems()
+export default async function MenusPage({
+  searchParams,
+}: {
+  searchParams: { location?: string }
+}) {
+  const locationId = searchParams.location
+  const menuItems = await getMenuItems(locationId)
   const restaurants = await getRestaurants()
   const categories = await getCategories()
+
+  // Get the selected restaurant name if filtering
+  const selectedRestaurant = locationId
+    ? restaurants.find(r => r.id === locationId)
+    : null
 
   // Group categories by restaurant for the filter
   const categoriesByRestaurant = categories.reduce((acc, cat) => {
@@ -79,7 +94,7 @@ export default async function MenusPage() {
 
   return (
     <div>
-      <AdminHeader title="Menu Management" />
+      <AdminHeader title={selectedRestaurant ? `Menu - ${selectedRestaurant.name}` : "Menu Management"} />
 
       <div className="p-8">
         {/* Stats Overview */}
@@ -130,17 +145,40 @@ export default async function MenusPage() {
           </Card>
         </div>
 
+        {/* Location Filter Badge */}
+        {selectedRestaurant && (
+          <div className="mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 border border-primary-200 rounded-lg">
+              <MapPin className="w-4 h-4 text-primary-600" />
+              <span className="text-sm font-medium text-primary-900">
+                Showing menu for: {selectedRestaurant.name}
+              </span>
+              <Link href="/admin/menus">
+                <button className="ml-2 p-1 hover:bg-primary-100 rounded">
+                  <X className="w-4 h-4 text-primary-600" />
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Header Actions */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-1">All Menu Items</h2>
-            <p className="text-gray-600">Manage menu items across all restaurant locations</p>
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">
+              {selectedRestaurant ? `Menu Items for ${selectedRestaurant.name}` : 'All Menu Items'}
+            </h2>
+            <p className="text-gray-600">
+              {selectedRestaurant
+                ? `Manage menu items for this location`
+                : 'Manage menu items across all restaurant locations'}
+            </p>
           </div>
           <div className="flex gap-3">
             <Link href="/admin/menus/categories">
               <Button variant="outline">Manage Categories</Button>
             </Link>
-            <Link href="/admin/menus/new">
+            <Link href={locationId ? `/admin/menus/new?location=${locationId}` : "/admin/menus/new"}>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Menu Item

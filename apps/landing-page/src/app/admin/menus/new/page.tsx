@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
+import { Suspense } from 'react'
 
 interface Restaurant {
   id: string
@@ -19,14 +20,17 @@ interface Category {
   restaurantId: string
 }
 
-export default function NewMenuItemPage() {
+function NewMenuItemForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const preselectedLocationId = searchParams.get('location')
+
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [selectedRestaurant, setSelectedRestaurant] = useState('')
+  const [selectedRestaurant, setSelectedRestaurant] = useState(preselectedLocationId || '')
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([])
 
   const [formData, setFormData] = useState({
@@ -124,7 +128,11 @@ export default function NewMenuItemPage() {
       setSuccessMessage('Menu item created successfully!')
 
       setTimeout(() => {
-        router.push('/admin/menus')
+        // Redirect back to menu page, preserving location filter if present
+        const redirectUrl = preselectedLocationId
+          ? `/admin/menus?location=${preselectedLocationId}`
+          : '/admin/menus'
+        router.push(redirectUrl)
       }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create menu item')
@@ -444,5 +452,20 @@ export default function NewMenuItemPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function NewMenuItemPage() {
+  return (
+    <Suspense fallback={
+      <div>
+        <AdminHeader title="Add New Menu Item" />
+        <div className="p-8">
+          <div className="text-center text-gray-600">Loading...</div>
+        </div>
+      </div>
+    }>
+      <NewMenuItemForm />
+    </Suspense>
   )
 }

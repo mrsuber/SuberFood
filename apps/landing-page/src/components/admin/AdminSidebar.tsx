@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard,
   Store,
@@ -339,7 +340,10 @@ export function AdminSidebar() {
             <p className="text-xs text-gray-400">admin@suberfoods.com</p>
           </div>
         </div>
-        <button className="w-full flex items-center gap-2 px-4 py-2 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors text-sm">
+        <button
+          onClick={() => signOut({ callbackUrl: '/admin/login' })}
+          className="w-full flex items-center gap-2 px-4 py-2 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors text-sm"
+        >
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </button>

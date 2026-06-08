@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { ArrowLeft, User, Mail, Phone, MapPin, Bell, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Navbar } from '@/components/navigation/Navbar';
+import { Footer } from '@/components/navigation/Footer';
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -31,7 +33,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -165,5 +169,7 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 }

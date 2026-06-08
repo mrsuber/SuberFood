@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 interface Restaurant {
   id: string
@@ -19,48 +19,9 @@ interface Category {
   restaurantId: string
 }
 
-interface MenuItem {
-  id: string
-  name: string
-  categoryId: string
-  description: string | null
-  price: number
-  salePrice: number | null
-  preparationTime: number | null
-  calories: number | null
-  spiceLevel: number | null
-  isAvailable: boolean
-  isVegetarian: boolean
-  isVegan: boolean
-  isGlutenFree: boolean
-  isKeto: boolean
-  isHalal: boolean
-  isKosher: boolean
-  isChefRecommended: boolean
-  isSeasonal: boolean
-  isPopular: boolean
-  allergens: string[]
-  ingredients: string | null
-  winePairing: string | null
-  category: {
-    id: string
-    name: string
-    restaurantId: string
-    restaurant: {
-      id: string
-      name: string
-    }
-  }
-}
-
-export default function EditMenuItemPage() {
+export default function NewMenuItemPage() {
   const router = useRouter()
-  const params = useParams()
-  const menuItemId = params.menuItemId as string
-
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
@@ -93,52 +54,22 @@ export default function EditMenuItemPage() {
   })
 
   useEffect(() => {
-    // Fetch menu item, restaurants, and categories
+    // Fetch restaurants and categories
     Promise.all([
-      fetch(`/api/admin/menu/${menuItemId}`).then(r => r.json()),
       fetch('/api/admin/restaurants').then(r => r.json()),
       fetch('/api/admin/menu/categories').then(r => r.json()),
-    ]).then(([menuItemData, restaurantsData, categoriesData]) => {
-      if (menuItemData.success) {
-        const item: MenuItem = menuItemData.menuItem
-        setFormData({
-          name: item.name,
-          categoryId: item.categoryId,
-          description: item.description || '',
-          price: item.price.toString(),
-          salePrice: item.salePrice?.toString() || '',
-          preparationTime: item.preparationTime?.toString() || '',
-          calories: item.calories?.toString() || '',
-          spiceLevel: item.spiceLevel?.toString() || '',
-          isAvailable: item.isAvailable,
-          isVegetarian: item.isVegetarian,
-          isVegan: item.isVegan,
-          isGlutenFree: item.isGlutenFree,
-          isKeto: item.isKeto,
-          isHalal: item.isHalal,
-          isKosher: item.isKosher,
-          isChefRecommended: item.isChefRecommended,
-          isSeasonal: item.isSeasonal,
-          isPopular: item.isPopular,
-          allergens: Array.isArray(item.allergens) ? item.allergens.join(', ') : '',
-          ingredients: item.ingredients || '',
-          winePairing: item.winePairing || '',
-        })
-        setSelectedRestaurant(item.category.restaurantId)
-      }
+    ]).then(([restaurantsData, categoriesData]) => {
       if (restaurantsData.success) {
         setRestaurants(restaurantsData.restaurants)
       }
       if (categoriesData.success) {
         setCategories(categoriesData.categories)
       }
-      setLoading(false)
     }).catch(err => {
       console.error('Error fetching data:', err)
-      setError('Failed to load menu item')
-      setLoading(false)
+      setError('Failed to load restaurants and categories')
     })
-  }, [menuItemId])
+  }, [])
 
   useEffect(() => {
     if (selectedRestaurant) {
@@ -168,8 +99,8 @@ export default function EditMenuItemPage() {
     setSaving(true)
 
     try {
-      const response = await fetch(`/api/admin/menu/${menuItemId}`, {
-        method: 'PUT',
+      const response = await fetch('/api/admin/menu', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -186,56 +117,24 @@ export default function EditMenuItemPage() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Failed to update menu item')
+        throw new Error(data.error || 'Failed to create menu item')
       }
 
-      setSuccessMessage('Menu item updated successfully!')
-      setSaving(false)
+      const data = await response.json()
+      setSuccessMessage('Menu item created successfully!')
+
+      setTimeout(() => {
+        router.push('/admin/menus')
+      }, 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update menu item')
+      setError(err instanceof Error ? err.message : 'Failed to create menu item')
       setSaving(false)
     }
-  }
-
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this menu item? This action cannot be undone.')) {
-      return
-    }
-
-    setDeleting(true)
-    setError(null)
-
-    try {
-      const response = await fetch(`/api/admin/menu/${menuItemId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to delete menu item')
-      }
-
-      router.push('/admin/menus')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete menu item')
-      setDeleting(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div>
-        <AdminHeader title="Edit Menu Item" />
-        <div className="p-8">
-          <div className="text-center text-gray-600">Loading...</div>
-        </div>
-      </div>
-    )
   }
 
   return (
     <div>
-      <AdminHeader title="Edit Menu Item" />
+      <AdminHeader title="Add New Menu Item" />
 
       <div className="p-8 max-w-4xl">
         <Link href="/admin/menus">
@@ -530,27 +429,15 @@ export default function EditMenuItemPage() {
               </div>
 
               {/* Form Actions */}
-              <div className="flex items-center justify-between pt-6 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDelete}
-                  disabled={deleting || saving}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  {deleting ? 'Deleting...' : 'Delete Item'}
-                </Button>
-                <div className="flex items-center gap-4">
-                  <Link href="/admin/menus">
-                    <Button type="button" variant="outline" disabled={saving || deleting}>
-                      Cancel
-                    </Button>
-                  </Link>
-                  <Button type="submit" disabled={saving || deleting}>
-                    {saving ? 'Saving...' : 'Save Changes'}
+              <div className="flex items-center justify-end gap-4 pt-6 border-t">
+                <Link href="/admin/menus">
+                  <Button type="button" variant="outline" disabled={saving}>
+                    Cancel
                   </Button>
-                </div>
+                </Link>
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Creating...' : 'Create Menu Item'}
+                </Button>
               </div>
             </form>
           </CardContent>

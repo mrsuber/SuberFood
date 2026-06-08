@@ -4,18 +4,12 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/admin/menu/[id]
- * Get a single menu item
+ * GET /api/admin/menu
+ * Get all menu items (admin view)
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { menuItemId: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const menuItem = await prisma.menuItem.findUnique({
-      where: {
-        id: params.menuItemId,
-      },
+    const menuItems = await prisma.menuItem.findMany({
       include: {
         category: {
           include: {
@@ -23,36 +17,30 @@ export async function GET(
           },
         },
       },
+      orderBy: [
+        { category: { restaurant: { name: 'asc' } } },
+        { category: { displayOrder: 'asc' } },
+      ],
     })
-
-    if (!menuItem) {
-      return NextResponse.json(
-        { error: 'Menu item not found' },
-        { status: 404 }
-      )
-    }
 
     return NextResponse.json({
       success: true,
-      menuItem,
+      menuItems,
     })
   } catch (error) {
-    console.error('Error fetching menu item:', error)
+    console.error('Error fetching menu items:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch menu item' },
+      { error: 'Failed to fetch menu items' },
       { status: 500 }
     )
   }
 }
 
 /**
- * PUT /api/admin/menu/[id]
- * Update a menu item
+ * POST /api/admin/menu
+ * Create a new menu item
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { menuItemId: string } }
-) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
@@ -64,11 +52,8 @@ export async function PUT(
       )
     }
 
-    // Update the menu item
-    const updatedMenuItem = await prisma.menuItem.update({
-      where: {
-        id: params.menuItemId,
-      },
+    // Create the menu item
+    const newMenuItem = await prisma.menuItem.create({
       data: {
         name: body.name,
         categoryId: body.categoryId,
@@ -103,41 +88,13 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      message: 'Menu item updated successfully',
-      menuItem: updatedMenuItem,
+      message: 'Menu item created successfully',
+      menuItem: newMenuItem,
     })
   } catch (error) {
-    console.error('Error updating menu item:', error)
+    console.error('Error creating menu item:', error)
     return NextResponse.json(
-      { error: 'Failed to update menu item' },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * DELETE /api/admin/menu/[id]
- * Delete a menu item
- */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { menuItemId: string } }
-) {
-  try {
-    await prisma.menuItem.delete({
-      where: {
-        id: params.menuItemId,
-      },
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: 'Menu item deleted successfully',
-    })
-  } catch (error) {
-    console.error('Error deleting menu item:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete menu item' },
+      { error: 'Failed to create menu item' },
       { status: 500 }
     )
   }

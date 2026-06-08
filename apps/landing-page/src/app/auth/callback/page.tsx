@@ -24,7 +24,8 @@ export default function AuthCallbackPage() {
     if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
       router.push('/admin');
     } else {
-      router.push('/');
+      // Redirect customers to profile page
+      router.push('/profile');
     }
   }, [session, status, router]);
 

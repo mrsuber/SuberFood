@@ -44,7 +44,8 @@ function SignInForm() {
         if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
           router.push('/admin');
         } else {
-          router.push(callbackUrl);
+          // Redirect customers to profile page
+          router.push(callbackUrl === '/' ? '/profile' : callbackUrl);
         }
         router.refresh();
       }

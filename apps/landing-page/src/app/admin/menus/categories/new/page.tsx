@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { AdminHeader } from '@/components/admin/AdminHeader'
@@ -13,7 +13,7 @@ interface Restaurant {
   name: string
 }
 
-export default function NewCategoryPage() {
+function NewCategoryForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const preselectedRestaurantId = searchParams.get('restaurantId')
@@ -189,5 +189,20 @@ export default function NewCategoryPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function NewCategoryPage() {
+  return (
+    <Suspense fallback={
+      <div>
+        <AdminHeader title="Add New Category" />
+        <div className="p-8">
+          <div className="text-center text-gray-600">Loading...</div>
+        </div>
+      </div>
+    }>
+      <NewCategoryForm />
+    </Suspense>
   )
 }

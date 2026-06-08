@@ -80,10 +80,7 @@ export default function NewRestaurantPage() {
 
   return (
     <div>
-      <AdminHeader
-        title="Add New Restaurant Location"
-        subtitle="Create a new restaurant branch or location"
-      />
+      <AdminHeader title="Add New Restaurant Location" />
 
       <div className="p-8 max-w-4xl">
         <Link href="/admin/distribution/restaurants">

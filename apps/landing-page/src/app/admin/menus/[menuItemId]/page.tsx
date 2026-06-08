@@ -24,6 +24,7 @@ interface MenuItem {
   name: string
   categoryId: string
   description: string | null
+  image: string | null
   price: number
   salePrice: number | null
   preparationTime: number | null

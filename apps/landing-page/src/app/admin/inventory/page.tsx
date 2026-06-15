@@ -411,7 +411,7 @@ export default function InventoryPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <Link href={`/admin/inventory/${item.id}/edit`}>
+                          <Link href={`/admin/inventory/${item.id}`}>
                             <Button variant="ghost" size="sm">
                               <Edit className="w-4 h-4" />
                             </Button>

@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         story: body.story || null,
         privateRooms: body.privateRooms || false,
         outdoorSeating: body.outdoorSeating || false,
+        images: body.images || [],
         branchCode,
         isMainBranch: false, // New locations are not main branches by default
       },

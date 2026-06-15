@@ -84,6 +84,7 @@ export async function PUT(
         story: body.story || null,
         privateRooms: body.privateRooms || false,
         outdoorSeating: body.outdoorSeating || false,
+        images: body.images || [],
       },
     })
 

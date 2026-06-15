@@ -70,7 +70,11 @@ export default function RestaurantDetailPage() {
     story: '',
     privateRooms: false,
     outdoorSeating: false,
+    images: [] as string[],
   })
+
+  const [newImageUrl, setNewImageUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     fetchRestaurant()
@@ -105,6 +109,7 @@ export default function RestaurantDetailPage() {
         story: data.restaurant.story || '',
         privateRooms: data.restaurant.privateRooms || false,
         outdoorSeating: data.restaurant.outdoorSeating || false,
+        images: data.restaurant.images || [],
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -160,6 +165,74 @@ export default function RestaurantDetailPage() {
       setError(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleAddImage = () => {
+    if (!newImageUrl.trim()) return
+    if (!newImageUrl.startsWith('http://') && !newImageUrl.startsWith('https://')) {
+      setError('Please enter a valid image URL starting with http:// or https://')
+      return
+    }
+    setFormData({ ...formData, images: [...formData.images, newImageUrl.trim()] })
+    setNewImageUrl('')
+  }
+
+  const handleRemoveImage = (index: number) => {
+    const updatedImages = formData.images.filter((_, i) => i !== index)
+    setFormData({ ...formData, images: updatedImages })
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    if (!validTypes.includes(file.type)) {
+      setError('Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      setError('File too large. Maximum size is 5MB.')
+      return
+    }
+
+    try {
+      setUploading(true)
+      setError(null)
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to upload image')
+      }
+
+      const data = await response.json()
+
+      // Get the full URL (for local dev and production)
+      const baseUrl = window.location.origin
+      const imageUrl = `${baseUrl}${data.url}`
+
+      setFormData(prev => ({ ...prev, images: [...prev.images, imageUrl] }))
+      setSuccessMessage('Image uploaded successfully!')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image')
+    } finally {
+      setUploading(false)
+      // Reset file input
+      e.target.value = ''
     }
   }
 
@@ -430,6 +503,129 @@ export default function RestaurantDetailPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Restaurant Images */}
+            <Card className="lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="w-5 h-5" />
+                  Restaurant Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Image from Computer
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor="file-upload"
+                      className="relative cursor-pointer bg-white px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">
+                        {uploading ? 'Uploading...' : 'Choose File'}
+                      </span>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        className="sr-only"
+                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                      />
+                    </label>
+                    {uploading && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        Uploading...
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Supported formats: JPEG, PNG, WebP, GIF (Max 5MB)
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="px-2 bg-white text-gray-500">OR</span>
+                  </div>
+                </div>
+
+                {/* URL Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Add Image URL
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    <Button type="button" onClick={handleAddImage} variant="outline">
+                      Add Image
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Enter the full URL of an image (must start with http:// or https://)
+                  </p>
+                </div>
+
+                {formData.images.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Current Images ({formData.images.length})
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {formData.images.map((imageUrl, index) => (
+                        <div key={index} className="relative group">
+                          <div className="aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                            <img
+                              src={imageUrl}
+                              alt={`Restaurant ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="150"%3E%3Crect fill="%23ddd" width="200" height="150"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" dy="75" dx="50"%3EInvalid Image%3C/text%3E%3C/svg%3E'
+                              }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            title="Remove image"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                          {index === 0 && (
+                            <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                              Primary
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      The first image will be used as the primary/featured image
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -76,6 +76,7 @@ export default function RestaurantDetailPage() {
   const [location, setLocation] = useState<LocationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
     if (params.slug) {
@@ -176,31 +177,110 @@ export default function RestaurantDetailPage() {
           </div>
         </div>
 
-        {/* Hero Image */}
-        <div className="relative h-96 bg-gray-200">
+        {/* Hero Image Gallery */}
+        <div className="relative bg-gray-900">
           {location.images && location.images.length > 0 ? (
-            <img
-              src={location.images[0]}
-              alt={location.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <Utensils size={96} />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-            <div className="max-w-7xl mx-auto">
-              <h1 className="text-4xl font-bold mb-2">{location.name}</h1>
-              <p className="text-lg">{formatType(location.type)}</p>
-              {location.status !== 'OPEN' && (
-                <span className="inline-block mt-2 px-3 py-1 bg-red-600 text-sm rounded">
-                  {location.status.replace('_', ' ')}
-                </span>
+            <div className="relative">
+              {/* Main Image */}
+              <div className="relative h-[500px] bg-gray-200">
+                <img
+                  src={location.images[selectedImage]}
+                  alt={`${location.name} - Image ${selectedImage + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                {/* Navigation Arrows */}
+                {location.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedImage(prev => prev === 0 ? location.images.length - 1 : prev - 1)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition backdrop-blur-sm"
+                      aria-label="Previous image"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setSelectedImage(prev => prev === location.images.length - 1 ? 0 : prev + 1)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition backdrop-blur-sm"
+                      aria-label="Next image"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+
+                {/* Title Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+                  <div className="max-w-7xl mx-auto">
+                    <h1 className="text-4xl font-bold mb-2">{location.name}</h1>
+                    <p className="text-lg">{formatType(location.type)}</p>
+                    {location.status !== 'OPEN' && (
+                      <span className="inline-block mt-2 px-3 py-1 bg-red-600 text-sm rounded">
+                        {location.status.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Image Counter */}
+                {location.images.length > 1 && (
+                  <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                    {selectedImage + 1} / {location.images.length}
+                  </div>
+                )}
+              </div>
+
+              {/* Thumbnail Gallery */}
+              {location.images.length > 1 && (
+                <div className="bg-gray-900 px-4 py-4">
+                  <div className="max-w-7xl mx-auto">
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                      {location.images.map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedImage(index)}
+                          className={`relative flex-shrink-0 w-24 h-20 rounded-lg overflow-hidden transition-all ${
+                            selectedImage === index
+                              ? 'ring-4 ring-blue-500 scale-105'
+                              : 'opacity-60 hover:opacity-100 hover:scale-105'
+                          }`}
+                        >
+                          <img
+                            src={image}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
+          ) : (
+            <div className="relative h-96">
+              <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
+                <Utensils size={96} />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+                <div className="max-w-7xl mx-auto">
+                  <h1 className="text-4xl font-bold mb-2">{location.name}</h1>
+                  <p className="text-lg">{formatType(location.type)}</p>
+                  {location.status !== 'OPEN' && (
+                    <span className="inline-block mt-2 px-3 py-1 bg-red-600 text-sm rounded">
+                      {location.status.replace('_', ' ')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -316,20 +396,20 @@ export default function RestaurantDetailPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Phone size={20} className="text-gray-400 flex-shrink-0" />
+                    <Phone size={20} className="text-blue-500 flex-shrink-0" />
                     <div>
                       <p className="text-sm text-gray-600">Phone</p>
-                      <a href={`tel:${location.phone}`} className="font-medium hover:text-blue-600">
+                      <a href={`tel:${location.phone}`} className="font-medium text-gray-900 hover:text-blue-600">
                         {location.phone}
                       </a>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Mail size={20} className="text-gray-400 flex-shrink-0" />
+                    <Mail size={20} className="text-blue-500 flex-shrink-0" />
                     <div>
                       <p className="text-sm text-gray-600">Email</p>
-                      <a href={`mailto:${location.email}`} className="font-medium hover:text-blue-600">
+                      <a href={`mailto:${location.email}`} className="font-medium text-gray-900 hover:text-blue-600 break-all">
                         {location.email}
                       </a>
                     </div>
@@ -363,12 +443,14 @@ export default function RestaurantDetailPage() {
               </div>
 
               {/* Rating */}
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-semibold mb-4">Rating</h3>
-                <div className="flex items-center gap-2">
-                  <Star size={32} className="text-yellow-500 fill-yellow-500" />
-                  <span className="text-3xl font-bold">{location.rating.toFixed(1)}</span>
-                  <span className="text-gray-600">/ 5.0</span>
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-lg shadow border border-yellow-200">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">Rating</h3>
+                <div className="flex items-center gap-3">
+                  <Star size={40} className="text-yellow-500 fill-yellow-500" />
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-gray-900">{location.rating.toFixed(1)}</span>
+                    <span className="text-lg text-gray-600">/ 5.0</span>
+                  </div>
                 </div>
               </div>
 

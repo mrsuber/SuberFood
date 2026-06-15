@@ -161,12 +161,12 @@ export default function LocationsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm"
+            className="flex items-center gap-2 px-5 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 shadow-md hover:shadow-lg transition-all text-gray-900 font-medium"
           >
-            <Filter size={20} />
-            Filters
+            <Filter size={20} className="text-blue-600" />
+            <span className="text-gray-900">Filters</span>
             {(selectedCity || selectedState || selectedType) && (
-              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <span className="ml-2 px-2.5 py-0.5 bg-blue-600 text-white text-xs rounded-full font-semibold">
                 Active
               </span>
             )}
@@ -256,75 +256,95 @@ export default function LocationsPage() {
                 <Link
                   key={location.id}
                   href={`/distribution/restaurants/${location.slug}`}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                  className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
                 >
                   {/* Image */}
-                  <div className="h-48 bg-gray-200 relative">
+                  <div className="h-56 bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
                     {location.images && location.images.length > 0 ? (
-                      <img
-                        src={location.images[0]}
-                        alt={location.name}
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={location.images[0]}
+                          alt={location.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <MapPin size={48} />
+                        <MapPin size={56} className="group-hover:text-blue-500 transition-colors" />
                       </div>
                     )}
                     {location.status !== 'OPEN' && (
-                      <span className="absolute top-2 left-2 px-2 py-1 bg-red-600 text-white text-xs rounded">
+                      <span className="absolute top-3 left-3 px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg shadow-lg">
                         {location.status.replace('_', ' ')}
+                      </span>
+                    )}
+                    {/* Image Count Badge */}
+                    {location.images && location.images.length > 1 && (
+                      <span className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 backdrop-blur-sm text-white text-xs rounded-full flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                        </svg>
+                        {location.images.length}
                       </span>
                     )}
                   </div>
 
                   {/* Content */}
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{location.name}</h3>
-
-                    <p className="text-sm text-gray-600 mb-2">{formatType(location.type)}</p>
-
-                    {/* Address */}
-                    <div className="flex items-start gap-2 text-sm text-gray-600 mb-2">
-                      <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                      <span>
-                        {location.address}, {location.city}, {location.state}
-                      </span>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">{location.name}</h3>
+                      {location.status === 'OPEN' && (
+                        <div className="flex-shrink-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse ml-2 mt-2"></div>
+                      )}
                     </div>
 
-                    {/* Phone */}
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                      <Phone size={16} className="flex-shrink-0" />
-                      <span>{location.phone}</span>
-                    </div>
+                    <p className="text-sm text-blue-600 font-medium mb-3">{formatType(location.type)}</p>
 
-                    {/* Hours */}
-                    {location.openingTime && location.closingTime && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                        <Clock size={16} className="flex-shrink-0" />
-                        <span>
-                          {location.openingTime} - {location.closingTime}
+                    <div className="space-y-2.5 mb-4">
+                      {/* Address */}
+                      <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <MapPin size={16} className="mt-0.5 flex-shrink-0 text-gray-400" />
+                        <span className="line-clamp-1">
+                          {location.address}, {location.city}, {location.state}
                         </span>
                       </div>
-                    )}
 
-                    {/* Rating */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <Star size={16} className="text-yellow-500 fill-yellow-500" />
-                      <span className="text-sm font-medium">{location.rating.toFixed(1)}</span>
+                      {/* Phone */}
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Phone size={16} className="flex-shrink-0 text-gray-400" />
+                        <span>{location.phone}</span>
+                      </div>
+
+                      {/* Hours */}
+                      {location.openingTime && location.closingTime && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Clock size={16} className="flex-shrink-0 text-gray-400" />
+                          <span>
+                            {location.openingTime} - {location.closingTime}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Wait Time */}
-                    {location.currentWaitTime && location.currentWaitTime > 0 && (
-                      <p className="text-xs text-orange-600 mb-3">
-                        Current wait: ~{location.currentWaitTime} min
-                      </p>
-                    )}
+                    {/* Rating & Wait Time */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-1.5 bg-yellow-50 px-2.5 py-1.5 rounded-lg">
+                        <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                        <span className="text-sm font-bold text-gray-900">{location.rating.toFixed(1)}</span>
+                      </div>
 
-                    {/* View Menu Button */}
-                    <div className="flex items-center justify-between pt-3 border-t">
-                      <span className="text-sm text-blue-600 font-medium">View Details</span>
-                      <ChevronRight size={20} className="text-blue-600" />
+                      {location.currentWaitTime && location.currentWaitTime > 0 && (
+                        <div className="text-xs text-orange-600 font-medium bg-orange-50 px-2.5 py-1.5 rounded-lg">
+                          Wait: ~{location.currentWaitTime} min
+                        </div>
+                      )}
+                    </div>
+
+                    {/* View Details Button */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 group-hover:border-blue-200 transition-colors">
+                      <span className="text-sm text-blue-600 font-semibold group-hover:text-blue-700">View Details & Menu</span>
+                      <ChevronRight size={20} className="text-blue-600 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </Link>

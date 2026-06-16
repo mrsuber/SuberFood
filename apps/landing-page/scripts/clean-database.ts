@@ -37,11 +37,11 @@ async function cleanDatabase() {
     console.log('Deleting menu categories...')
     await prisma.menuCategory.deleteMany({})
 
-    console.log('Deleting inventory movements...')
-    await prisma.inventoryMovement.deleteMany({})
+    console.log('Deleting stock movements...')
+    await prisma.stockMovement.deleteMany({})
 
-    console.log('Deleting inventory batches...')
-    await prisma.inventoryBatch.deleteMany({})
+    console.log('Deleting preparation batches...')
+    await prisma.preparationBatch.deleteMany({})
 
     console.log('Deleting inventory items...')
     await prisma.inventoryItem.deleteMany({})

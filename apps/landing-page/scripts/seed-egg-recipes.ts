@@ -11,9 +11,31 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🥚 Starting to seed egg recipes...')
 
+  // Find a restaurant first (categories are restaurant-specific)
+  let restaurant = await prisma.restaurant.findFirst({
+    where: { isActive: true },
+  })
+
+  if (!restaurant) {
+    console.log('Creating default restaurant...')
+    restaurant = await prisma.restaurant.create({
+      data: {
+        name: 'SuberFood Main Kitchen',
+        address: 'Main Location',
+        phone: '123-456-7890',
+        isActive: true,
+      },
+    })
+  }
+
+  console.log('✓ Using restaurant:', restaurant.name)
+
   // First, find or create a Breakfast category
   let breakfastCategory = await prisma.menuCategory.findFirst({
-    where: { name: 'Breakfast' },
+    where: {
+      name: 'Breakfast',
+      restaurantId: restaurant.id,
+    },
   })
 
   if (!breakfastCategory) {
@@ -24,6 +46,7 @@ async function main() {
         description: 'Morning meals and breakfast items',
         displayOrder: 1,
         isActive: true,
+        restaurantId: restaurant.id,
       },
     })
   }

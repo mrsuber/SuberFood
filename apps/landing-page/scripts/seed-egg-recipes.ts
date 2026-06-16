@@ -13,7 +13,7 @@ async function main() {
 
   // Find a restaurant first (categories are restaurant-specific)
   let restaurant = await prisma.restaurant.findFirst({
-    where: { isActive: true },
+    where: { status: 'ACTIVE' },
   })
 
   if (!restaurant) {
@@ -21,9 +21,20 @@ async function main() {
     restaurant = await prisma.restaurant.create({
       data: {
         name: 'SuberFood Main Kitchen',
+        slug: 'suberfood-main',
+        type: 'FINE_DINING',
         address: 'Main Location',
+        city: 'Central',
+        state: 'Province',
+        postalCode: '00000',
         phone: '123-456-7890',
-        isActive: true,
+        email: 'info@suberfoods.com',
+        status: 'ACTIVE',
+        capacity: 100,
+        rating: 5.0,
+        privateRooms: false,
+        outdoorSeating: false,
+        isMainBranch: true,
       },
     })
   }

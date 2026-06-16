@@ -236,6 +236,9 @@ export default function NewInventoryItemPage() {
                         </option>
                       ))}
                     </select>
+                    <p className="text-xs text-gray-600 mt-1 bg-blue-50 p-2 rounded border border-blue-200">
+                      <strong>Important:</strong> This is how you'll track stock. Stock quantities and prices will be in this unit.
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-3 pt-6">
@@ -280,6 +283,15 @@ export default function NewInventoryItemPage() {
               {/* Stock Levels */}
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Stock Levels</h3>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-amber-900">
+                    <strong>📦 How stock works:</strong> Quantities are measured in the <strong>Unit</strong> you selected above.
+                    <br />
+                    <span className="text-xs">
+                      Example: If Unit = <strong>DOZEN</strong> and Stock = <strong>12</strong>, you have <strong>12 dozens</strong> (144 individual eggs).
+                    </span>
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -295,6 +307,9 @@ export default function NewInventoryItemPage() {
                       step="0.01"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      In {formData.unit} units
+                    </p>
                   </div>
 
                   <div>
@@ -392,9 +407,25 @@ export default function NewInventoryItemPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       placeholder="0"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Central African CFA Franc (XAF)
-                    </p>
+                    <div className="mt-2 bg-green-50 border border-green-200 rounded p-2">
+                      <p className="text-xs text-green-900">
+                        <strong>💰 Price per {formData.unit}:</strong> This is the cost for <strong>ONE {formData.unit}</strong>, not per individual item.
+                      </p>
+                      <p className="text-xs text-green-800 mt-1">
+                        {formData.unit === 'DOZEN' && (
+                          <>Example: If a dozen eggs costs 1500 FCFA, enter <strong>1500</strong> (not 125 for one egg)</>
+                        )}
+                        {formData.unit === 'KG' && (
+                          <>Example: If 1 kilogram costs 800 FCFA, enter <strong>800</strong> (not per gram)</>
+                        )}
+                        {formData.unit === 'PCS' && (
+                          <>Example: If 1 piece costs 200 FCFA, enter <strong>200</strong></>
+                        )}
+                        {!['DOZEN', 'KG', 'PCS'].includes(formData.unit) && (
+                          <>Example: Enter the price for 1 {formData.unit}</>
+                        )}
+                      </p>
+                    </div>
                   </div>
 
                   <div>

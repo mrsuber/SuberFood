@@ -281,6 +281,12 @@ export default function InventoryPage() {
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
+                <Link href="/admin/inventory/receive">
+                  <Button variant="outline" className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100">
+                    <Package className="w-4 h-4 mr-2" />
+                    Receive Stock
+                  </Button>
+                </Link>
                 <Link href="/admin/inventory/new">
                   <Button>
                     <Plus className="w-4 h-4 mr-2" />

@@ -13,8 +13,10 @@ import {
   Filter,
   Download,
   Loader2,
+  Plus,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 type StockMovement = {
   id: string
@@ -152,10 +154,18 @@ export default function StockMovementsPage() {
                 <option value="CONSUMED">Consumed</option>
               </select>
 
-              <Button variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+                <Link href="/admin/inventory/receive">
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Receive Stock
+                  </Button>
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>

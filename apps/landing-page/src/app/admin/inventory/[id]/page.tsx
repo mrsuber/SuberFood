@@ -408,7 +408,7 @@ export default function EditInventoryItemPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cost Per Unit ($)
+                      Cost Per Unit (FCFA)
                     </label>
                     <input
                       type="number"
@@ -416,10 +416,13 @@ export default function EditInventoryItemPage() {
                       value={formData.costPerUnit}
                       onChange={handleChange}
                       min="0"
-                      step="0.01"
+                      step="1"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="0.00"
+                      placeholder="0"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Central African CFA Franc (XAF)
+                    </p>
                   </div>
 
                   <div>

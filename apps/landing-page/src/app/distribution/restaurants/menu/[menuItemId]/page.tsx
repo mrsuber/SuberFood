@@ -416,17 +416,17 @@ export default function MenuItemDetailPage() {
                   <div>
                     <div className="flex items-baseline gap-3">
                       <span className="text-3xl font-bold text-green-600">
-                        ${displayPrice.toFixed(2)}
+                        {displayPrice.toLocaleString('fr-FR')} FCFA
                       </span>
                       {hasDiscount && (
                         <span className="text-lg text-gray-400 line-through">
-                          ${menuItem.price.toFixed(2)}
+                          {menuItem.price.toLocaleString('fr-FR')} FCFA
                         </span>
                       )}
                     </div>
                     {hasDiscount && (
                       <p className="text-sm text-green-600 font-medium mt-1">
-                        Save ${(menuItem.price - displayPrice).toFixed(2)}!
+                        Save {(menuItem.price - displayPrice).toLocaleString('fr-FR')} FCFA!
                       </p>
                     )}
                   </div>
@@ -488,7 +488,7 @@ export default function MenuItemDetailPage() {
                       disabled={!menuItem.isAvailable}
                       onClick={() => setOrderModalOpen(true)}
                     >
-                      Place Order - ${(displayPrice * quantity).toFixed(2)}
+                      Place Order - {(displayPrice * quantity).toLocaleString('fr-FR')} FCFA
                     </Button>
                     <p className="text-xs text-center text-gray-500">
                       Choose dine-in, takeaway, or delivery

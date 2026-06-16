@@ -270,35 +270,37 @@ function NewMenuItemForm() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Price ($) *
+                        Price (FCFA) *
                       </label>
                       <input
                         type="number"
-                        step="0.01"
+                        step="1"
                         name="price"
                         value={formData.price}
                         onChange={handleInputChange}
                         required
                         min="0"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="24.99"
+                        placeholder="5000"
                       />
+                      <p className="text-xs text-gray-500 mt-1">Central African CFA Franc (XAF)</p>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Sale Price ($)
+                        Sale Price (FCFA)
                       </label>
                       <input
                         type="number"
-                        step="0.01"
+                        step="1"
                         name="salePrice"
                         value={formData.salePrice}
                         onChange={handleInputChange}
                         min="0"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="19.99"
+                        placeholder="4500"
                       />
+                      <p className="text-xs text-gray-500 mt-1">Discounted price (optional)</p>
                     </div>
 
                     <div>

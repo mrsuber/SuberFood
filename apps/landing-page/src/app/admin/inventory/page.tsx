@@ -153,7 +153,7 @@ export default function InventoryPage() {
     },
     {
       title: 'Total Value (Raw)',
-      value: `$${filteredInventoryItems.reduce((sum, item) => sum + (item.rawStock * item.costPerUnit), 0).toFixed(2)}`,
+      value: `${filteredInventoryItems.reduce((sum, item) => sum + (item.rawStock * item.costPerUnit), 0).toLocaleString('fr-FR')} FCFA`,
       icon: Package,
       color: 'text-green-600',
       bgColor: 'bg-green-100',

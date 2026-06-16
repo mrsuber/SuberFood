@@ -129,6 +129,30 @@ export default function InventoryPage() {
     return null
   }
 
+  const handleDelete = async (itemId: string, itemName: string) => {
+    if (!confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/inventory/items/${itemId}`, {
+        method: 'DELETE',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert('✅ Ingredient deleted successfully!')
+        fetchInventoryItems() // Refresh the list
+      } else {
+        alert(`❌ Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting ingredient:', error)
+      alert('❌ Failed to delete ingredient')
+    }
+  }
+
   const stats = [
     {
       title: 'Total Items',
@@ -381,7 +405,12 @@ export default function InventoryPage() {
                               <Edit className="w-4 h-4" />
                             </Button>
                           </Link>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDelete(item.id, item.name)}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>

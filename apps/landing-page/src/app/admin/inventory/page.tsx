@@ -39,11 +39,16 @@ export default function InventoryPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [filteredInventoryItems, setFilteredInventoryItems] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchInventoryItems()
   }, [])
+
+  useEffect(() => {
+    applyFilters()
+  }, [filterCategory, filterStatus, searchQuery, inventoryItems])
 
   const fetchInventoryItems = async () => {
     try {
@@ -73,6 +78,31 @@ export default function InventoryPage() {
     return 'OK'
   }
 
+  const applyFilters = () => {
+    let filtered = inventoryItems
+
+    // Apply category filter
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter(item => item.category === filterCategory)
+    }
+
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(item => item.status === filterStatus)
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.supplier.toLowerCase().includes(query) ||
+        item.storageLocation.toLowerCase().includes(query)
+      )
+    }
+
+    setFilteredInventoryItems(filtered)
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -102,28 +132,28 @@ export default function InventoryPage() {
   const stats = [
     {
       title: 'Total Items',
-      value: inventoryItems.length.toString(),
+      value: filteredInventoryItems.length.toString(),
       icon: Package,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100',
     },
     {
       title: 'Low Stock',
-      value: inventoryItems.filter(item => item.status === 'LOW').length.toString(),
+      value: filteredInventoryItems.filter(item => item.status === 'LOW').length.toString(),
       icon: TrendingDown,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100',
     },
     {
       title: 'Critical/Out',
-      value: inventoryItems.filter(item => item.status === 'CRITICAL' || item.status === 'OUT').length.toString(),
+      value: filteredInventoryItems.filter(item => item.status === 'CRITICAL' || item.status === 'OUT').length.toString(),
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-100',
     },
     {
       title: 'Total Value (Raw)',
-      value: `$${inventoryItems.reduce((sum, item) => sum + (item.rawStock * item.costPerUnit), 0).toFixed(2)}`,
+      value: `$${filteredInventoryItems.reduce((sum, item) => sum + (item.rawStock * item.costPerUnit), 0).toFixed(2)}`,
       icon: Package,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
@@ -261,24 +291,32 @@ export default function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {inventoryItems.length === 0 ? (
+                  {filteredInventoryItems.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <Package className="w-16 h-16 text-gray-300 mb-4" />
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Inventory Items</h3>
-                          <p className="text-gray-600 mb-4">Get started by adding your first ingredient</p>
-                          <Link href="/admin/inventory/new">
-                            <Button>
-                              <Plus className="w-4 h-4 mr-2" />
-                              Add First Item
-                            </Button>
-                          </Link>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {inventoryItems.length === 0 ? 'No Inventory Items' : 'No Items Match Your Filters'}
+                          </h3>
+                          <p className="text-gray-600 mb-4">
+                            {inventoryItems.length === 0
+                              ? 'Get started by adding your first ingredient'
+                              : 'Try adjusting your search or filter criteria'}
+                          </p>
+                          {inventoryItems.length === 0 && (
+                            <Link href="/admin/inventory/new">
+                              <Button>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add First Item
+                              </Button>
+                            </Link>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    inventoryItems.map((item) => (
+                    filteredInventoryItems.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

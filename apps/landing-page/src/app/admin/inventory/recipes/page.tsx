@@ -11,8 +11,9 @@ import {
   AlertCircle,
   CheckCircle,
   Search,
+  Loader2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 type RecipeIngredient = {
@@ -38,64 +39,32 @@ type Recipe = {
 
 export default function RecipesPage() {
   const [searchQuery, setSearchQuery] = useState('')
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock data - will be replaced with API
-  const recipes: Recipe[] = [
-    {
-      id: '1',
-      menuItemName: 'Chocolate Cake',
-      servingSize: 8,
-      prepTime: 30,
-      cookTime: 45,
-      totalCost: 18.50,
-      costPerServing: 2.31,
-      canMake: false,
-      canMakeServings: 0,
-      ingredients: [
-        { name: 'All-Purpose Flour', quantity: 2, unit: 'KG', available: 25, status: 'ok' },
-        { name: 'Granulated Sugar', quantity: 1.5, unit: 'KG', available: 80, status: 'ok' },
-        { name: 'Dark Chocolate (70%)', quantity: 0.5, unit: 'KG', available: 5, status: 'ok' },
-        { name: 'Fresh Eggs', quantity: 12, unit: 'PCS', available: 120, status: 'ok' },
-        { name: 'Whole Milk', quantity: 1, unit: 'L', available: 15, status: 'ok' },
-        { name: 'Vanilla Extract', quantity: 50, unit: 'ML', available: 0, status: 'out' },
-      ],
-    },
-    {
-      id: '2',
-      menuItemName: 'Vanilla Cupcakes',
-      servingSize: 12,
-      prepTime: 20,
-      cookTime: 25,
-      totalCost: 12.80,
-      costPerServing: 1.07,
-      canMake: false,
-      canMakeServings: 0,
-      ingredients: [
-        { name: 'All-Purpose Flour', quantity: 1, unit: 'KG', available: 25, status: 'ok' },
-        { name: 'Granulated Sugar', quantity: 0.8, unit: 'KG', available: 80, status: 'ok' },
-        { name: 'Fresh Eggs', quantity: 8, unit: 'PCS', available: 120, status: 'ok' },
-        { name: 'Whole Milk', quantity: 0.5, unit: 'L', available: 15, status: 'ok' },
-        { name: 'Vanilla Extract', quantity: 30, unit: 'ML', available: 0, status: 'out' },
-      ],
-    },
-    {
-      id: '3',
-      menuItemName: 'Banana Bread',
-      servingSize: 10,
-      prepTime: 15,
-      cookTime: 60,
-      totalCost: 8.50,
-      costPerServing: 0.85,
-      canMake: true,
-      canMakeServings: 12,
-      ingredients: [
-        { name: 'All-Purpose Flour', quantity: 1.5, unit: 'KG', available: 25, status: 'ok' },
-        { name: 'Granulated Sugar', quantity: 0.5, unit: 'KG', available: 80, status: 'ok' },
-        { name: 'Fresh Eggs', quantity: 6, unit: 'PCS', available: 120, status: 'ok' },
-        { name: 'Whole Milk', quantity: 0.3, unit: 'L', available: 15, status: 'ok' },
-      ],
-    },
-  ]
+  useEffect(() => {
+    fetchRecipes()
+  }, [])
+
+  const fetchRecipes = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/admin/recipes')
+      const result = await response.json()
+      if (result.success) {
+        setRecipes(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching recipes:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredRecipes = recipes.filter((recipe) =>
+    searchQuery === '' ||
+    recipe.menuItemName.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   const getIngredientStatusColor = (status: string) => {
     switch (status) {
@@ -144,9 +113,30 @@ export default function RecipesPage() {
           </CardContent>
         </Card>
 
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Loader2 className="w-12 h-12 text-primary-600 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-600">Loading recipes...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {!loading && filteredRecipes.length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <ChefHat className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No recipes found. Create your first recipe to get started!</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Recipes List */}
-        <div className="space-y-6">
-          {recipes.map((recipe) => (
+        {!loading && filteredRecipes.length > 0 && (
+          <div className="space-y-6">
+            {filteredRecipes.map((recipe) => (
             <Card key={recipe.id} className={recipe.canMake ? '' : 'border-yellow-200'}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -260,7 +250,8 @@ export default function RecipesPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* Summary Card */}
         <Card className="mt-6">
@@ -272,20 +263,22 @@ export default function RecipesPage() {
               <div className="p-4 bg-green-50 rounded-lg">
                 <p className="text-sm text-green-700 mb-1">Available Dishes</p>
                 <p className="text-3xl font-bold text-green-900">
-                  {recipes.filter(r => r.canMake).length}
+                  {loading ? '-' : recipes.filter(r => r.canMake).length}
                 </p>
                 <p className="text-xs text-green-600 mt-1">Ready to cook</p>
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <p className="text-sm text-yellow-700 mb-1">Missing Ingredients</p>
                 <p className="text-3xl font-bold text-yellow-900">
-                  {recipes.filter(r => !r.canMake).length}
+                  {loading ? '-' : recipes.filter(r => !r.canMake).length}
                 </p>
                 <p className="text-xs text-yellow-600 mt-1">Need restocking</p>
               </div>
               <div className="p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-700 mb-1">Total Recipes</p>
-                <p className="text-3xl font-bold text-blue-900">{recipes.length}</p>
+                <p className="text-3xl font-bold text-blue-900">
+                  {loading ? '-' : recipes.length}
+                </p>
                 <p className="text-xs text-blue-600 mt-1">Menu items with recipes</p>
               </div>
             </div>

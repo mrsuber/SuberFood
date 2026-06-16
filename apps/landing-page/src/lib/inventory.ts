@@ -1,6 +1,5 @@
-import { PrismaClient, InventoryUnit } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { InventoryUnit } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
 export type InventoryDeduction = {
   itemId: string

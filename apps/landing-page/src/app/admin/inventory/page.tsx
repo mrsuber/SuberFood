@@ -15,7 +15,7 @@ import {
   Download,
   FileSpreadsheet,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 type InventoryItem = {
@@ -38,145 +38,41 @@ export default function InventoryPage() {
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock data - will be replaced with API
-  const inventoryItems: InventoryItem[] = [
-    {
-      id: '1',
-      name: 'All-Purpose Flour',
-      category: 'FLOUR_GRAIN',
-      rawStock: 25,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'KG',
-      minimumStock: 50,
-      costPerUnit: 2.50,
-      supplier: 'Grain Mills Inc',
-      storageLocation: 'Pantry A',
-      isCompound: false,
-      status: 'LOW',
-    },
-    {
-      id: '2',
-      name: 'Granulated Sugar',
-      category: 'SUGAR_SWEETENER',
-      rawStock: 80,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'KG',
-      minimumStock: 30,
-      costPerUnit: 1.80,
-      supplier: 'Sweet Supply Co',
-      storageLocation: 'Pantry A',
-      isCompound: false,
-      status: 'OK',
-    },
-    {
-      id: '3',
-      name: 'Dark Chocolate (70%)',
-      category: 'CHOCOLATE_COCOA',
-      rawStock: 5,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'KG',
-      minimumStock: 10,
-      costPerUnit: 12.50,
-      supplier: 'Cocoa Traders',
-      storageLocation: 'Pantry B',
-      isCompound: false,
-      status: 'CRITICAL',
-    },
-    {
-      id: '4',
-      name: 'Fresh Eggs',
-      category: 'EGGS',
-      rawStock: 120,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'PCS',
-      minimumStock: 100,
-      costPerUnit: 0.30,
-      supplier: 'Farm Fresh Eggs',
-      storageLocation: 'Fridge 1',
-      isCompound: false,
-      status: 'OK',
-    },
-    {
-      id: '5',
-      name: 'Whole Milk',
-      category: 'DAIRY',
-      rawStock: 15,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'L',
-      minimumStock: 20,
-      costPerUnit: 1.50,
-      supplier: 'Dairy Best',
-      storageLocation: 'Fridge 2',
-      isCompound: false,
-      status: 'LOW',
-    },
-    {
-      id: '6',
-      name: 'Vanilla Extract',
-      category: 'BAKING_SUPPLIES',
-      rawStock: 0,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'ML',
-      minimumStock: 500,
-      costPerUnit: 0.05,
-      supplier: 'Flavor House',
-      storageLocation: 'Pantry B',
-      isCompound: false,
-      status: 'OUT',
-    },
-    {
-      id: '7',
-      name: 'Dry Beans',
-      category: 'VEGETABLES',
-      rawStock: 10,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'KG',
-      minimumStock: 5,
-      costPerUnit: 3.50,
-      supplier: 'Grain & Bean Co',
-      storageLocation: 'Pantry A',
-      isCompound: false,
-      status: 'OK',
-    },
-    {
-      id: '8',
-      name: 'Table Salt',
-      category: 'SPICES_HERBS',
-      rawStock: 1000,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'G',
-      minimumStock: 500,
-      costPerUnit: 0.002,
-      supplier: 'Spice Traders',
-      storageLocation: 'Pantry A',
-      isCompound: false,
-      status: 'OK',
-    },
-    {
-      id: '9',
-      name: 'Pre-boiled Salted Beans',
-      category: 'VEGETABLES',
-      rawStock: 0,
-      wipStock: 0,
-      consumedStock: 0,
-      unit: 'KG',
-      minimumStock: 2,
-      costPerUnit: 0,
-      supplier: '-',
-      storageLocation: 'Freezer 1',
-      isCompound: true,
-      status: 'OUT',
-    },
-  ]
+  useEffect(() => {
+    fetchInventoryItems()
+  }, [])
+
+  const fetchInventoryItems = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/inventory/items')
+      const result = await response.json()
+
+      if (result.success) {
+        // Map API data to match component structure
+        const items = result.data.map((item: any) => ({
+          ...item,
+          status: getStockStatus(item.rawStock, item.minimumStock),
+        }))
+        setInventoryItems(items)
+      }
+    } catch (error) {
+      console.error('Error fetching inventory:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStockStatus = (rawStock: number, minimumStock: number): 'OK' | 'LOW' | 'CRITICAL' | 'OUT' => {
+    if (rawStock === 0) return 'OUT'
+    if (rawStock < minimumStock * 0.5) return 'CRITICAL'
+    if (rawStock < minimumStock) return 'LOW'
+    return 'OK'
+  }
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -245,6 +141,20 @@ export default function InventoryPage() {
     { value: 'OILS_FATS', label: 'Oils & Fats' },
     { value: 'SPICES_HERBS', label: 'Spices & Herbs' },
   ]
+
+  if (loading) {
+    return (
+      <div>
+        <AdminHeader title="Kitchen Inventory" />
+        <div className="p-8 flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading inventory...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -351,7 +261,24 @@ export default function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {inventoryItems.map((item) => (
+                  {inventoryItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <Package className="w-16 h-16 text-gray-300 mb-4" />
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Inventory Items</h3>
+                          <p className="text-gray-600 mb-4">Get started by adding your first ingredient</p>
+                          <Link href="/admin/inventory/new">
+                            <Button>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add First Item
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    inventoryItems.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -422,7 +349,8 @@ export default function InventoryPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                  )}
                 </tbody>
               </table>
             </div>

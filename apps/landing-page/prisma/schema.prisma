@@ -692,7 +692,7 @@ model InventoryItem {
   id           String            @id @default(cuid())
   restaurantId String? // Location-specific inventory (nullable for migration)
   name         String
-  category     InventoryCategory
+  category     String // Flexible category - can be custom or from predefined list
   unit         InventoryUnit
 
   // THREE-STATE STOCK TRACKING
@@ -722,6 +722,8 @@ model InventoryItem {
   // Metadata
   description String?
   notes       String?
+  imageUrl    String? // Image of the ingredient
+  size        String? // Size/grade: SMALL, MEDIUM, LARGE, EXTRA_LARGE, JUMBO (universal for all ingredients)
   isActive    Boolean @default(true)
 
   createdAt DateTime @default(now())

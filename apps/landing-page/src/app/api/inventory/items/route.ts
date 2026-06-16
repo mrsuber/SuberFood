@@ -25,6 +25,8 @@ export async function POST(req: NextRequest) {
       description,
       isCompound,
       totalPurchased,
+      imageUrl,
+      size,
     } = body
 
     if (!name || !category || !unit || rawStock === undefined || minimumStock === undefined) {
@@ -52,6 +54,8 @@ export async function POST(req: NextRequest) {
         storageLocation,
         description,
         isCompound,
+        imageUrl,
+        size,
         isActive: true,
       },
     })

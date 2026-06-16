@@ -11,10 +11,11 @@ import { useRouter } from 'next/navigation'
 export default function NewInventoryItemPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
-    category: 'OTHER',
-    unit: 'KG',
+    category: '',
+    unit: 'PCS',
     rawStock: 0,
     minimumStock: 0,
     maximumStock: 0,
@@ -25,6 +26,8 @@ export default function NewInventoryItemPage() {
     storageLocation: '',
     description: '',
     isCompound: false,
+    imageUrl: '',
+    size: '',
   })
 
   const categories = [
@@ -50,17 +53,26 @@ export default function NewInventoryItemPage() {
   ]
 
   const units = [
+    { value: 'PCS', label: 'Pieces (PCS)' },
+    { value: 'DOZEN', label: 'Dozen' },
     { value: 'KG', label: 'Kilograms (KG)' },
     { value: 'G', label: 'Grams (G)' },
     { value: 'L', label: 'Liters (L)' },
     { value: 'ML', label: 'Milliliters (ML)' },
-    { value: 'PCS', label: 'Pieces (PCS)' },
-    { value: 'DOZEN', label: 'Dozen' },
     { value: 'LBS', label: 'Pounds (LBS)' },
     { value: 'OZ', label: 'Ounces (OZ)' },
     { value: 'CUPS', label: 'Cups' },
     { value: 'TBSP', label: 'Tablespoons (TBSP)' },
     { value: 'TSP', label: 'Teaspoons (TSP)' },
+  ]
+
+  const sizes = [
+    { value: 'EXTRA_SMALL', label: 'Extra Small (XS)' },
+    { value: 'SMALL', label: 'Small (S)' },
+    { value: 'MEDIUM', label: 'Medium (M)' },
+    { value: 'LARGE', label: 'Large (L)' },
+    { value: 'EXTRA_LARGE', label: 'Extra Large (XL)' },
+    { value: 'JUMBO', label: 'Jumbo (XXL)' },
   ]
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,6 +122,41 @@ export default function NewInventoryItemPage() {
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        const fullUrl = `${window.location.origin}${data.url}`
+        setFormData((prev) => ({ ...prev, imageUrl: fullUrl }))
+        alert('✅ Image uploaded successfully!')
+      } else {
+        alert(`❌ Upload failed: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('❌ Failed to upload image')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({ ...prev, imageUrl: '' }))
+  }
+
   return (
     <div>
       <AdminHeader title="Add Ingredient" />
@@ -152,19 +199,24 @@ export default function NewInventoryItemPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Category *
                     </label>
-                    <select
+                    <input
+                      type="text"
                       name="category"
                       value={formData.category}
                       onChange={handleChange}
                       required
+                      list="category-suggestions"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
+                      placeholder="e.g., Eggs, Vegetables, or create your own..."
+                    />
+                    <datalist id="category-suggestions">
                       {categories.map((cat) => (
-                        <option key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </option>
+                        <option key={cat.value} value={cat.label} />
                       ))}
-                    </select>
+                    </datalist>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Choose from suggestions or type your own custom category
+                    </p>
                   </div>
 
                   <div>
@@ -199,6 +251,29 @@ export default function NewInventoryItemPage() {
                       This is a compound/pre-prepared ingredient
                     </label>
                   </div>
+                </div>
+
+                {/* Size/Grade - Universal for all ingredients */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Size / Grade (Optional)
+                  </label>
+                  <select
+                    name="size"
+                    value={formData.size}
+                    onChange={handleChange}
+                    className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">Select size...</option>
+                    {sizes.map((size) => (
+                      <option key={size.value} value={size.value}>
+                        {size.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Select the size/grade for this ingredient (e.g., small eggs, large potatoes, jumbo shrimp). This helps with recipe calculations and consistency.
+                  </p>
                 </div>
               </div>
 
@@ -350,6 +425,78 @@ export default function NewInventoryItemPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="Optional notes about this ingredient..."
                   />
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Ingredient Image</h3>
+
+                {/* Current Image */}
+                {formData.imageUrl && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Current Image
+                    </label>
+                    <div className="relative inline-block">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Ingredient preview"
+                        className="w-48 h-48 object-cover rounded-lg border-2 border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Options */}
+                <div className="space-y-4">
+                  {/* URL Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image URL
+                    </label>
+                    <input
+                      type="url"
+                      name="imageUrl"
+                      value={formData.imageUrl}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+
+                  <div className="text-center text-gray-500 text-sm font-medium">OR</div>
+
+                  {/* File Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Upload from Computer
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                      />
+                      {uploading && (
+                        <span className="text-sm text-gray-600">Uploading...</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Supported formats: JPG, PNG, WebP, GIF. Max size: 5MB
+                    </p>
+                  </div>
                 </div>
               </div>
 

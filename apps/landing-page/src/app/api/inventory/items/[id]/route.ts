@@ -85,6 +85,8 @@ export async function PUT(
       description,
       isCompound,
       isActive,
+      imageUrl,
+      size,
     } = body
 
     // Don't allow updating stock levels here - use stock movement endpoints
@@ -104,6 +106,8 @@ export async function PUT(
         description,
         isCompound,
         isActive,
+        imageUrl,
+        size,
       },
     })
 

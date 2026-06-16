@@ -20,6 +20,12 @@ interface Category {
   restaurantId: string
 }
 
+interface Recipe {
+  id: string
+  name: string
+  menuItemName: string
+}
+
 function NewMenuItemForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -30,12 +36,16 @@ function NewMenuItemForm() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [recipes, setRecipes] = useState<Recipe[]>([])
   const [selectedRestaurant, setSelectedRestaurant] = useState(preselectedLocationId || '')
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
     categoryId: '',
+    recipeId: '',
     description: '',
     image: '',
     price: '',
@@ -59,20 +69,24 @@ function NewMenuItemForm() {
   })
 
   useEffect(() => {
-    // Fetch restaurants and categories
+    // Fetch restaurants, categories, and recipes
     Promise.all([
       fetch('/api/admin/restaurants').then(r => r.json()),
       fetch('/api/admin/menu/categories').then(r => r.json()),
-    ]).then(([restaurantsData, categoriesData]) => {
+      fetch('/api/admin/recipes').then(r => r.json()),
+    ]).then(([restaurantsData, categoriesData, recipesData]) => {
       if (restaurantsData.success) {
         setRestaurants(restaurantsData.restaurants)
       }
       if (categoriesData.success) {
         setCategories(categoriesData.categories)
       }
+      if (recipesData.success) {
+        setRecipes(recipesData.data)
+      }
     }).catch(err => {
       console.error('Error fetching data:', err)
-      setError('Failed to load restaurants and categories')
+      setError('Failed to load data')
     })
   }, [])
 
@@ -97,6 +111,59 @@ function NewMenuItemForm() {
     setFormData(prev => ({ ...prev, categoryId: '' }))
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB')
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image')
+      }
+
+      const result = await response.json()
+
+      if (result.success && result.url) {
+        setFormData(prev => ({ ...prev, image: result.url }))
+        setImagePreview(result.url)
+      } else {
+        throw new Error('Upload failed')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image')
+      console.error('Image upload error:', err)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, image: '' }))
+    setImagePreview(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -104,13 +171,16 @@ function NewMenuItemForm() {
     setSaving(true)
 
     try {
+      // Prepare data for API (exclude recipeId as it's not stored on MenuItem)
+      const { recipeId, ...menuItemData } = formData
+
       const response = await fetch('/api/admin/menu', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
+          ...menuItemData,
           price: parseFloat(formData.price),
           salePrice: formData.salePrice ? parseFloat(formData.salePrice) : null,
           preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : null,
@@ -215,6 +285,29 @@ function NewMenuItemForm() {
                     )}
                   </div>
                 </div>
+
+                {/* Recipe Reference */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Recipe Reference (Informational)
+                  </label>
+                  <select
+                    name="recipeId"
+                    value={formData.recipeId}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">No recipe selected</option>
+                    {recipes.map(recipe => (
+                      <option key={recipe.id} value={recipe.id}>
+                        {recipe.menuItemName}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    View existing recipes for reference. To link a recipe to this menu item, create the recipe separately after creating this menu item.
+                  </p>
+                </div>
               </div>
 
               {/* Basic Information */}
@@ -252,19 +345,43 @@ function NewMenuItemForm() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Image URL
+                      Dish Image
                     </label>
-                    <input
-                      type="url"
-                      name="image"
-                      value={formData.image}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="https://example.com/dish-image.jpg"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Paste a URL to an image of this dish (optional)
-                    </p>
+
+                    {!imagePreview ? (
+                      <div>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            disabled={uploading}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {uploading ? 'Uploading...' : 'Upload an image of this dish (max 5MB, optional)'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-gray-200">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleRemoveImage}
+                          className="w-full"
+                        >
+                          Remove Image
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

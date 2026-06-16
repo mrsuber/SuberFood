@@ -13,7 +13,7 @@ async function main() {
 
   // Find a restaurant first (categories are restaurant-specific)
   let restaurant = await prisma.restaurant.findFirst({
-    where: { status: 'ACTIVE' },
+    where: { status: 'OPEN' },
   })
 
   if (!restaurant) {
@@ -29,7 +29,7 @@ async function main() {
         postalCode: '00000',
         phone: '123-456-7890',
         email: 'info@suberfoods.com',
-        status: 'ACTIVE',
+        status: 'OPEN',
         capacity: 100,
         rating: 5.0,
         privateRooms: false,

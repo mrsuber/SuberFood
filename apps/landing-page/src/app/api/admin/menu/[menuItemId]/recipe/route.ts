@@ -111,29 +111,36 @@ export async function PATCH(
       )
     }
 
-    // Delete existing ingredients
-    await prisma.recipeIngredient.deleteMany({
-      where: { recipeId: existingRecipe.id },
-    })
+    // Build update data object with only provided fields
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (servingSize !== undefined) updateData.servingSize = servingSize
+    if (prepTime !== undefined) updateData.prepTime = prepTime
+    if (cookTime !== undefined) updateData.cookTime = cookTime
+    if (instructions !== undefined) updateData.instructions = instructions
 
-    // Update recipe with new ingredients
+    // Only update ingredients if they are provided
+    if (ingredients !== undefined) {
+      // Delete existing ingredients
+      await prisma.recipeIngredient.deleteMany({
+        where: { recipeId: existingRecipe.id },
+      })
+
+      // Add new ingredients
+      updateData.ingredients = {
+        create: ingredients.map((ing: any) => ({
+          inventoryItemId: ing.inventoryItemId,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          notes: ing.notes || null,
+        })),
+      }
+    }
+
+    // Update recipe
     const recipe = await prisma.recipe.update({
       where: { id: existingRecipe.id },
-      data: {
-        name,
-        servingSize,
-        prepTime,
-        cookTime,
-        instructions,
-        ingredients: {
-          create: ingredients.map((ing: any) => ({
-            inventoryItemId: ing.inventoryItemId,
-            quantity: ing.quantity,
-            unit: ing.unit,
-            notes: ing.notes || null,
-          })),
-        },
-      },
+      data: updateData,
       include: {
         ingredients: {
           include: {

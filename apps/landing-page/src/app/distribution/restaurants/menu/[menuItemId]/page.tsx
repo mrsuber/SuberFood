@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ChevronLeft,
+  ChevronRight,
   Heart,
   Star,
   Clock,
@@ -36,6 +37,7 @@ export default function MenuItemDetailPage() {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { isFavorite, toggleFavorite } = useMenuStore();
   const favorite = isFavorite(menuItemId);
@@ -173,18 +175,66 @@ export default function MenuItemDetailPage() {
           </div>
         </div>
 
-        {/* Hero Image Section */}
+        {/* Hero Image Section with Gallery */}
         <div className="relative h-96 bg-gray-900">
           {menuItem.image || menuItem.images?.[0] ? (
             <>
-              <Image
-                src={menuItem.image || menuItem.images![0]}
-                alt={menuItem.name}
-                fill
-                className="object-cover opacity-90"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              {/* Get all available images */}
+              {(() => {
+                const allImages = [];
+                if (menuItem.image) allImages.push(menuItem.image);
+                if (menuItem.images && menuItem.images.length > 0) {
+                  menuItem.images.forEach((img: string) => {
+                    if (!allImages.includes(img)) allImages.push(img);
+                  });
+                }
+
+                return (
+                  <>
+                    <Image
+                      src={allImages[currentImageIndex] || allImages[0]}
+                      alt={menuItem.name}
+                      fill
+                      className="object-cover opacity-90"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+                    {/* Navigation arrows - only show if more than 1 image */}
+                    {allImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setCurrentImageIndex(prev => prev === 0 ? allImages.length - 1 : prev - 1)}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-2 shadow-lg transition-all z-10"
+                        >
+                          <ChevronLeft className="w-6 h-6" />
+                        </button>
+                        <button
+                          onClick={() => setCurrentImageIndex(prev => prev === allImages.length - 1 ? 0 : prev + 1)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-2 shadow-lg transition-all z-10"
+                        >
+                          <ChevronRight className="w-6 h-6" />
+                        </button>
+
+                        {/* Image indicators */}
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                          {allImages.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setCurrentImageIndex(idx)}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                idx === currentImageIndex
+                                  ? 'bg-white w-8'
+                                  : 'bg-white/50 hover:bg-white/80'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white text-6xl">

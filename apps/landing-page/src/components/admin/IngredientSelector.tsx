@@ -41,12 +41,15 @@ export function IngredientSelector({ value, onChange, restaurantId }: Ingredient
       if (!response.ok) throw new Error('Failed to fetch inventory items')
 
       const data = await response.json()
-      if (data.success) {
-        setInventoryItems(data.items)
+      if (data.success && data.data) {
+        setInventoryItems(data.data)
+      } else {
+        setInventoryItems([])
       }
     } catch (err) {
       setError('Failed to load inventory items')
       console.error(err)
+      setInventoryItems([])
     } finally {
       setLoading(false)
     }
@@ -73,7 +76,7 @@ export function IngredientSelector({ value, onChange, restaurantId }: Ingredient
   const updateIngredient = (index: number, field: keyof SelectedIngredient, fieldValue: string | number) => {
     const updated = [...value]
     if (field === 'inventoryItemId') {
-      const item = inventoryItems.find(i => i.id === fieldValue)
+      const item = (inventoryItems || []).find(i => i.id === fieldValue)
       if (item) {
         updated[index] = {
           ...updated[index],
@@ -140,7 +143,7 @@ export function IngredientSelector({ value, onChange, restaurantId }: Ingredient
                   className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select ingredient...</option>
-                  {inventoryItems.map((item) => (
+                  {(inventoryItems || []).map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name} ({item.category})
                     </option>

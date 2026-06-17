@@ -176,101 +176,111 @@ export default function MenuItemDetailPage() {
         </div>
 
         {/* Hero Image Section with Gallery */}
-        <div className="relative h-96 bg-gray-900">
-          {menuItem.image || menuItem.images?.[0] ? (
-            <>
-              {/* Get all available images */}
-              {(() => {
-                const allImages = [];
-                if (menuItem.image) allImages.push(menuItem.image);
-                if (menuItem.images && menuItem.images.length > 0) {
-                  menuItem.images.forEach((img: string) => {
-                    if (!allImages.includes(img)) allImages.push(img);
-                  });
-                }
+        <div className="bg-gray-900">
+          {/* Main Image Display */}
+          <div className="relative h-96">
+            {menuItem.image || menuItem.images?.[0] ? (
+              <>
+                {(() => {
+                  const allImages = [];
+                  if (menuItem.image) allImages.push(menuItem.image);
+                  if (menuItem.images && menuItem.images.length > 0) {
+                    menuItem.images.forEach((img: string) => {
+                      if (!allImages.includes(img)) allImages.push(img);
+                    });
+                  }
 
-                return (
-                  <>
-                    <Image
-                      src={allImages[currentImageIndex] || allImages[0]}
-                      alt={menuItem.name}
-                      fill
-                      className="object-cover opacity-90"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  return (
+                    <>
+                      <Image
+                        src={allImages[currentImageIndex] || allImages[0]}
+                        alt={menuItem.name}
+                        fill
+                        className="object-cover opacity-90"
+                        priority
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </>
+                  );
+                })()}
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white text-6xl">
+                🍽️
+              </div>
+            )}
 
-                    {/* Navigation arrows - only show if more than 1 image */}
-                    {allImages.length > 1 && (
-                      <>
-                        <button
-                          onClick={() => setCurrentImageIndex(prev => prev === 0 ? allImages.length - 1 : prev - 1)}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-2 shadow-lg transition-all z-10"
-                        >
-                          <ChevronLeft className="w-6 h-6" />
-                        </button>
-                        <button
-                          onClick={() => setCurrentImageIndex(prev => prev === allImages.length - 1 ? 0 : prev + 1)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 rounded-full p-2 shadow-lg transition-all z-10"
-                        >
-                          <ChevronRight className="w-6 h-6" />
-                        </button>
-
-                        {/* Image indicators */}
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                          {allImages.map((_, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => setCurrentImageIndex(idx)}
-                              className={`w-2 h-2 rounded-full transition-all ${
-                                idx === currentImageIndex
-                                  ? 'bg-white w-8'
-                                  : 'bg-white/50 hover:bg-white/80'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </>
-                );
-              })()}
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-white text-6xl">
-              🍽️
+            {/* Floating Badges */}
+            <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
+              {menuItem.isChefRecommended && (
+                <span className="bg-yellow-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg">
+                  <Award className="w-4 h-4" />
+                  Chef's Pick
+                </span>
+              )}
+              {menuItem.isSeasonal && (
+                <span className="bg-orange-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg shadow-lg">
+                  Seasonal
+                </span>
+              )}
+              {hasDiscount && (
+                <span className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg shadow-lg">
+                  On Sale
+                </span>
+              )}
             </div>
-          )}
 
-          {/* Floating Badges */}
-          <div className="absolute top-6 left-6 flex flex-col gap-2">
-            {menuItem.isChefRecommended && (
-              <span className="bg-yellow-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg">
-                <Award className="w-4 h-4" />
-                Chef's Pick
-              </span>
-            )}
-            {menuItem.isSeasonal && (
-              <span className="bg-orange-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg shadow-lg">
-                Seasonal
-              </span>
-            )}
-            {hasDiscount && (
-              <span className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-lg shadow-lg">
-                On Sale
-              </span>
-            )}
+            {/* Favorite Button */}
+            <button
+              onClick={() => toggleFavorite(menuItemId)}
+              className="absolute top-6 right-6 p-3 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors z-10"
+            >
+              <Heart
+                className={`w-6 h-6 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
+              />
+            </button>
           </div>
 
-          {/* Favorite Button */}
-          <button
-            onClick={() => toggleFavorite(menuItemId)}
-            className="absolute top-6 right-6 p-3 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors"
-          >
-            <Heart
-              className={`w-6 h-6 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
-            />
-          </button>
+          {/* Image Gallery Thumbnails - only show if more than 1 image */}
+          {(() => {
+            const allImages = [];
+            if (menuItem.image) allImages.push(menuItem.image);
+            if (menuItem.images && menuItem.images.length > 0) {
+              menuItem.images.forEach((img: string) => {
+                if (!allImages.includes(img)) allImages.push(img);
+              });
+            }
+
+            if (allImages.length > 1) {
+              return (
+                <div className="bg-gray-800 px-4 py-6">
+                  <div className="max-w-7xl mx-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {allImages.map((img, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentImageIndex(idx)}
+                          className={`relative aspect-square rounded-lg overflow-hidden transition-all ${
+                            idx === currentImageIndex
+                              ? 'ring-4 ring-green-500 scale-105'
+                              : 'ring-2 ring-gray-600 hover:ring-gray-400'
+                          }`}
+                        >
+                          <Image
+                            src={img}
+                            alt={`${menuItem.name} - Image ${idx + 1}`}
+                            fill
+                            className="object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
 
         {/* Main Content */}

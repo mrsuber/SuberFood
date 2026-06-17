@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 import { Suspense } from 'react'
-import { IngredientSelector } from '@/components/admin/IngredientSelector'
 
 interface Restaurant {
   id: string
@@ -25,6 +24,18 @@ interface Recipe {
   id: string
   name: string
   menuItemName: string
+  instructions?: string
+  prepTime?: number
+  ingredients?: Array<{
+    inventoryItemId: string
+    inventoryItem: {
+      name: string
+      unit: string
+    }
+    quantity: number
+    unit: string
+    notes?: string
+  }>
 }
 
 interface SelectedIngredient {
@@ -53,6 +64,8 @@ function NewMenuItemForm() {
   const [galleryImages, setGalleryImages] = useState<string[]>([])
   const [uploadingGallery, setUploadingGallery] = useState(false)
   const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([])
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
+  const [loadingRecipe, setLoadingRecipe] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -127,6 +140,60 @@ function NewMenuItemForm() {
   const handleRestaurantChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedRestaurant(e.target.value)
     setFormData(prev => ({ ...prev, categoryId: '' }))
+  }
+
+  const handleRecipeSelection = async (recipeId: string) => {
+    if (!recipeId) {
+      setSelectedRecipe(null)
+      setFormData(prev => ({ ...prev, name: '', recipeId: '', preparationTime: '' }))
+      setSelectedIngredients([])
+      return
+    }
+
+    setLoadingRecipe(true)
+    setError(null)
+
+    try {
+      // Fetch full recipe details including ingredients
+      const response = await fetch(`/api/admin/recipes?id=${recipeId}`)
+      if (!response.ok) throw new Error('Failed to fetch recipe details')
+
+      const data = await response.json()
+      if (!data.success || !data.data || data.data.length === 0) {
+        throw new Error('Recipe not found')
+      }
+
+      const recipe = data.data.find((r: Recipe) => r.id === recipeId)
+      if (!recipe) throw new Error('Recipe not found')
+
+      setSelectedRecipe(recipe)
+
+      // Auto-fill form with recipe data
+      setFormData(prev => ({
+        ...prev,
+        name: recipe.name,
+        recipeId: recipe.id,
+        preparationTime: recipe.prepTime?.toString() || '',
+      }))
+
+      // Set ingredients from recipe (for display purposes)
+      if (recipe.ingredients && recipe.ingredients.length > 0) {
+        const formattedIngredients = recipe.ingredients.map(ing => ({
+          inventoryItemId: ing.inventoryItemId,
+          name: ing.inventoryItem.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          notes: ing.notes,
+        }))
+        setSelectedIngredients(formattedIngredients)
+      }
+    } catch (err) {
+      console.error('Error loading recipe:', err)
+      setError('Failed to load recipe details. Please try again.')
+      setSelectedRecipe(null)
+    } finally {
+      setLoadingRecipe(false)
+    }
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -244,25 +311,15 @@ function NewMenuItemForm() {
     setError(null)
     setSuccessMessage(null)
 
-    // Validate ingredients
-    if (selectedIngredients.length === 0) {
-      setError('Please add at least one ingredient from your inventory')
-      return
-    }
-
-    // Validate all ingredients are selected
-    const hasEmptyIngredient = selectedIngredients.some(ing => !ing.inventoryItemId || ing.quantity <= 0)
-    if (hasEmptyIngredient) {
-      setError('Please complete all ingredient selections and quantities')
+    // Validate recipe is selected
+    if (!formData.recipeId || !selectedRecipe) {
+      setError('Please select a recipe from the dropdown')
       return
     }
 
     setSaving(true)
 
     try {
-      // Step 1: Create menu item
-      const { recipeId, ...menuItemData } = formData
-
       // Build nutrition info object
       const nutritionInfo = (formData.protein || formData.carbs || formData.fat || formData.fiber || formData.sodium || formData.sugar) ? {
         protein: formData.protein || null,
@@ -273,13 +330,18 @@ function NewMenuItemForm() {
         sugar: formData.sugar || null,
       } : null
 
+      // Step 1: Create menu item
       const menuResponse = await fetch('/api/admin/menu', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...menuItemData,
+          name: formData.name,
+          categoryId: formData.categoryId,
+          description: formData.description,
+          image: formData.image,
+          images: galleryImages,
           price: parseFloat(formData.price),
           salePrice: formData.salePrice ? parseFloat(formData.salePrice) : null,
           preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : null,
@@ -287,7 +349,17 @@ function NewMenuItemForm() {
           nutritionInfo,
           spiceLevel: formData.spiceLevel ? parseInt(formData.spiceLevel) : null,
           allergens: formData.allergens ? formData.allergens.split(',').map(a => a.trim()) : [],
-          images: galleryImages,
+          isAvailable: formData.isAvailable,
+          isVegetarian: formData.isVegetarian,
+          isVegan: formData.isVegan,
+          isGlutenFree: formData.isGlutenFree,
+          isKeto: formData.isKeto,
+          isHalal: formData.isHalal,
+          isKosher: formData.isKosher,
+          isChefRecommended: formData.isChefRecommended,
+          isSeasonal: formData.isSeasonal,
+          isPopular: formData.isPopular,
+          winePairing: formData.winePairing,
         }),
       })
 
@@ -299,7 +371,7 @@ function NewMenuItemForm() {
       const menuData = await menuResponse.json()
       const menuItemId = menuData.menuItem.id
 
-      // Step 2: Create recipe with ingredients
+      // Step 2: Create recipe with ingredients from selected recipe (as a template)
       const recipeResponse = await fetch(`/api/admin/menu/${menuItemId}/recipe`, {
         method: 'POST',
         headers: {
@@ -308,6 +380,8 @@ function NewMenuItemForm() {
         body: JSON.stringify({
           name: formData.name,
           servingSize: 1,
+          instructions: selectedRecipe?.instructions || '',
+          prepTime: selectedRecipe?.prepTime || null,
           ingredients: selectedIngredients.map(ing => ({
             inventoryItemId: ing.inventoryItemId,
             quantity: ing.quantity,
@@ -318,12 +392,11 @@ function NewMenuItemForm() {
       })
 
       if (!recipeResponse.ok) {
-        // Menu item was created but recipe failed
         const data = await recipeResponse.json()
         throw new Error(data.error || 'Menu item created but failed to add recipe. Please add ingredients manually.')
       }
 
-      setSuccessMessage('Menu item and recipe created successfully!')
+      setSuccessMessage('Menu item created successfully!')
 
       setTimeout(() => {
         const redirectUrl = preselectedLocationId
@@ -364,6 +437,64 @@ function NewMenuItemForm() {
         <Card>
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Recipe Selection */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Recipe</h3>
+                <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Important:</strong> Select an existing recipe from your kitchen.
+                    The dish name, ingredients, and cooking procedure will be automatically filled from the recipe.
+                    You only need to add menu-specific details like pricing, category, and images.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Recipe *
+                  </label>
+                  <select
+                    value={formData.recipeId}
+                    onChange={(e) => handleRecipeSelection(e.target.value)}
+                    required
+                    disabled={loadingRecipe}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select a recipe</option>
+                    {recipes.map(recipe => (
+                      <option key={recipe.id} value={recipe.id}>
+                        {recipe.name}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingRecipe && (
+                    <p className="text-xs text-blue-600 mt-1">Loading recipe details...</p>
+                  )}
+                </div>
+
+                {/* Show recipe ingredients when loaded */}
+                {selectedRecipe && selectedIngredients.length > 0 && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-3">Recipe Ingredients:</h4>
+                    <ul className="space-y-2">
+                      {selectedIngredients.map((ing, idx) => (
+                        <li key={idx} className="text-sm text-gray-700 flex items-center gap-2">
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          {ing.name} - {ing.quantity} {ing.unit}
+                          {ing.notes && <span className="text-gray-500">({ing.notes})</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Show cooking procedure when loaded */}
+                {selectedRecipe && selectedRecipe.instructions && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-3">Cooking Procedure:</h4>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedRecipe.instructions}</p>
+                  </div>
+                )}
+              </div>
+
               {/* Location & Category Selection */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Location & Category</h3>
@@ -415,21 +546,22 @@ function NewMenuItemForm() {
 
               {/* Basic Information */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Menu Item Details</h3>
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dish Name *
+                      Dish Name (from recipe) *
                     </label>
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
-                      onChange={handleInputChange}
+                      readOnly
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="e.g., Grilled Herb Chicken"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+                      placeholder="Select a recipe first"
                     />
+                    <p className="text-xs text-gray-500 mt-1">The dish name is automatically filled from the selected recipe</p>
                   </div>
 
                   <div>
@@ -774,22 +906,6 @@ function NewMenuItemForm() {
                     </label>
                   ))}
                 </div>
-              </div>
-
-              {/* Recipe Ingredients */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipe Ingredients</h3>
-                <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>Important:</strong> Select ingredients from your kitchen inventory.
-                    This ensures you can only create menu items with tracked ingredients.
-                  </p>
-                </div>
-                <IngredientSelector
-                  value={selectedIngredients}
-                  onChange={setSelectedIngredients}
-                  restaurantId={selectedRestaurant}
-                />
               </div>
 
               {/* Additional Details */}

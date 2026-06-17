@@ -308,6 +308,7 @@ model MenuItem {
 
   // Phase 1: Enhanced details
   calories        Int?
+  nutritionInfo   Json? // Nutritional information: protein, carbs, fat, fiber, sodium, sugar
   preparationTime Int? // in minutes
   spiceLevel      Int? // 0-5 scale
   allergens       String[] // gluten, dairy, nuts, shellfish, etc.

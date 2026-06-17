@@ -94,15 +94,15 @@ export default function MenuItemDetailPage() {
   const displayPrice = menuItem.salePrice || menuItem.price;
   const hasDiscount = menuItem.salePrice && menuItem.salePrice < menuItem.price;
 
-  // Mock data for demonstration - this would come from the API
+  // Use real nutrition data from database or fallback to defaults
   const nutritionalInfo = {
     calories: menuItem.calories || 450,
-    protein: '28g',
-    carbs: '42g',
-    fat: '18g',
-    fiber: '6g',
-    sodium: '680mg',
-    sugar: '8g',
+    protein: menuItem.nutritionInfo?.protein ? `${menuItem.nutritionInfo.protein}g` : '28g',
+    carbs: menuItem.nutritionInfo?.carbs ? `${menuItem.nutritionInfo.carbs}g` : '42g',
+    fat: menuItem.nutritionInfo?.fat ? `${menuItem.nutritionInfo.fat}g` : '18g',
+    fiber: menuItem.nutritionInfo?.fiber ? `${menuItem.nutritionInfo.fiber}g` : '6g',
+    sodium: menuItem.nutritionInfo?.sodium ? `${menuItem.nutritionInfo.sodium}mg` : '680mg',
+    sugar: menuItem.nutritionInfo?.sugar ? `${menuItem.nutritionInfo.sugar}g` : '8g',
   };
 
   // Get ingredients from recipe if available, otherwise use text field
@@ -127,26 +127,34 @@ export default function MenuItemDetailPage() {
             { id: 'default3', name: 'Premium quality', displayName: 'Premium quality' }
           ]);
 
-  const cookingProcedure = [
-    {
-      step: 1,
-      title: 'Preparation',
-      description: 'Gather all ingredients and prepare your workstation. Wash and chop vegetables.',
-      time: '10 min'
-    },
-    {
-      step: 2,
-      title: 'Cooking',
-      description: 'Heat pan to medium-high. Add ingredients in the proper sequence for optimal flavor.',
-      time: '15 min'
-    },
-    {
-      step: 3,
-      title: 'Finishing',
-      description: 'Plate beautifully and garnish. Add final seasonings to taste.',
-      time: '5 min'
-    },
-  ];
+  // Get cooking procedure from recipe instructions or use default
+  const cookingProcedure = menuItem.recipe?.instructions
+    ? menuItem.recipe.instructions.split('\n').filter((line: string) => line.trim()).map((instruction: string, index: number) => ({
+        step: index + 1,
+        title: `Step ${index + 1}`,
+        description: instruction.replace(/^\d+\.\s*/, ''), // Remove leading numbers
+        time: menuItem.recipe.prepTime && index === 0 ? `${menuItem.recipe.prepTime} min` : ''
+      }))
+    : [
+        {
+          step: 1,
+          title: 'Preparation',
+          description: 'Gather all ingredients and prepare your workstation. Wash and chop vegetables.',
+          time: '10 min'
+        },
+        {
+          step: 2,
+          title: 'Cooking',
+          description: 'Heat pan to medium-high. Add ingredients in the proper sequence for optimal flavor.',
+          time: '15 min'
+        },
+        {
+          step: 3,
+          title: 'Finishing',
+          description: 'Plate beautifully and garnish. Add final seasonings to taste.',
+          time: '5 min'
+        },
+      ];
 
   return (
     <>

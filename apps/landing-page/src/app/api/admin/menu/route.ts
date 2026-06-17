@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         salePrice: body.salePrice || null,
         preparationTime: body.preparationTime || null,
         calories: body.calories || null,
+        nutritionInfo: body.nutritionInfo || null,
         spiceLevel: body.spiceLevel || null,
         isAvailable: body.isAvailable ?? true,
         isVegetarian: body.isVegetarian ?? false,

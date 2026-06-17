@@ -62,6 +62,12 @@ function NewMenuItemForm() {
     salePrice: '',
     preparationTime: '',
     calories: '',
+    protein: '',
+    carbs: '',
+    fat: '',
+    fiber: '',
+    sodium: '',
+    sugar: '',
     spiceLevel: '',
     isAvailable: true,
     isVegetarian: false,
@@ -198,6 +204,16 @@ function NewMenuItemForm() {
       // Step 1: Create menu item
       const { recipeId, ...menuItemData } = formData
 
+      // Build nutrition info object
+      const nutritionInfo = (formData.protein || formData.carbs || formData.fat || formData.fiber || formData.sodium || formData.sugar) ? {
+        protein: formData.protein || null,
+        carbs: formData.carbs || null,
+        fat: formData.fat || null,
+        fiber: formData.fiber || null,
+        sodium: formData.sodium || null,
+        sugar: formData.sugar || null,
+      } : null
+
       const menuResponse = await fetch('/api/admin/menu', {
         method: 'POST',
         headers: {
@@ -209,6 +225,7 @@ function NewMenuItemForm() {
           salePrice: formData.salePrice ? parseFloat(formData.salePrice) : null,
           preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : null,
           calories: formData.calories ? parseInt(formData.calories) : null,
+          nutritionInfo,
           spiceLevel: formData.spiceLevel ? parseInt(formData.spiceLevel) : null,
           allergens: formData.allergens ? formData.allergens.split(',').map(a => a.trim()) : [],
         }),
@@ -467,7 +484,8 @@ function NewMenuItemForm() {
               {/* Nutritional Info */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Nutritional Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <p className="text-sm text-gray-600 mb-4">Enter nutrition information per serving</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Calories
@@ -480,6 +498,90 @@ function NewMenuItemForm() {
                       min="0"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="450"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Protein (g)
+                    </label>
+                    <input
+                      type="text"
+                      name="protein"
+                      value={formData.protein}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="28"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Carbs (g)
+                    </label>
+                    <input
+                      type="text"
+                      name="carbs"
+                      value={formData.carbs}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="42"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fat (g)
+                    </label>
+                    <input
+                      type="text"
+                      name="fat"
+                      value={formData.fat}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="18"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fiber (g)
+                    </label>
+                    <input
+                      type="text"
+                      name="fiber"
+                      value={formData.fiber}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="6"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sodium (mg)
+                    </label>
+                    <input
+                      type="text"
+                      name="sodium"
+                      value={formData.sodium}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="680"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sugar (g)
+                    </label>
+                    <input
+                      type="text"
+                      name="sugar"
+                      value={formData.sugar}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="8"
                     />
                   </div>
 
@@ -499,7 +601,7 @@ function NewMenuItemForm() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Allergens (comma-separated)
                     </label>

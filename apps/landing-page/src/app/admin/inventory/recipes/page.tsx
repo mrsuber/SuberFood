@@ -259,13 +259,23 @@ export default function RecipesPage() {
                     </h4>
                     <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <div className="prose prose-sm max-w-none">
-                        {recipe.instructions.split('\n').filter(line => line.trim()).map((line, idx) => (
-                          <p key={idx} className="text-gray-700 mb-2 last:mb-0">
-                            {line.replace(/^\d+\.\s*/, (match) => (
-                              <span className="font-semibold text-blue-700">{match}</span>
-                            ))}
-                          </p>
-                        ))}
+                        {recipe.instructions.split('\n').filter(line => line.trim()).map((line, idx) => {
+                          // Extract the step number if present
+                          const match = line.match(/^(\d+\.\s*)(.*)$/)
+                          if (match) {
+                            return (
+                              <p key={idx} className="text-gray-700 mb-2 last:mb-0">
+                                <span className="font-semibold text-blue-700">{match[1]}</span>
+                                {match[2]}
+                              </p>
+                            )
+                          }
+                          return (
+                            <p key={idx} className="text-gray-700 mb-2 last:mb-0">
+                              {line}
+                            </p>
+                          )
+                        })}
                       </div>
                     </div>
                   </div>

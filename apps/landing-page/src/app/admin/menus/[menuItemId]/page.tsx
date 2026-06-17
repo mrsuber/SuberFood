@@ -7,6 +7,7 @@ import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Trash2 } from 'lucide-react'
+import { IngredientSelector } from '@/components/admin/IngredientSelector'
 
 interface Restaurant {
   id: string
@@ -52,6 +53,28 @@ interface MenuItem {
       name: string
     }
   }
+  recipe?: {
+    id: string
+    ingredients: Array<{
+      id: string
+      quantity: number
+      unit: string
+      notes: string | null
+      inventoryItem: {
+        id: string
+        name: string
+        unit: string
+      }
+    }>
+  }
+}
+
+interface SelectedIngredient {
+  inventoryItemId: string
+  name: string
+  quantity: number
+  unit: string
+  notes?: string
 }
 
 export default function EditMenuItemPage() {
@@ -70,6 +93,8 @@ export default function EditMenuItemPage() {
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([])
   const [uploading, setUploading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([])
+  const [hasRecipe, setHasRecipe] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -131,6 +156,20 @@ export default function EditMenuItemPage() {
         })
         setSelectedRestaurant(item.category.restaurantId)
         setImagePreview(item.image || null)
+
+        // Load recipe ingredients if they exist
+        if (item.recipe && item.recipe.ingredients) {
+          setHasRecipe(true)
+          setSelectedIngredients(
+            item.recipe.ingredients.map(ing => ({
+              inventoryItemId: ing.inventoryItem.id,
+              name: ing.inventoryItem.name,
+              quantity: ing.quantity,
+              unit: ing.unit,
+              notes: ing.notes || '',
+            }))
+          )
+        }
       }
       if (restaurantsData.success) {
         setRestaurants(restaurantsData.restaurants)
@@ -224,9 +263,24 @@ export default function EditMenuItemPage() {
     e.preventDefault()
     setError(null)
     setSuccessMessage(null)
+
+    // Validate ingredients
+    if (selectedIngredients.length === 0) {
+      setError('Please add at least one ingredient from your inventory')
+      return
+    }
+
+    // Validate all ingredients are selected
+    const hasEmptyIngredient = selectedIngredients.some(ing => !ing.inventoryItemId || ing.quantity <= 0)
+    if (hasEmptyIngredient) {
+      setError('Please complete all ingredient selections and quantities')
+      return
+    }
+
     setSaving(true)
 
     try {
+      // Step 1: Update menu item
       const response = await fetch(`/api/admin/menu/${menuItemId}`, {
         method: 'PUT',
         headers: {
@@ -248,7 +302,31 @@ export default function EditMenuItemPage() {
         throw new Error(data.error || 'Failed to update menu item')
       }
 
-      setSuccessMessage('Menu item updated successfully!')
+      // Step 2: Update or create recipe with ingredients
+      const recipeMethod = hasRecipe ? 'PATCH' : 'POST'
+      const recipeResponse = await fetch(`/api/admin/menu/${menuItemId}/recipe`, {
+        method: recipeMethod,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          servingSize: 1,
+          ingredients: selectedIngredients.map(ing => ({
+            inventoryItemId: ing.inventoryItemId,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            notes: ing.notes || '',
+          })),
+        }),
+      })
+
+      if (!recipeResponse.ok) {
+        const data = await recipeResponse.json()
+        throw new Error(data.error || 'Menu item updated but failed to update recipe')
+      }
+
+      setSuccessMessage('Menu item and recipe updated successfully!')
       setSaving(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update menu item')
@@ -597,24 +675,26 @@ export default function EditMenuItemPage() {
                 </div>
               </div>
 
+              {/* Recipe Ingredients */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipe Ingredients</h3>
+                <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Important:</strong> Select ingredients from your kitchen inventory.
+                    This ensures menu items only use tracked ingredients.
+                  </p>
+                </div>
+                <IngredientSelector
+                  value={selectedIngredients}
+                  onChange={setSelectedIngredients}
+                  restaurantId={selectedRestaurant}
+                />
+              </div>
+
               {/* Additional Details */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Details</h3>
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ingredients
-                    </label>
-                    <textarea
-                      name="ingredients"
-                      value={formData.ingredients}
-                      onChange={handleInputChange}
-                      rows={2}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Chicken breast, olive oil, fresh basil..."
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Wine Pairing Suggestion

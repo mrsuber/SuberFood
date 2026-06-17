@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 import { Suspense } from 'react'
+import { IngredientSelector } from '@/components/admin/IngredientSelector'
 
 interface Restaurant {
   id: string
@@ -26,6 +27,14 @@ interface Recipe {
   menuItemName: string
 }
 
+interface SelectedIngredient {
+  inventoryItemId: string
+  name: string
+  quantity: number
+  unit: string
+  notes?: string
+}
+
 function NewMenuItemForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -41,6 +50,7 @@ function NewMenuItemForm() {
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([])
   const [uploading, setUploading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([])
 
   const [formData, setFormData] = useState({
     name: '',
@@ -168,13 +178,27 @@ function NewMenuItemForm() {
     e.preventDefault()
     setError(null)
     setSuccessMessage(null)
+
+    // Validate ingredients
+    if (selectedIngredients.length === 0) {
+      setError('Please add at least one ingredient from your inventory')
+      return
+    }
+
+    // Validate all ingredients are selected
+    const hasEmptyIngredient = selectedIngredients.some(ing => !ing.inventoryItemId || ing.quantity <= 0)
+    if (hasEmptyIngredient) {
+      setError('Please complete all ingredient selections and quantities')
+      return
+    }
+
     setSaving(true)
 
     try {
-      // Prepare data for API (exclude recipeId as it's not stored on MenuItem)
+      // Step 1: Create menu item
       const { recipeId, ...menuItemData } = formData
 
-      const response = await fetch('/api/admin/menu', {
+      const menuResponse = await fetch('/api/admin/menu', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -190,16 +214,41 @@ function NewMenuItemForm() {
         }),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
+      if (!menuResponse.ok) {
+        const data = await menuResponse.json()
         throw new Error(data.error || 'Failed to create menu item')
       }
 
-      const data = await response.json()
-      setSuccessMessage('Menu item created successfully!')
+      const menuData = await menuResponse.json()
+      const menuItemId = menuData.menuItem.id
+
+      // Step 2: Create recipe with ingredients
+      const recipeResponse = await fetch(`/api/admin/menu/${menuItemId}/recipe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          servingSize: 1,
+          ingredients: selectedIngredients.map(ing => ({
+            inventoryItemId: ing.inventoryItemId,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            notes: ing.notes || '',
+          })),
+        }),
+      })
+
+      if (!recipeResponse.ok) {
+        // Menu item was created but recipe failed
+        const data = await recipeResponse.json()
+        throw new Error(data.error || 'Menu item created but failed to add recipe. Please add ingredients manually.')
+      }
+
+      setSuccessMessage('Menu item and recipe created successfully!')
 
       setTimeout(() => {
-        // Redirect back to menu page, preserving location filter if present
         const redirectUrl = preselectedLocationId
           ? `/admin/menus?location=${preselectedLocationId}`
           : '/admin/menus'
@@ -284,29 +333,6 @@ function NewMenuItemForm() {
                       <p className="text-xs text-gray-500 mt-1">Select a location first</p>
                     )}
                   </div>
-                </div>
-
-                {/* Recipe Reference */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Recipe Reference (Informational)
-                  </label>
-                  <select
-                    name="recipeId"
-                    value={formData.recipeId}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">No recipe selected</option>
-                    {recipes.map(recipe => (
-                      <option key={recipe.id} value={recipe.id}>
-                        {recipe.menuItemName}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    View existing recipes for reference. To link a recipe to this menu item, create the recipe separately after creating this menu item.
-                  </p>
                 </div>
               </div>
 
@@ -539,24 +565,26 @@ function NewMenuItemForm() {
                 </div>
               </div>
 
+              {/* Recipe Ingredients */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipe Ingredients</h3>
+                <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Important:</strong> Select ingredients from your kitchen inventory.
+                    This ensures you can only create menu items with tracked ingredients.
+                  </p>
+                </div>
+                <IngredientSelector
+                  value={selectedIngredients}
+                  onChange={setSelectedIngredients}
+                  restaurantId={selectedRestaurant}
+                />
+              </div>
+
               {/* Additional Details */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Details</h3>
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ingredients
-                    </label>
-                    <textarea
-                      name="ingredients"
-                      value={formData.ingredients}
-                      onChange={handleInputChange}
-                      rows={2}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Chicken breast, olive oil, fresh basil..."
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Wine Pairing Suggestion

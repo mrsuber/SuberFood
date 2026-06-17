@@ -22,6 +22,15 @@ export async function GET(
             restaurant: true,
           },
         },
+        recipe: {
+          include: {
+            ingredients: {
+              include: {
+                inventoryItem: true,
+              },
+            },
+          },
+        },
       },
     })
 

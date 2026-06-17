@@ -40,11 +40,11 @@ export default function MenuItemDetailPage() {
   const { isFavorite, toggleFavorite } = useMenuStore();
   const favorite = isFavorite(menuItemId);
 
-  const toggleIngredient = (ingredient: string) => {
+  const toggleIngredient = (ingredientId: string) => {
     setRemovedIngredients(prev =>
-      prev.includes(ingredient)
-        ? prev.filter(i => i !== ingredient)
-        : [...prev, ingredient]
+      prev.includes(ingredientId)
+        ? prev.filter(i => i !== ingredientId)
+        : [...prev, ingredientId]
     );
   };
 
@@ -105,9 +105,27 @@ export default function MenuItemDetailPage() {
     sugar: '8g',
   };
 
-  const detailedIngredients = menuItem.ingredients ?
-    menuItem.ingredients.split(',').map((i: string) => i.trim()) :
-    ['Fresh ingredients', 'Seasonal vegetables', 'Premium quality'];
+  // Get ingredients from recipe if available, otherwise use text field
+  const detailedIngredients = menuItem.recipe?.ingredients?.length > 0
+    ? menuItem.recipe.ingredients.map((ing: any) => ({
+        id: ing.inventoryItemId,
+        name: ing.inventoryItem.name,
+        quantity: ing.quantity,
+        unit: ing.unit,
+        notes: ing.notes,
+        displayName: `${ing.inventoryItem.name} (${ing.quantity}${ing.unit})${ing.notes ? ' - ' + ing.notes : ''}`
+      }))
+    : (menuItem.ingredients
+        ? menuItem.ingredients.split(',').map((i: string) => ({
+            id: i.trim(),
+            name: i.trim(),
+            displayName: i.trim()
+          }))
+        : [
+            { id: 'default1', name: 'Fresh ingredients', displayName: 'Fresh ingredients' },
+            { id: 'default2', name: 'Seasonal vegetables', displayName: 'Seasonal vegetables' },
+            { id: 'default3', name: 'Premium quality', displayName: 'Premium quality' }
+          ]);
 
   const cookingProcedure = [
     {
@@ -295,19 +313,19 @@ export default function MenuItemDetailPage() {
                         Uncheck any ingredients you'd like to remove from your order
                       </p>
                       <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {detailedIngredients.map((ingredient: string, index: number) => {
-                          const isRemoved = removedIngredients.includes(ingredient);
+                        {detailedIngredients.map((ingredient: any, index: number) => {
+                          const isRemoved = removedIngredients.includes(ingredient.id);
                           return (
-                            <li key={index} className="flex items-start gap-3">
-                              <label className="flex items-center gap-2 cursor-pointer">
+                            <li key={ingredient.id || index} className="flex items-start gap-3">
+                              <label className="flex items-center gap-2 cursor-pointer group">
                                 <input
                                   type="checkbox"
                                   checked={!isRemoved}
-                                  onChange={() => toggleIngredient(ingredient)}
+                                  onChange={() => toggleIngredient(ingredient.id)}
                                   className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
                                 />
-                                <span className={`text-gray-700 ${isRemoved ? 'line-through text-gray-400' : ''}`}>
-                                  {ingredient}
+                                <span className={`text-gray-700 transition-all ${isRemoved ? 'line-through text-gray-400' : 'group-hover:text-green-600'}`}>
+                                  {ingredient.displayName}
                                 </span>
                               </label>
                             </li>
@@ -318,7 +336,11 @@ export default function MenuItemDetailPage() {
                       {removedIngredients.length > 0 && (
                         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                           <p className="text-sm text-red-800">
-                            <strong>Removed:</strong> {removedIngredients.join(', ')}
+                            <strong>Removed ingredients:</strong>{' '}
+                            {detailedIngredients
+                              .filter((ing: any) => removedIngredients.includes(ing.id))
+                              .map((ing: any) => ing.name)
+                              .join(', ')}
                           </p>
                         </div>
                       )}

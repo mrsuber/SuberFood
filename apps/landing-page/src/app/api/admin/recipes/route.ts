@@ -82,6 +82,7 @@ export async function GET(req: NextRequest) {
           cookTime: recipe.cookTime || 0,
           totalCost: recipe.totalCost || 0,
           costPerServing: recipe.costPerServing || 0,
+          instructions: recipe.instructions || '',
           canMake: availability.available,
           canMakeServings: availability.maxServings,
           ingredients,

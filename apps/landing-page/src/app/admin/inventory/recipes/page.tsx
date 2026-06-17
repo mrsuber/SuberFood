@@ -12,6 +12,7 @@ import {
   CheckCircle,
   Search,
   Loader2,
+  BookOpen,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -33,6 +34,7 @@ type Recipe = {
   costPerServing: number
   prepTime: number
   cookTime: number
+  instructions: string
   canMake: boolean
   canMakeServings: number
 }
@@ -245,6 +247,42 @@ export default function RecipesPage() {
                           .join(', ')}
                       </strong>
                     </p>
+                  </div>
+                )}
+
+                {/* Cooking Instructions */}
+                {recipe.instructions && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Cooking Procedure
+                    </h4>
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="prose prose-sm max-w-none">
+                        {recipe.instructions.split('\n').filter(line => line.trim()).map((line, idx) => (
+                          <p key={idx} className="text-gray-700 mb-2 last:mb-0">
+                            {line.replace(/^\d+\.\s*/, (match) => (
+                              <span className="font-semibold text-blue-700">{match}</span>
+                            ))}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* No instructions warning */}
+                {!recipe.instructions && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Cooking Procedure
+                    </h4>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-600 italic">
+                        No cooking instructions available. <Link href={`/admin/inventory/recipes/${recipe.id}/edit`} className="text-primary-600 hover:underline">Add instructions</Link> to help your chefs.
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>

@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         categoryId: body.categoryId,
         description: body.description || null,
         image: body.image || null,
+        images: body.images || [],
         price: body.price,
         salePrice: body.salePrice || null,
         preparationTime: body.preparationTime || null,

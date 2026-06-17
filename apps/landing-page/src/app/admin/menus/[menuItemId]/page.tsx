@@ -26,6 +26,7 @@ interface MenuItem {
   categoryId: string
   description: string | null
   image: string | null
+  images: string[]
   price: number
   salePrice: number | null
   preparationTime: number | null
@@ -93,6 +94,8 @@ export default function EditMenuItemPage() {
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([])
   const [uploading, setUploading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [galleryImages, setGalleryImages] = useState<string[]>([])
+  const [uploadingGallery, setUploadingGallery] = useState(false)
   const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([])
   const [hasRecipe, setHasRecipe] = useState(false)
 
@@ -156,6 +159,7 @@ export default function EditMenuItemPage() {
         })
         setSelectedRestaurant(item.category.restaurantId)
         setImagePreview(item.image || null)
+        setGalleryImages(item.images || [])
 
         // Load recipe ingredients if they exist
         if (item.recipe && item.recipe.ingredients) {
@@ -259,6 +263,63 @@ export default function EditMenuItemPage() {
     setImagePreview(null)
   }
 
+  const handleGalleryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    // Validate all files
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (!file.type.startsWith('image/')) {
+        setError('All files must be valid images')
+        return
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Each image must be less than 5MB')
+        return
+      }
+    }
+
+    setUploadingGallery(true)
+    setError(null)
+
+    try {
+      const uploadedUrls: string[] = []
+
+      for (let i = 0; i < files.length; i++) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', files[i])
+
+        const response = await fetch('/api/upload/image', {
+          method: 'POST',
+          body: uploadFormData,
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image')
+        }
+
+        const result = await response.json()
+        if (result.success && result.url) {
+          uploadedUrls.push(result.url)
+        }
+      }
+
+      setGalleryImages(prev => [...prev, ...uploadedUrls])
+    } catch (err) {
+      setError('Failed to upload gallery images. Please try again.')
+      console.error('Error uploading gallery images:', err)
+    } finally {
+      setUploadingGallery(false)
+      // Reset the input
+      e.target.value = ''
+    }
+  }
+
+  const handleRemoveGalleryImage = (index: number) => {
+    setGalleryImages(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -294,6 +355,7 @@ export default function EditMenuItemPage() {
           calories: formData.calories ? parseInt(formData.calories) : null,
           spiceLevel: formData.spiceLevel ? parseInt(formData.spiceLevel) : null,
           allergens: formData.allergens ? formData.allergens.split(',').map(a => a.trim()) : [],
+          images: galleryImages,
         }),
       })
 
@@ -518,6 +580,55 @@ export default function EditMenuItemPage() {
                         </Button>
                       </div>
                     )}
+                  </div>
+
+                  {/* Gallery Images */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Additional Images (Gallery)
+                    </label>
+
+                    <div className="space-y-3">
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleGalleryImageUpload}
+                          disabled={uploadingGallery}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {uploadingGallery ? 'Uploading...' : 'Upload multiple images to show different views of the dish (max 5MB each, optional)'}
+                        </p>
+                      </div>
+
+                      {/* Gallery Preview */}
+                      {galleryImages.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {galleryImages.map((url, index) => (
+                            <div key={index} className="relative group">
+                              <div className="relative w-full h-32 rounded-lg overflow-hidden border-2 border-gray-200">
+                                <img
+                                  src={url}
+                                  alt={`Gallery ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveGalleryImage(index)}
+                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

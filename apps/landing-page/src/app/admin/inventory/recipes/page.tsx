@@ -35,6 +35,13 @@ type Recipe = {
   prepTime: number
   cookTime: number
   instructions: string
+  calories: number | null
+  protein: string | null
+  carbs: string | null
+  fat: string | null
+  fiber: string | null
+  sodium: string | null
+  sugar: string | null
   canMake: boolean
   canMakeServings: number
 }
@@ -247,6 +254,59 @@ export default function RecipesPage() {
                           .join(', ')}
                       </strong>
                     </p>
+                  </div>
+                )}
+
+                {/* Nutritional Information */}
+                {(recipe.calories || recipe.protein || recipe.carbs || recipe.fat || recipe.fiber || recipe.sodium || recipe.sugar) && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold text-gray-900 mb-3">Nutritional Information (per serving)</h4>
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                        {recipe.calories && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-900">{recipe.calories}</p>
+                            <p className="text-xs text-green-700 mt-1">Calories</p>
+                          </div>
+                        )}
+                        {recipe.protein && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-900">{recipe.protein}g</p>
+                            <p className="text-xs text-green-700 mt-1">Protein</p>
+                          </div>
+                        )}
+                        {recipe.carbs && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-900">{recipe.carbs}g</p>
+                            <p className="text-xs text-green-700 mt-1">Carbs</p>
+                          </div>
+                        )}
+                        {recipe.fat && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-900">{recipe.fat}g</p>
+                            <p className="text-xs text-green-700 mt-1">Fat</p>
+                          </div>
+                        )}
+                        {recipe.fiber && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-900">{recipe.fiber}g</p>
+                            <p className="text-xs text-green-700 mt-1">Fiber</p>
+                          </div>
+                        )}
+                        {recipe.sodium && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-900">{recipe.sodium}mg</p>
+                            <p className="text-xs text-green-700 mt-1">Sodium</p>
+                          </div>
+                        )}
+                        {recipe.sugar && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-900">{recipe.sugar}g</p>
+                            <p className="text-xs text-green-700 mt-1">Sugar</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 

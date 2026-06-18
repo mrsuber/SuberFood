@@ -62,7 +62,8 @@ async function main() {
             connect: { id: restaurant.id }
           },
           costPerUnit: 1000,
-          reorderLevel: 10,
+          reorderPoint: 10,
+          reorderQuantity: 20,
           isActive: true,
         }
       })

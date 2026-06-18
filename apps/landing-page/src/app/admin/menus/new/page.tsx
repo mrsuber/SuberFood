@@ -26,6 +26,13 @@ interface Recipe {
   menuItemName: string
   instructions?: string
   prepTime?: number
+  calories?: number
+  protein?: string
+  carbs?: string
+  fat?: string
+  fiber?: string
+  sodium?: string
+  sugar?: string
   ingredients?: Array<{
     inventoryItemId: string
     inventoryItem: {
@@ -66,6 +73,9 @@ function NewMenuItemForm() {
   const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([])
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
   const [loadingRecipe, setLoadingRecipe] = useState(false)
+  const [showCategoryForm, setShowCategoryForm] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -168,12 +178,19 @@ function NewMenuItemForm() {
 
       setSelectedRecipe(recipe)
 
-      // Auto-fill form with recipe data
+      // Auto-fill form with recipe data including nutrition
       setFormData(prev => ({
         ...prev,
         name: recipe.name,
         recipeId: recipe.id,
         preparationTime: recipe.prepTime?.toString() || '',
+        calories: recipe.calories?.toString() || '',
+        protein: recipe.protein || '',
+        carbs: recipe.carbs || '',
+        fat: recipe.fat || '',
+        fiber: recipe.fiber || '',
+        sodium: recipe.sodium || '',
+        sugar: recipe.sugar || '',
       }))
 
       // Set ingredients from recipe (for display purposes)
@@ -306,6 +323,57 @@ function NewMenuItemForm() {
     setGalleryImages(prev => prev.filter((_, i) => i !== index))
   }
 
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      setError('Please enter a category name')
+      return
+    }
+
+    if (!selectedRestaurant) {
+      setError('Please select a restaurant first')
+      return
+    }
+
+    setCreatingCategory(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/admin/menu/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newCategoryName,
+          restaurantId: selectedRestaurant,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create category')
+      }
+
+      const data = await response.json()
+
+      // Add new category to the list
+      setCategories(prev => [...prev, data.category])
+      setFilteredCategories(prev => [...prev, data.category])
+
+      // Select the newly created category
+      setFormData(prev => ({ ...prev, categoryId: data.category.id }))
+
+      // Reset and hide form
+      setNewCategoryName('')
+      setShowCategoryForm(false)
+      setSuccessMessage('Category created successfully!')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError('Failed to create category. Please try again.')
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -382,6 +450,14 @@ function NewMenuItemForm() {
           servingSize: 1,
           instructions: selectedRecipe?.instructions || '',
           prepTime: selectedRecipe?.prepTime || null,
+          // Include nutritional information from recipe
+          calories: selectedRecipe?.calories || null,
+          protein: selectedRecipe?.protein || null,
+          carbs: selectedRecipe?.carbs || null,
+          fat: selectedRecipe?.fat || null,
+          fiber: selectedRecipe?.fiber || null,
+          sodium: selectedRecipe?.sodium || null,
+          sugar: selectedRecipe?.sugar || null,
           ingredients: selectedIngredients.map(ing => ({
             inventoryItemId: ing.inventoryItemId,
             quantity: ing.quantity,
@@ -522,23 +598,70 @@ function NewMenuItemForm() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Menu Category *
                     </label>
-                    <select
-                      name="categoryId"
-                      value={formData.categoryId}
-                      onChange={handleInputChange}
-                      required
-                      disabled={!selectedRestaurant}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100"
-                    >
-                      <option value="">Select a category</option>
-                      {filteredCategories.map(category => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex gap-2">
+                      <select
+                        name="categoryId"
+                        value={formData.categoryId}
+                        onChange={handleInputChange}
+                        required
+                        disabled={!selectedRestaurant}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100"
+                      >
+                        <option value="">Select a category</option>
+                        {filteredCategories.map(category => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryForm(!showCategoryForm)}
+                        disabled={!selectedRestaurant}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
                     {!selectedRestaurant && (
                       <p className="text-xs text-gray-500 mt-1">Select a location first</p>
+                    )}
+
+                    {/* Quick Category Creation Form */}
+                    {showCategoryForm && selectedRestaurant && (
+                      <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          New Category Name
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="e.g., Appetizers"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleCreateCategory}
+                            disabled={creatingCategory}
+                            className="whitespace-nowrap"
+                          >
+                            {creatingCategory ? 'Creating...' : 'Create'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setShowCategoryForm(false)
+                              setNewCategoryName('')
+                            }}
+                            disabled={creatingCategory}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -722,23 +845,25 @@ function NewMenuItemForm() {
                 </div>
               </div>
 
-              {/* Nutritional Info */}
+              {/* Nutritional Info - Read Only from Recipe */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Nutritional Information</h3>
-                <p className="text-sm text-gray-600 mb-4">Enter nutrition information per serving</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Nutritional Information (from recipe)</h3>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Info:</strong> Nutritional information is defined in the recipe and cannot be edited here.
+                    {!selectedRecipe && ' Select a recipe to see nutritional information.'}
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Calories
                     </label>
                     <input
-                      type="number"
-                      name="calories"
-                      value={formData.calories}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="450"
+                      type="text"
+                      value={formData.calories || '-'}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -748,11 +873,9 @@ function NewMenuItemForm() {
                     </label>
                     <input
                       type="text"
-                      name="protein"
-                      value={formData.protein}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="28"
+                      value={formData.protein || '-'}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -762,11 +885,9 @@ function NewMenuItemForm() {
                     </label>
                     <input
                       type="text"
-                      name="carbs"
-                      value={formData.carbs}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="42"
+                      value={formData.carbs || '-'}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -776,11 +897,9 @@ function NewMenuItemForm() {
                     </label>
                     <input
                       type="text"
-                      name="fat"
-                      value={formData.fat}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="18"
+                      value={formData.fat || '-'}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -790,11 +909,9 @@ function NewMenuItemForm() {
                     </label>
                     <input
                       type="text"
-                      name="fiber"
-                      value={formData.fiber}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="6"
+                      value={formData.fiber || '-'}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -804,11 +921,9 @@ function NewMenuItemForm() {
                     </label>
                     <input
                       type="text"
-                      name="sodium"
-                      value={formData.sodium}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="680"
+                      value={formData.sodium || '-'}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 
@@ -818,11 +933,9 @@ function NewMenuItemForm() {
                     </label>
                     <input
                       type="text"
-                      name="sugar"
-                      value={formData.sugar}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="8"
+                      value={formData.sugar || '-'}
+                      readOnly
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
                   </div>
 

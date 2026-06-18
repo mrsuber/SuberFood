@@ -754,6 +754,15 @@ model Recipe {
   totalCost      Float? // Auto-calculated from ingredients
   costPerServing Float?
 
+  // Nutritional Information (per serving)
+  calories Int? // Calories per serving
+  protein  String? // Protein in grams
+  carbs    String? // Carbohydrates in grams
+  fat      String? // Fat in grams
+  fiber    String? // Fiber in grams
+  sodium   String? // Sodium in mg
+  sugar    String? // Sugar in grams
+
   isActive Boolean @default(true)
 
   createdAt DateTime @default(now())

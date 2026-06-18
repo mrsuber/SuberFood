@@ -22,6 +22,13 @@ export async function POST(
       cookTime,
       instructions,
       ingredients,
+      calories,
+      protein,
+      carbs,
+      fat,
+      fiber,
+      sodium,
+      sugar,
     } = body
 
     // Check if menu item exists
@@ -36,7 +43,7 @@ export async function POST(
       )
     }
 
-    // Create recipe with ingredients
+    // Create recipe with ingredients and nutrition
     const recipe = await prisma.recipe.create({
       data: {
         menuItemId,
@@ -45,6 +52,13 @@ export async function POST(
         prepTime,
         cookTime,
         instructions,
+        calories: calories || null,
+        protein: protein || null,
+        carbs: carbs || null,
+        fat: fat || null,
+        fiber: fiber || null,
+        sodium: sodium || null,
+        sugar: sugar || null,
         ingredients: {
           create: ingredients.map((ing: any) => ({
             inventoryItemId: ing.inventoryItemId,
@@ -97,6 +111,13 @@ export async function PATCH(
       cookTime,
       instructions,
       ingredients,
+      calories,
+      protein,
+      carbs,
+      fat,
+      fiber,
+      sodium,
+      sugar,
     } = body
 
     // Find existing recipe
@@ -118,6 +139,13 @@ export async function PATCH(
     if (prepTime !== undefined) updateData.prepTime = prepTime
     if (cookTime !== undefined) updateData.cookTime = cookTime
     if (instructions !== undefined) updateData.instructions = instructions
+    if (calories !== undefined) updateData.calories = calories
+    if (protein !== undefined) updateData.protein = protein
+    if (carbs !== undefined) updateData.carbs = carbs
+    if (fat !== undefined) updateData.fat = fat
+    if (fiber !== undefined) updateData.fiber = fiber
+    if (sodium !== undefined) updateData.sodium = sodium
+    if (sugar !== undefined) updateData.sugar = sugar
 
     // Only update ingredients if they are provided
     if (ingredients !== undefined) {

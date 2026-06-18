@@ -56,6 +56,15 @@ interface MenuItem {
   }
   recipe?: {
     id: string
+    prepTime: number | null
+    instructions: string | null
+    calories: number | null
+    protein: string | null
+    carbs: string | null
+    fat: string | null
+    fiber: string | null
+    sodium: string | null
+    sugar: string | null
     ingredients: Array<{
       id: string
       quantity: number
@@ -98,6 +107,17 @@ export default function EditMenuItemPage() {
   const [uploadingGallery, setUploadingGallery] = useState(false)
   const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([])
   const [hasRecipe, setHasRecipe] = useState(false)
+  const [recipeNutrition, setRecipeNutrition] = useState({
+    calories: '',
+    protein: '',
+    carbs: '',
+    fat: '',
+    fiber: '',
+    sodium: '',
+    sugar: '',
+    instructions: '',
+    prepTime: '',
+  })
 
   const [formData, setFormData] = useState({
     name: '',
@@ -173,6 +193,19 @@ export default function EditMenuItemPage() {
               notes: ing.notes || '',
             }))
           )
+
+          // Load recipe nutrition if available
+          setRecipeNutrition({
+            calories: item.recipe.calories?.toString() || '',
+            protein: item.recipe.protein || '',
+            carbs: item.recipe.carbs || '',
+            fat: item.recipe.fat || '',
+            fiber: item.recipe.fiber || '',
+            sodium: item.recipe.sodium || '',
+            sugar: item.recipe.sugar || '',
+            instructions: item.recipe.instructions || '',
+            prepTime: item.recipe.prepTime?.toString() || '',
+          })
         }
       }
       if (restaurantsData.success) {
@@ -364,7 +397,7 @@ export default function EditMenuItemPage() {
         throw new Error(data.error || 'Failed to update menu item')
       }
 
-      // Step 2: Update or create recipe with ingredients
+      // Step 2: Update or create recipe with ingredients and nutrition
       const recipeMethod = hasRecipe ? 'PATCH' : 'POST'
       const recipeResponse = await fetch(`/api/admin/menu/${menuItemId}/recipe`, {
         method: recipeMethod,
@@ -374,6 +407,15 @@ export default function EditMenuItemPage() {
         body: JSON.stringify({
           name: formData.name,
           servingSize: 1,
+          prepTime: recipeNutrition.prepTime ? parseInt(recipeNutrition.prepTime) : null,
+          instructions: recipeNutrition.instructions || null,
+          calories: recipeNutrition.calories ? parseInt(recipeNutrition.calories) : null,
+          protein: recipeNutrition.protein || null,
+          carbs: recipeNutrition.carbs || null,
+          fat: recipeNutrition.fat || null,
+          fiber: recipeNutrition.fiber || null,
+          sodium: recipeNutrition.sodium || null,
+          sugar: recipeNutrition.sugar || null,
           ingredients: selectedIngredients.map(ing => ({
             inventoryItemId: ing.inventoryItemId,
             quantity: ing.quantity,
@@ -783,6 +825,134 @@ export default function EditMenuItemPage() {
                       <span className="text-sm font-medium text-gray-700">{label}</span>
                     </label>
                   ))}
+                </div>
+              </div>
+
+              {/* Recipe Nutritional Information & Details */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipe Information</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Define nutritional information and cooking details for this recipe. This information will be displayed with menu items that use this recipe.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Prep Time (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      value={recipeNutrition.prepTime}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, prepTime: e.target.value }))}
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="25"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Calories (per serving)
+                    </label>
+                    <input
+                      type="number"
+                      value={recipeNutrition.calories}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, calories: e.target.value }))}
+                      min="0"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="450"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Protein (g)
+                    </label>
+                    <input
+                      type="text"
+                      value={recipeNutrition.protein}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, protein: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="28"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Carbs (g)
+                    </label>
+                    <input
+                      type="text"
+                      value={recipeNutrition.carbs}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, carbs: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="42"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fat (g)
+                    </label>
+                    <input
+                      type="text"
+                      value={recipeNutrition.fat}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, fat: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="18"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fiber (g)
+                    </label>
+                    <input
+                      type="text"
+                      value={recipeNutrition.fiber}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, fiber: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="6"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sodium (mg)
+                    </label>
+                    <input
+                      type="text"
+                      value={recipeNutrition.sodium}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, sodium: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="680"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sugar (g)
+                    </label>
+                    <input
+                      type="text"
+                      value={recipeNutrition.sugar}
+                      onChange={(e) => setRecipeNutrition(prev => ({ ...prev, sugar: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="8"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cooking Instructions
+                  </label>
+                  <textarea
+                    value={recipeNutrition.instructions}
+                    onChange={(e) => setRecipeNutrition(prev => ({ ...prev, instructions: e.target.value }))}
+                    rows={5}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter step-by-step cooking instructions..."
+                  />
                 </div>
               </div>
 

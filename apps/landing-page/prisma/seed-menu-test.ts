@@ -58,7 +58,9 @@ async function main() {
       const created = await prisma.inventoryItem.create({
         data: {
           ...item,
-          restaurantId: restaurant.id,
+          restaurant: {
+            connect: { id: restaurant.id }
+          },
           costPerUnit: 1000,
           reorderLevel: 10,
           isActive: true,
@@ -83,7 +85,9 @@ async function main() {
       const category = await prisma.menuCategory.create({
         data: {
           name: categoriesToCreate[i],
-          restaurantId: restaurant.id,
+          restaurant: {
+            connect: { id: restaurant.id }
+          },
           displayOrder: i,
           isActive: true,
         }

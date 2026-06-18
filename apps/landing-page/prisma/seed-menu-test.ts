@@ -35,16 +35,16 @@ async function main() {
 
   const inventoryItems = []
   const itemsToCreate = [
-    { name: 'Chicken Breast', unit: 'kg', rawStock: 50, category: 'PROTEIN' },
-    { name: 'Eggs', unit: 'pieces', rawStock: 200, category: 'PROTEIN' },
-    { name: 'Bread', unit: 'loaves', rawStock: 30, category: 'GRAIN' },
-    { name: 'Tomatoes', unit: 'kg', rawStock: 25, category: 'VEGETABLE' },
-    { name: 'Lettuce', unit: 'heads', rawStock: 40, category: 'VEGETABLE' },
-    { name: 'Cheese', unit: 'kg', rawStock: 15, category: 'DAIRY' },
-    { name: 'Rice', unit: 'kg', rawStock: 100, category: 'GRAIN' },
-    { name: 'Beef', unit: 'kg', rawStock: 40, category: 'PROTEIN' },
-    { name: 'Pasta', unit: 'kg', rawStock: 50, category: 'GRAIN' },
-    { name: 'Olive Oil', unit: 'liters', rawStock: 20, category: 'OIL' },
+    { name: 'Chicken Breast', unit: 'KG', rawStock: 50, category: 'MEAT_POULTRY' },
+    { name: 'Eggs', unit: 'PCS', rawStock: 200, category: 'EGGS' },
+    { name: 'Bread', unit: 'PCS', rawStock: 30, category: 'FLOUR_GRAIN' },
+    { name: 'Tomatoes', unit: 'KG', rawStock: 25, category: 'VEGETABLES' },
+    { name: 'Lettuce', unit: 'PCS', rawStock: 40, category: 'VEGETABLES' },
+    { name: 'Cheese', unit: 'KG', rawStock: 15, category: 'DAIRY' },
+    { name: 'Rice', unit: 'KG', rawStock: 100, category: 'FLOUR_GRAIN' },
+    { name: 'Beef', unit: 'KG', rawStock: 40, category: 'MEAT_POULTRY' },
+    { name: 'Pasta', unit: 'KG', rawStock: 50, category: 'FLOUR_GRAIN' },
+    { name: 'Olive Oil', unit: 'L', rawStock: 20, category: 'OILS_FATS' },
   ]
 
   for (const item of itemsToCreate) {
@@ -160,19 +160,19 @@ async function main() {
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Eggs')!.id,
                 quantity: 3,
-                unit: 'pieces',
+                unit: 'PCS',
                 notes: 'Large eggs',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Cheese')!.id,
                 quantity: 0.05,
-                unit: 'kg',
+                unit: 'KG',
                 notes: 'Grated cheddar',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Bread')!.id,
-                quantity: 0.1,
-                unit: 'loaves',
+                quantity: 2,
+                unit: 'PCS',
                 notes: '2 slices',
               },
             ],
@@ -222,19 +222,19 @@ async function main() {
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Chicken Breast')!.id,
                 quantity: 0.25,
-                unit: 'kg',
+                unit: 'KG',
                 notes: 'Boneless, skinless',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Rice')!.id,
                 quantity: 0.15,
-                unit: 'kg',
+                unit: 'KG',
                 notes: 'White rice',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Olive Oil')!.id,
                 quantity: 0.02,
-                unit: 'liters',
+                unit: 'L',
               },
             ],
           },
@@ -282,19 +282,19 @@ async function main() {
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Lettuce')!.id,
                 quantity: 1,
-                unit: 'heads',
+                unit: 'PCS',
                 notes: 'Romaine lettuce',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Cheese')!.id,
                 quantity: 0.03,
-                unit: 'kg',
+                unit: 'KG',
                 notes: 'Parmesan',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Bread')!.id,
                 quantity: 0.05,
-                unit: 'loaves',
+                unit: 'PCS',
                 notes: 'For croutons',
               },
             ],
@@ -346,18 +346,18 @@ async function main() {
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Pasta')!.id,
                 quantity: 0.15,
-                unit: 'kg',
+                unit: 'KG',
                 notes: 'Spaghetti or fettuccine',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Eggs')!.id,
                 quantity: 2,
-                unit: 'pieces',
+                unit: 'PCS',
               },
               {
                 inventoryItemId: inventoryItems.find(i => i.name === 'Cheese')!.id,
                 quantity: 0.04,
-                unit: 'kg',
+                unit: 'KG',
                 notes: 'Parmesan',
               },
             ],

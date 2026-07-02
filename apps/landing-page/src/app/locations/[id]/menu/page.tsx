@@ -324,11 +324,11 @@ export default function LocationMenuPage() {
                     <div className="text-right ml-2">
                       {item.salePrice ? (
                         <>
-                          <p className="text-lg font-bold text-green-600">${item.salePrice.toFixed(2)}</p>
-                          <p className="text-sm text-gray-500 line-through">${item.price.toFixed(2)}</p>
+                          <p className="text-lg font-bold text-green-600">{item.salePrice.toLocaleString('fr-FR')} XAF</p>
+                          <p className="text-sm text-gray-500 line-through">{item.price.toLocaleString('fr-FR')} XAF</p>
                         </>
                       ) : (
-                        <p className="text-lg font-bold text-gray-900">${item.price.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-gray-900">{item.price.toLocaleString('fr-FR')} XAF</p>
                       )}
                     </div>
                   </div>

@@ -122,11 +122,11 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-green-600">
-                ${displayPrice.toFixed(2)}
+                {displayPrice.toLocaleString('fr-FR')} XAF
               </span>
               {hasDiscount && (
                 <span className="text-sm text-gray-400 line-through">
-                  ${item.price.toFixed(2)}
+                  {item.price.toLocaleString('fr-FR')} XAF
                 </span>
               )}
             </div>

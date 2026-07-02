@@ -258,12 +258,11 @@ export default async function MenusPage({
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
-                              <DollarSign className="w-4 h-4" />
-                              {item.price.toFixed(2)}
+                              {item.price.toLocaleString('fr-FR')} XAF
                             </div>
                             {item.salePrice && (
                               <div className="flex items-center gap-1 text-xs text-green-600">
-                                Sale: ${item.salePrice.toFixed(2)}
+                                Sale: {item.salePrice.toLocaleString('fr-FR')} XAF
                               </div>
                             )}
                           </div>

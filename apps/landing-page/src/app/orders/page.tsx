@@ -175,7 +175,7 @@ async function OrdersContent() {
                           <p className="font-medium text-gray-900">{item.menuItem?.name || 'Unknown Item'}</p>
                           <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                         </div>
-                        <p className="font-medium text-gray-900">${item.price.toFixed(2)}</p>
+                        <p className="font-medium text-gray-900">{item.price.toLocaleString('fr-FR')} XAF</p>
                       </div>
 
                       {/* Customizations from customerNotes */}
@@ -264,7 +264,7 @@ async function OrdersContent() {
               {/* Total */}
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
                 <span className="font-semibold text-gray-900">Total:</span>
-                <span className="text-xl font-bold text-green-600">${order.total.toFixed(2)}</span>
+                <span className="text-xl font-bold text-green-600">{order.total.toLocaleString('fr-FR')} XAF</span>
               </div>
             </div>
           ))}

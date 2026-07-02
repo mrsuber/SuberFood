@@ -249,7 +249,7 @@ export default function OrdersPage() {
             <CardContent className="p-6">
               <p className="text-sm text-gray-600 mb-1">Revenue</p>
               <p className="text-3xl font-bold text-green-600">
-                ${(stats.totalRevenue / 1000).toFixed(1)}K
+                {(stats.totalRevenue / 1000).toLocaleString('fr-FR', {maximumFractionDigits: 1})}K XAF
               </p>
             </CardContent>
           </Card>
@@ -330,7 +330,7 @@ export default function OrdersPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-gray-900">
-                        ${order.total.toFixed(2)}
+                        {order.total.toLocaleString('fr-FR')} XAF
                       </p>
                     </div>
                   </div>
@@ -426,7 +426,7 @@ export default function OrdersPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Total</p>
-                  <p className="mt-1 text-lg font-bold">${orderDetails.total.toFixed(2)}</p>
+                  <p className="mt-1 text-lg font-bold">{orderDetails.total.toLocaleString('fr-FR')} XAF</p>
                 </div>
               </div>
 
@@ -472,11 +472,11 @@ export default function OrdersPage() {
                         <div className="flex-1">
                           <p className="font-medium">{itemName}</p>
                           <p className="text-sm text-gray-500">
-                            ${itemPrice.toFixed(2)} × {item.quantity}
+                            {itemPrice.toLocaleString('fr-FR')} XAF × {item.quantity}
                           </p>
                         </div>
                         <p className="font-semibold">
-                          ${(itemPrice * item.quantity).toFixed(2)}
+                          {(itemPrice * item.quantity).toLocaleString('fr-FR')} XAF
                         </p>
                       </div>
                     )
@@ -484,7 +484,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="mt-4 pt-4 border-t flex items-center justify-between">
                   <p className="font-bold text-lg">Total</p>
-                  <p className="font-bold text-lg">${orderDetails.total.toFixed(2)}</p>
+                  <p className="font-bold text-lg">{orderDetails.total.toLocaleString('fr-FR')} XAF</p>
                 </div>
               </div>
             </div>

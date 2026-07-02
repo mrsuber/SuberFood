@@ -431,11 +431,11 @@ export function OrderTypeModal({
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Unit Price:</span>
-                  <span className="font-medium text-gray-900">${price.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{price.toLocaleString('fr-FR')} XAF</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
                   <span className="text-gray-900">Total:</span>
-                  <span className="text-green-600">${(price * quantity).toFixed(2)}</span>
+                  <span className="text-green-600">{(price * quantity).toLocaleString('fr-FR')} XAF</span>
                 </div>
               </div>
             </div>

@@ -121,7 +121,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       {/* Price & Quantity */}
                       <div className="flex items-center justify-between mt-2">
                         <p className="font-bold text-blue-600">
-                          ${(item.price * item.quantity).toFixed(2)}
+                          {(item.price * item.quantity).toLocaleString('fr-FR')} XAF
                         </p>
 
                         {/* Quantity Controls */}
@@ -164,7 +164,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${totalPrice.toFixed(2)}</span>
+                <span className="font-medium">{totalPrice.toLocaleString('fr-FR')} XAF</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Items</span>
@@ -172,7 +172,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               </div>
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>Total</span>
-                <span className="text-blue-600">${totalPrice.toFixed(2)}</span>
+                <span className="text-blue-600">{totalPrice.toLocaleString('fr-FR')} XAF</span>
               </div>
             </div>
 

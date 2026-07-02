@@ -27,7 +27,7 @@ export default function CartButton() {
         {totalItems > 0 && (
           <div className="hidden sm:block">
             <p className="text-xs opacity-90">Cart</p>
-            <p className="font-bold">${totalPrice.toFixed(2)}</p>
+            <p className="font-bold">{totalPrice.toLocaleString('fr-FR')} XAF</p>
           </div>
         )}
       </button>

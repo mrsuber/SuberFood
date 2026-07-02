@@ -246,15 +246,15 @@ export default function MenuItemDetailPage() {
                 {menuItem.salePrice ? (
                   <>
                     <p className="text-3xl font-bold text-green-600">
-                      ${menuItem.salePrice.toFixed(2)}
+                      {menuItem.salePrice.toLocaleString('fr-FR')} XAF
                     </p>
                     <p className="text-lg text-gray-500 line-through">
-                      ${menuItem.price.toFixed(2)}
+                      {menuItem.price.toLocaleString('fr-FR')} XAF
                     </p>
                   </>
                 ) : (
                   <p className="text-3xl font-bold text-gray-900">
-                    ${menuItem.price.toFixed(2)}
+                    {menuItem.price.toLocaleString('fr-FR')} XAF
                   </p>
                 )}
               </div>
@@ -374,7 +374,7 @@ export default function MenuItemDetailPage() {
                 className="flex-1 bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-3"
               >
                 <ShoppingCart size={20} />
-                Add to Cart • ${totalPrice.toFixed(2)}
+                Add to Cart • {totalPrice.toLocaleString('fr-FR')} XAF
               </button>
             </div>
 

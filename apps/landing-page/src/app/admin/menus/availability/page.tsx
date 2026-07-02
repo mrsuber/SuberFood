@@ -228,7 +228,7 @@ export default function MenuAvailabilityPage() {
                         <td className="px-6 py-4">
                           <div>
                             <p className="font-medium text-gray-900">{item.name}</p>
-                            <p className="text-sm text-gray-500">${item.price.toFixed(2)}</p>
+                            <p className="text-sm text-gray-500">{item.price.toLocaleString('fr-FR')} XAF</p>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{item.category}</td>

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 
 type DeliveryMethod = 'delivery' | 'pickup'
+type PaymentMethod = 'online' | 'cash'
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -33,6 +34,9 @@ export default function CheckoutPage() {
 
   // Delivery Method
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery')
+
+  // Payment Method
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
 
   // Contact Information
   const [contactInfo, setContactInfo] = useState({
@@ -148,32 +152,41 @@ export default function CheckoutPage() {
 
       const orderId = result.data.id
 
-      // Initialize PayWithCamsol payment
-      const paymentResponse = await fetch('/api/farm-products/payment/initialize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId,
-          amount: finalTotal,
-          customerEmail: contactInfo.email || undefined,
-          customerPhone: contactInfo.phone,
-          customerName: contactInfo.fullName,
-        }),
-      })
+      // Clear cart
+      clearCart()
 
-      const paymentResult = await paymentResponse.json()
+      // Handle payment based on selected method
+      if (paymentMethod === 'online') {
+        // Initialize PayWithCamsol payment
+        const paymentResponse = await fetch('/api/farm-products/payment/initialize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId,
+            amount: finalTotal,
+            customerEmail: contactInfo.email || undefined,
+            customerPhone: contactInfo.phone,
+            customerName: contactInfo.fullName,
+          }),
+        })
 
-      if (!paymentResult.success) {
-        throw new Error(paymentResult.message || 'Failed to initialize payment')
-      }
+        const paymentResult = await paymentResponse.json()
 
-      // Redirect to PayWithCamsol payment page
-      if (paymentResult.data.paymentUrl) {
-        window.location.href = paymentResult.data.paymentUrl
+        if (!paymentResult.success) {
+          throw new Error(paymentResult.message || 'Failed to initialize payment')
+        }
+
+        // Redirect to PayWithCamsol payment page
+        if (paymentResult.data.paymentUrl) {
+          window.location.href = paymentResult.data.paymentUrl
+        } else {
+          throw new Error('Payment URL not provided')
+        }
       } else {
-        throw new Error('Payment URL not provided')
+        // Cash payment - redirect to order confirmation
+        router.push(`/distribution/farm-products/order-confirmation?orderId=${orderId}`)
       }
     } catch (error) {
       console.error('Checkout error:', error)
@@ -440,6 +453,59 @@ export default function CheckoutPage() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Payment Method */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-[#15803D]" />
+                      Payment Method
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('cash')}
+                        className={`p-4 border-2 rounded-lg transition-all ${
+                          paymentMethod === 'cash'
+                            ? 'border-[#15803D] bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <Package className="h-8 w-8 mb-2 mx-auto text-[#15803D]" />
+                        <p className="font-semibold">
+                          {deliveryMethod === 'delivery' ? 'Pay on Delivery' : 'Pay on Pickup'}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">Cash payment</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('online')}
+                        className={`p-4 border-2 rounded-lg transition-all ${
+                          paymentMethod === 'online'
+                            ? 'border-[#15803D] bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <CreditCard className="h-8 w-8 mb-2 mx-auto text-[#15803D]" />
+                        <p className="font-semibold">Pay Online</p>
+                        <p className="text-sm text-gray-600 mt-1">Mobile Money / Card</p>
+                      </button>
+                    </div>
+                    {paymentMethod === 'online' && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm flex items-start gap-2">
+                        <Lock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-blue-900 mb-1">Secure Online Payment</p>
+                          <p className="text-blue-800">
+                            You'll be redirected to PayWithCamsol to complete your payment securely using Mobile Money or Card.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Order Summary */}
@@ -500,20 +566,27 @@ export default function CheckoutPage() {
                     >
                       {processing ? (
                         <>Processing...</>
-                      ) : (
+                      ) : paymentMethod === 'online' ? (
                         <>
                           <Lock className="h-5 w-5 mr-2" />
                           Proceed to Payment
                         </>
+                      ) : (
+                        <>
+                          <Package className="h-5 w-5 mr-2" />
+                          Place Order
+                        </>
                       )}
                     </Button>
 
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                        <Lock className="h-3 w-3" />
-                        Secure payment powered by PayWithCamsol
-                      </p>
-                    </div>
+                    {paymentMethod === 'online' && (
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          Secure payment powered by PayWithCamsol
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

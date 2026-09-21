@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
-const prisma = new PrismaClient()
+export const dynamic = 'force-dynamic'
 
 // GET /api/farm-products - List all farm products with filtering
 export async function GET(request: NextRequest) {

@@ -27,7 +27,7 @@ export default function FarmProductsListPage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [categoryFilter, setCategory Filter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
   useEffect(() => {

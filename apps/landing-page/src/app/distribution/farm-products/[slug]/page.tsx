@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Navbar } from '@/components/navigation/Navbar'
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { useFarmCart } from '@/contexts/FarmCartContext'
 import {
   Leaf,
   ShoppingCart,
@@ -65,12 +66,15 @@ interface ProductDetail {
 
 export default function ProductDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const slug = params?.slug as string
+  const { addItem, isInCart, getCartItem } = useFarmCart()
 
   const [product, setProduct] = useState<ProductDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
   const [selectedPriceType, setSelectedPriceType] = useState<'retail' | 'bulk'>('retail')
+  const [addingToCart, setAddingToCart] = useState(false)
 
   useEffect(() => {
     if (slug) {
@@ -162,6 +166,33 @@ export default function ProductDetailPage() {
 
     const newQty = Math.max(minQty, quantity + delta)
     setQuantity(newQty)
+  }
+
+  const handleAddToCart = () => {
+    if (!product) return
+
+    setAddingToCart(true)
+
+    const unit = selectedPriceType === 'retail' ? product.retailUnit : product.bulkUnit
+    const price = parseInt(getCurrentPrice())
+
+    addItem({
+      productId: product.id,
+      productSlug: product.sku,
+      name: product.name,
+      image: product.thumbnail,
+      priceType: selectedPriceType,
+      price,
+      unit: unit || '',
+      quantity,
+      stockQuantity: parseFloat(product.stockQuantity),
+      stockUnit: product.stockUnit,
+    })
+
+    setTimeout(() => {
+      setAddingToCart(false)
+      router.push('/distribution/farm-products/cart')
+    }, 500)
   }
 
   if (loading) {
@@ -388,10 +419,15 @@ export default function ProductDetailPage() {
               {/* Add to Cart Button */}
               <Button
                 className="w-full bg-[#15803D] hover:bg-[#166534] h-14 text-lg"
-                disabled={!product.isAvailable}
+                disabled={!product.isAvailable || addingToCart}
+                onClick={handleAddToCart}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
-                {product.isAvailable ? 'Add to Cart' : 'Out of Stock'}
+                {addingToCart
+                  ? 'Adding to Cart...'
+                  : product.isAvailable
+                  ? 'Add to Cart'
+                  : 'Out of Stock'}
               </Button>
             </div>
           </div>

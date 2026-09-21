@@ -3,6 +3,7 @@ import { Inter, Poppins } from 'next/font/google'
 import './globals.css'
 import { QueryProvider } from '@/lib/providers/query-provider'
 import { SessionProvider } from '@/components/providers/SessionProvider'
+import { FarmCartProvider } from '@/contexts/FarmCartContext'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -50,9 +51,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <SessionProvider>
           <QueryProvider>
-            <div className="flex flex-col min-h-screen">
-              {children}
-            </div>
+            <FarmCartProvider>
+              <div className="flex flex-col min-h-screen">
+                {children}
+              </div>
+            </FarmCartProvider>
           </QueryProvider>
         </SessionProvider>
       </body>

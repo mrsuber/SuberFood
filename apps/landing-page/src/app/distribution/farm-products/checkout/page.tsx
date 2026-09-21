@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
@@ -51,6 +53,13 @@ export default function CheckoutPage() {
   // Validation & Processing
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [processing, setProcessing] = useState(false)
+
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (items.length === 0) {
+      router.push('/distribution/farm-products')
+    }
+  }, [items.length, router])
 
   const formatPrice = (price: number) => {
     return `${price.toLocaleString()} XAF`
@@ -171,12 +180,6 @@ export default function CheckoutPage() {
       alert(error instanceof Error ? error.message : 'An error occurred during checkout')
       setProcessing(false)
     }
-  }
-
-  // Redirect if cart is empty
-  if (items.length === 0) {
-    router.push('/distribution/farm-products')
-    return null
   }
 
   return (

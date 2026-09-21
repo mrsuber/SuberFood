@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,6 @@ import {
 
 export default function FarmProductsListPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

@@ -56,7 +56,7 @@ export default function CartPage() {
     return (
       <>
         <Navbar />
-        <main className="flex-1 py-16 px-4 sm:px-6 lg:px-8">
+        <main className="flex-1 py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
           <div className="max-w-7xl mx-auto">
             <div className="text-center">
               <ShoppingCart className="h-24 w-24 text-gray-400 mx-auto mb-6" />
@@ -81,7 +81,7 @@ export default function CartPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">

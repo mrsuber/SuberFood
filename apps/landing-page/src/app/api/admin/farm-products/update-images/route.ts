@@ -16,7 +16,7 @@ export async function POST() {
         ],
       },
       {
-        slug: 'fresh-tilapia-fish',
+        slug: 'fresh-tilapia',
         thumbnail: 'https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=800&q=80',
         images: [
           'https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=800&q=80',
@@ -24,7 +24,7 @@ export async function POST() {
         ],
       },
       {
-        slug: 'fresh-farm-eggs',
+        slug: 'fresh-eggs',
         thumbnail: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=800&q=80',
         images: [
           'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=800&q=80',
@@ -42,22 +42,31 @@ export async function POST() {
     ]
 
     const results = []
+    const errors = []
 
     for (const update of updates) {
-      const product = await prisma.farmProduct.update({
-        where: { slug: update.slug },
-        data: {
-          thumbnail: update.thumbnail,
-          images: update.images,
-        },
-      })
-      results.push({ slug: update.slug, name: product.name })
+      try {
+        const product = await prisma.farmProduct.update({
+          where: { slug: update.slug },
+          data: {
+            thumbnail: update.thumbnail,
+            images: update.images,
+          },
+        })
+        results.push({ slug: update.slug, name: product.name, status: 'success' })
+      } catch (error) {
+        errors.push({
+          slug: update.slug,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          status: 'failed'
+        })
+      }
     }
 
     return NextResponse.json({
-      success: true,
-      message: 'Product images updated successfully',
-      data: results,
+      success: results.length > 0,
+      message: `Updated ${results.length} products, ${errors.length} errors`,
+      data: { results, errors },
     })
   } catch (error) {
     console.error('Error updating product images:', error)

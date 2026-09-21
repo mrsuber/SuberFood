@@ -5,8 +5,6 @@ const nextConfig = {
   images: {
     domains: ['cdn.suberfood.com', 'images.unsplash.com'],
   },
-  // Enable static exports for better SEO
-  output: 'standalone',
   // Skip type checking during build (types are validated in IDE)
   typescript: {
     ignoreBuildErrors: true,

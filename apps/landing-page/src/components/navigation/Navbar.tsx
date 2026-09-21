@@ -61,21 +61,21 @@ const navigationData: NavItem[] = [
       },
       {
         name: 'Retail & E-commerce',
-        href: '/distribution/retail',
+        href: '/distribution/farm-products',
         submenu: [
           {
             name: 'Shop Online',
-            href: '/distribution/retail/shop',
+            href: '/distribution/farm-products',
             description: 'Browse our online store'
           },
           {
             name: 'Products',
-            href: '/distribution/retail/products',
+            href: '/distribution/farm-products',
             description: 'Fresh products delivered'
           },
           {
             name: 'Delivery',
-            href: '/distribution/retail/delivery',
+            href: '/distribution/farm-products',
             description: 'Delivery information'
           },
         ]

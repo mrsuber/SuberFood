@@ -199,7 +199,7 @@ export default function ProductDetailPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#15803D]"></div>
         </div>
         <Footer />
@@ -211,7 +211,7 @@ export default function ProductDetailPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
           <AlertCircle className="h-16 w-16 text-gray-400 mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h2>
           <p className="text-gray-600 mb-6">The product you're looking for doesn't exist.</p>
@@ -230,7 +230,7 @@ export default function ProductDetailPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Breadcrumb */}
           <div className="mb-6">

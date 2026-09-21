@@ -82,7 +82,7 @@ FARM → PROCESSING → LOGISTICS → DISTRIBUTION → CONSUMER
 - ✅ Monorepo setup with Turborepo
 - ✅ Next.js landing page with branding
 - ✅ Microservice template (IAM service)
-- ✅ Server-based deployment on 148.230.118.19
+- ✅ Server-based deployment on 76.13.41.99
 - ✅ Production environment with PostgreSQL
 - ✅ Domain: suberfoods.com with Nginx + SSL
 

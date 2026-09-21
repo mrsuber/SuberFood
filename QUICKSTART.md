@@ -10,14 +10,16 @@ Get up and running with SuberFood in minutes!
 ## 🚀 Production Setup (Server Deployment)
 
 **Server Details:**
-- **IP:** 148.230.118.19
+- **IP:** 76.13.41.99
+- **User:** mohamaduser
+- **Port:** 2222
 - **Domain:** suberfoods.com
 - **Database:** PostgreSQL (shared with other applications)
 - **Web Server:** Nginx with SSL
 
 ```bash
 # 1. SSH into server
-ssh user@148.230.118.19
+ssh -p 2222 mohamaduser@76.13.41.99
 
 # 2. Clone and install
 cd ~/dev/personal

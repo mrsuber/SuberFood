@@ -1053,7 +1053,7 @@ When starting a new session, review:
 - OrderPreparation supports multiple photo URLs as array
 
 **Blockers:**
-- Database server at 148.230.118.19:5432 is not reachable
+- Database server at 76.13.41.99:5432 is not reachable
 - Cannot run migration until database connection is restored
 - Need to either:
   1. Start the remote PostgreSQL server

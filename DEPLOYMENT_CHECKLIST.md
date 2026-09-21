@@ -12,7 +12,7 @@
 
 ## 🗄️ Database
 
-- [x] Schema deployed to production database (148.230.118.19:5432)
+- [x] Schema deployed to production database (76.13.41.99:5432)
 - [x] All 8 new models created (Staff, Equipment, Delivery, etc.)
 - [x] Existing models updated (Restaurant, InventoryItem, Order, User)
 - [x] Migration successful
@@ -35,7 +35,7 @@ npx prisma migrate dev     # For development
 Ensure these are set in `.env`:
 ```env
 # Database
-DATABASE_URL="postgresql://suberfood_user:SuberFood2026Secure@148.230.118.19:5432/suberfood_db"
+DATABASE_URL="postgresql://suberfood_user:SuberFood2026Secure@76.13.41.99:5432/suberfood_db"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"  # Update for production
@@ -293,7 +293,7 @@ Once deployed, monitor:
 - Performance monitoring
 
 ### Contact Points
-- Database: PostgreSQL at 148.230.118.19
+- Database: PostgreSQL at 76.13.41.99
 - Application: Next.js app
 - Support: [Add contact info]
 

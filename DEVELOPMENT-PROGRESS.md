@@ -385,7 +385,7 @@ apps/landing-page/
 ## 📝 Notes
 
 - **Domain:** suberfoods.com (already configured)
-- **Server:** 148.230.118.19
+- **Server:** 76.13.41.99
 - **Database:** PostgreSQL (ready on server)
 - **PM2:** Process manager configured
 - **SSL:** Let's Encrypt certificate active

@@ -2095,7 +2095,7 @@ GET    /api/v1/promotions/:code/validate
 - E2E test suite runs before deployment
 
 ### Production Environment
-- Current: VPS (148.230.118.19) with PM2 + Nginx
+- Current: VPS (76.13.41.99) with PM2 + Nginx
 - Future: AWS EKS (Kubernetes) for scalability
 - Blue-green deployment strategy
 - Automated backups (database, file storage)

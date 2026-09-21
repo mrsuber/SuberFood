@@ -34,21 +34,21 @@ The database server is currently unreachable. Try:
 
 **Option A: SSH into server and start PostgreSQL**
 ```bash
-ssh root@148.230.118.19
+ssh -p 2222 mohamaduser@76.13.41.99
 sudo systemctl status postgresql
 sudo systemctl start postgresql
 ```
 
 **Option B: Use SSH tunnel**
 ```bash
-ssh -L 5432:localhost:5432 root@148.230.118.19 -N
+ssh -L 5432:localhost:5432 -p 2222 mohamaduser@76.13.41.99 -N
 # Then in another terminal, run migration
 ```
 
 **Option C: Check if server is running**
 ```bash
-ping 148.230.118.19
-telnet 148.230.118.19 5432
+ping 76.13.41.99
+telnet 76.13.41.99 5432
 ```
 
 ### Step 4: Run Pending Migration

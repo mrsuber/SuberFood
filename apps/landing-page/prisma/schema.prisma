@@ -88,6 +88,11 @@ model User {
   orderHistory UserOrderHistory[]
   staff        Staff? // One-to-one: User can be a staff member
 
+  // Farm Products Relations
+  farmCarts           FarmCart[]
+  farmOrders          FarmOrder[]
+  farmProductReviews  FarmProductReview[]
+
   @@map("users")
 }
 
@@ -1202,4 +1207,328 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@map("activity_logs")
+}
+
+// ============================================
+// FARM PRODUCTS DISTRIBUTION
+// ============================================
+
+enum FarmProductCategory {
+  LEAFY_GREENS // Spinach, lettuce, kale
+  ROOT_VEGETABLES // Carrots, potatoes, yams, cassava
+  FRUITS // Bananas, mangoes, oranges
+  LEGUMES // Beans, peas, lentils
+  GRAINS_CEREALS // Rice, corn, wheat
+  SEEDS_NUTS // Groundnuts, sesame
+  TUBERS // Yam, cocoyam, sweet potato
+  HERBS_SPICES // Ginger, garlic, pepper
+  FRESH_VEGETABLES // Tomatoes, peppers, onions
+  DAIRY_EGGS // Fresh milk, eggs (from farms)
+  LIVESTOCK_MEAT // Fresh meat
+  FISH_SEAFOOD // Fresh fish
+}
+
+enum PriceType {
+  RETAIL_ONLY // Only sold by weight/volume
+  BULK_ONLY // Only sold in bags/crates
+  BOTH // Available in both retail and bulk
+}
+
+enum FarmProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+model FarmProduct {
+  id          String              @id @default(cuid())
+  sku         String              @unique
+  slug        String              @unique
+  name        String
+  description String?
+  category    FarmProductCategory
+  subcategory String?
+
+  // Images (admin uploads)
+  images    String[] // URLs to uploaded images
+  thumbnail String? // Primary image
+
+  // Pricing Configuration
+  priceType PriceType @default(RETAIL_ONLY)
+
+  // Retail pricing (sold by weight/volume)
+  retailPrice  Decimal? // Price per unit (XAF)
+  retailUnit   String? // kg, g, L, ml, pieces
+  retailMinQty Decimal? // Minimum purchase quantity
+
+  // Bulk pricing (sold in bags/crates)
+  bulkPrice       Decimal? // Price per bag/crate (XAF)
+  bulkUnit        String? // "25kg bag", "50kg sack", "crate"
+  bulkQtyPerUnit  Decimal? // How much in each unit (25, 50, etc.)
+  bulkMinOrder    Int? // Minimum number of bags/crates
+
+  // Inventory
+  stockQuantity     Decimal // Total available (in base unit)
+  stockUnit         String // Base unit (kg, L, pieces)
+  lowStockThreshold Decimal?
+  reorderPoint      Decimal?
+
+  // Traceability
+  farmSource  String? // Farm name/location
+  harvestDate DateTime?
+  expiryDate  DateTime?
+  batchNumber String?
+
+  // Product attributes
+  isOrganic   Boolean @default(false)
+  isCertified Boolean @default(false)
+  isInSeason  Boolean @default(true)
+  isFeatured  Boolean @default(false)
+
+  // Measurements
+  weight     Decimal? // Product weight
+  weightUnit String? // kg, g
+  dimensions String? // LxWxH in cm
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  keywords        String[]
+
+  // Status
+  status      FarmProductStatus @default(ACTIVE)
+  isAvailable Boolean           @default(true)
+
+  // Relationships
+  cartItems  FarmCartItem[]
+  orderItems FarmOrderItem[]
+  reviews    FarmProductReview[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([slug])
+  @@map("farm_products")
+}
+
+// ============================================
+// FARM PRODUCT CART
+// ============================================
+
+model FarmCart {
+  id        String   @id @default(cuid())
+  userId    String? // Null for guest carts
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String? // For guest users
+  items     FarmCartItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime // Cart expiry (7 days)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@map("farm_carts")
+}
+
+enum PurchaseType {
+  RETAIL // Buying by weight/volume
+  BULK // Buying in bags/crates
+}
+
+model FarmCartItem {
+  id     String   @id @default(cuid())
+  cartId String
+  cart   FarmCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   FarmProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Quantity & Pricing
+  purchaseType PurchaseType // RETAIL or BULK
+  quantity     Decimal // Amount ordered
+  unit         String // Unit of measurement
+  pricePerUnit Decimal // Price at time of adding (XAF)
+  totalPrice   Decimal // quantity * pricePerUnit (XAF)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@map("farm_cart_items")
+}
+
+// ============================================
+// FARM PRODUCT ORDERS
+// ============================================
+
+enum FulfillmentType {
+  PICKUP // Customer picks up
+  DELIVERY // We deliver
+}
+
+enum FarmPaymentMethod {
+  MOBILE_MONEY // MTN, Orange, etc.
+  BANK_CARD // Credit/Debit card
+  BANK_TRANSFER
+  CASH_ON_PICKUP
+  CASH_ON_DELIVERY
+}
+
+enum FarmPaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum FarmOrderStatus {
+  PENDING // Just placed
+  CONFIRMED // Admin confirmed
+  PREPARING // Being prepared
+  READY_FOR_PICKUP // Ready for customer pickup
+  OUT_FOR_DELIVERY // In transit
+  DELIVERED // Completed
+  COMPLETED // Picked up or delivered
+  CANCELLED // Cancelled
+}
+
+model FarmOrder {
+  id          String   @id @default(cuid())
+  orderNumber String   @unique // FPO-2026-XXXXX
+
+  // Customer Info
+  userId  String? // Null for guest orders
+  user    User?   @relation(fields: [userId], references: [id])
+  isGuest Boolean @default(false)
+
+  // Guest customer details
+  guestEmail String?
+  guestPhone String?
+  guestName  String?
+
+  // Order Details
+  items         FarmOrderItem[]
+  totalAmount   Decimal // Total (XAF)
+  subtotal      Decimal // Before delivery (XAF)
+  deliveryFee   Decimal @default(0) // Delivery cost (XAF)
+  discount      Decimal @default(0) // Any discounts (XAF)
+
+  // Fulfillment
+  fulfillmentType FulfillmentType
+
+  // Pickup details
+  pickupLocation String?
+  pickupDate     DateTime?
+  pickupTime     String?
+
+  // Delivery details
+  deliveryAddress      String?
+  deliveryCity         String?
+  deliveryState        String?
+  deliveryPhone        String?
+  deliveryInstructions String?
+  estimatedDelivery    DateTime?
+
+  // Payment
+  paymentMethod    FarmPaymentMethod
+  paymentStatus    FarmPaymentStatus @default(PENDING)
+  paymentReference String? // PayWithCamsol transaction ref
+  paymentDetails   Json? // Store payment gateway response
+  paidAt           DateTime?
+
+  // Order Status
+  status        FarmOrderStatus              @default(PENDING)
+  statusHistory FarmOrderStatusHistory[]
+
+  // Notes
+  customerNotes String?
+  adminNotes    String?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  cancelledAt DateTime?
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("farm_orders")
+}
+
+model FarmOrderItem {
+  id      String    @id @default(cuid())
+  orderId String
+  order   FarmOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   FarmProduct @relation(fields: [productId], references: [id])
+
+  // Product snapshot at time of order
+  productName  String
+  productSku   String
+  productImage String?
+
+  // Pricing
+  purchaseType PurchaseType
+  quantity     Decimal
+  unit         String
+  pricePerUnit Decimal // XAF
+  totalPrice   Decimal // XAF
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@map("farm_order_items")
+}
+
+model FarmOrderStatusHistory {
+  id        String          @id @default(cuid())
+  orderId   String
+  order     FarmOrder       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  status    FarmOrderStatus
+  note      String?
+  updatedBy String? // Admin user ID
+  timestamp DateTime        @default(now())
+
+  @@index([orderId])
+  @@map("farm_order_status_history")
+}
+
+// ============================================
+// REVIEWS & RATINGS
+// ============================================
+
+model FarmProductReview {
+  id        String      @id @default(cuid())
+  productId String
+  product   FarmProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rating             Int     // 1-5 stars
+  title              String?
+  comment            String?
+  isVerifiedPurchase Boolean @default(false)
+
+  // Moderation
+  isApproved  Boolean   @default(false)
+  moderatedBy String?
+  moderatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+  @@map("farm_product_reviews")
 }

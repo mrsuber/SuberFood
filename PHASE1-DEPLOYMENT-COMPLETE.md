@@ -2,7 +2,7 @@
 
 **Deployment Date:** May 23, 2026
 **Status:** ✅ Successfully Deployed to Production
-**Server:** suberfoods.com (148.230.118.19)
+**Server:** suberfoods.com (76.13.41.99)
 
 ---
 
@@ -257,7 +257,7 @@ Now that the **backend is complete and deployed**, the next step is building the
 
 ### Check Service Status
 ```bash
-ssh root@148.230.118.19
+ssh -p 2222 mohamaduser@76.13.41.99
 pm2 status
 pm2 logs restaurant-service
 ```
@@ -339,7 +339,7 @@ PGPASSWORD='SuberFood2026!Secure' psql -U suberfood_user -h localhost -d suberfo
 - **Data Fetching:** React Query (planned)
 
 ### Infrastructure
-- **Server:** Ubuntu VPS (148.230.118.19)
+- **Server:** Ubuntu VPS (76.13.41.99)
 - **Reverse Proxy:** Nginx 1.24.0
 - **SSL:** Let's Encrypt
 - **Domain:** suberfoods.com

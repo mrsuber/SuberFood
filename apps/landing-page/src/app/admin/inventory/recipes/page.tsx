@@ -192,7 +192,7 @@ export default function RecipesPage() {
                       </div>
                     )}
 
-                    <Link href={`/admin/inventory/recipes/${recipe.id}/edit`}>
+                    <Link href={`/admin/menus/${recipe.menuItemId}`}>
                       <Button variant="outline" size="sm">
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
@@ -350,7 +350,7 @@ export default function RecipesPage() {
                     </h4>
                     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                       <p className="text-sm text-gray-600 italic">
-                        No cooking instructions available. <Link href={`/admin/inventory/recipes/${recipe.id}/edit`} className="text-primary-600 hover:underline">Add instructions</Link> to help your chefs.
+                        No cooking instructions available. <Link href={`/admin/menus/${recipe.menuItemId}`} className="text-primary-600 hover:underline">Add instructions</Link> to help your chefs.
                       </p>
                     </div>
                   </div>

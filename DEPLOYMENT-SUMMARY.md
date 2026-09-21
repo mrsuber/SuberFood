@@ -1,8 +1,10 @@
 # SuberFood - Deployment Summary
 
 ## Server Information
-- **IP Address:** 148.230.118.19
+- **IP Address:** 76.13.41.99
 - **Domain:** suberfoods.com (www.suberfoods.com)
+- **SSH Port:** 2222
+- **SSH User:** mohamaduser
 - **SSL Certificate:** Let's Encrypt (Auto-renews)
 - **Certificate Expiry:** 2026-08-13
 
@@ -41,7 +43,7 @@
 ### Update Application
 ```bash
 # SSH into server
-ssh root@148.230.118.19
+ssh -p 2222 mohamaduser@76.13.41.99
 
 # Navigate to project
 cd /root/suberfood

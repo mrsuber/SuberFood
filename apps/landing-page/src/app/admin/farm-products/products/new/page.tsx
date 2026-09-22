@@ -15,7 +15,8 @@ export default function NewFarmProductPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [thumbnail, setThumbnail] = useState('')
   const [images, setImages] = useState<string[]>([])
-  const [imageUrl, setImageUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -50,6 +51,65 @@ export default function NewFarmProductPage() {
     metaDescription: '',
     status: 'ACTIVE',
   })
+
+  const handleFileUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', 'farm-products')
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        const imageUrl = data.url
+        if (!thumbnail) {
+          setThumbnail(imageUrl)
+        }
+        if (!images.includes(imageUrl)) {
+          setImages([...images, imageUrl])
+        }
+      } else {
+        alert(data.error || 'Failed to upload image')
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('Failed to upload image')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0])
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -270,37 +330,52 @@ export default function NewFarmProductPage() {
               <CardTitle>Product Images</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Drag and Drop Upload Area */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thumbnail Image URL
+                  Upload Product Images
                 </label>
-                <div className="flex gap-2">
+                <div
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    dragActive
+                      ? 'border-[#15803D] bg-green-50'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
                   <input
-                    type="url"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
-                    placeholder="https://images.unsplash.com/photo-..."
+                    type="file"
+                    id="file-upload"
+                    accept="image/*"
+                    onChange={handleFileInput}
+                    className="hidden"
+                    disabled={uploading}
                   />
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      if (imageUrl.trim()) {
-                        setThumbnail(imageUrl)
-                        if (!images.includes(imageUrl)) {
-                          setImages([...images, imageUrl])
-                        }
-                        setImageUrl('')
-                      }
-                    }}
-                    className="bg-[#15803D] hover:bg-[#166534]"
+                  <label
+                    htmlFor="file-upload"
+                    className="cursor-pointer flex flex-col items-center"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Add
-                  </Button>
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-12 w-12 text-[#15803D] animate-spin mb-2" />
+                        <p className="text-gray-600">Uploading...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-12 w-12 text-gray-400 mb-2" />
+                        <p className="text-gray-600 mb-1">
+                          <span className="text-[#15803D] font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                        <p className="text-sm text-gray-500">PNG, JPG, WebP or GIF (max. 5MB)</p>
+                      </>
+                    )}
+                  </label>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Use Unsplash or other image URLs. First image added will be the thumbnail.
+                  First image uploaded will be the thumbnail. Images are saved to your VPS.
                 </p>
               </div>
 

@@ -5,13 +5,17 @@ import { useRouter } from 'next/navigation'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Upload, X, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function NewFarmProductPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [thumbnail, setThumbnail] = useState('')
+  const [images, setImages] = useState<string[]>([])
+  const [imageUrl, setImageUrl] = useState('')
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -113,7 +117,11 @@ export default function NewFarmProductPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          thumbnail,
+          images,
+        }),
       })
 
       const data = await response.json()
@@ -253,6 +261,124 @@ export default function NewFarmProductPage() {
                   placeholder="Product description..."
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Images */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Product Images</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thumbnail Image URL
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                    placeholder="https://images.unsplash.com/photo-..."
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (imageUrl.trim()) {
+                        setThumbnail(imageUrl)
+                        if (!images.includes(imageUrl)) {
+                          setImages([...images, imageUrl])
+                        }
+                        setImageUrl('')
+                      }
+                    }}
+                    className="bg-[#15803D] hover:bg-[#166534]"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Use Unsplash or other image URLs. First image added will be the thumbnail.
+                </p>
+              </div>
+
+              {/* Thumbnail Preview */}
+              {thumbnail && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Thumbnail
+                  </label>
+                  <div className="relative w-48 h-48 bg-gray-100 rounded-lg overflow-hidden">
+                    <Image
+                      src={thumbnail}
+                      alt="Thumbnail"
+                      fill
+                      className="object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setThumbnail('')
+                        setImages(images.filter(img => img !== thumbnail))
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Images */}
+              {images.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gallery Images ({images.length})
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {images.map((img, index) => (
+                      <div key={index} className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
+                        <Image
+                          src={img}
+                          alt={`Image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newImages = images.filter((_, i) => i !== index)
+                            setImages(newImages)
+                            if (img === thumbnail && newImages.length > 0) {
+                              setThumbnail(newImages[0])
+                            } else if (img === thumbnail) {
+                              setThumbnail('')
+                            }
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        {img === thumbnail && (
+                          <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                            Thumbnail
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {images.length === 0 && !thumbnail && (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-600 mb-1">No images added yet</p>
+                  <p className="text-sm text-gray-500">Add image URLs above to display product images</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

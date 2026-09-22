@@ -134,13 +134,13 @@ const navigationSections: NavSection[] = [
       },
       {
         name: 'E-commerce',
-        href: '/admin/distribution/ecommerce',
+        href: '/admin/farm-products',
         icon: ShoppingBag,
         submenu: [
-          { name: 'Products', href: '/admin/products' },
-          { name: 'Add Product', href: '/admin/products/new' },
-          { name: 'Categories', href: '/admin/products/categories' },
-          { name: 'Online Orders', href: '/admin/distribution/ecommerce/orders' },
+          { name: 'Dashboard', href: '/admin/farm-products' },
+          { name: 'Products', href: '/admin/farm-products/products' },
+          { name: 'Add Product', href: '/admin/farm-products/products/new' },
+          { name: 'Orders', href: '/admin/farm-products/orders' },
         ]
       },
       {

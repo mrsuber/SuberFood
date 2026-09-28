@@ -26,6 +26,8 @@ export default function NewFarmProductPage() {
     category: 'FRESH_VEGETABLES',
     subcategory: '',
     priceType: 'RETAIL_ONLY',
+    farmCostRetail: '',
+    farmCostBulk: '',
     retailPrice: '',
     retailUnit: 'kg',
     retailMinQty: '1',
@@ -115,10 +117,30 @@ export default function NewFarmProductPage() {
     const { name, value, type } = e.target
     const checked = (e.target as HTMLInputElement).checked
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }))
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      }
+
+      // Auto-calculate retail price from farm cost (farmCost * 1.4)
+      if (name === 'farmCostRetail' && value) {
+        const farmCost = parseFloat(value)
+        if (!isNaN(farmCost)) {
+          updated.retailPrice = (farmCost * 1.4).toFixed(2)
+        }
+      }
+
+      // Auto-calculate bulk price from farm cost (farmCost * 1.4)
+      if (name === 'farmCostBulk' && value) {
+        const farmCost = parseFloat(value)
+        if (!isNaN(farmCost)) {
+          updated.bulkPrice = (farmCost * 1.4).toFixed(2)
+        }
+      }
+
+      return updated
+    })
 
     // Auto-generate slug from name
     if (name === 'name' && !formData.slug) {
@@ -460,7 +482,10 @@ export default function NewFarmProductPage() {
           {/* Pricing */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Pricing</CardTitle>
+              <CardTitle>Pricing (Auto-Calculated)</CardTitle>
+              <p className="text-sm text-gray-600 mt-1">
+                Enter farm cost, retail price will be auto-calculated at 140% (Farm: 100% + Transport: 20% + Profit: 20%)
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -480,23 +505,60 @@ export default function NewFarmProductPage() {
               </div>
 
               {(formData.priceType === 'RETAIL_ONLY' || formData.priceType === 'BOTH') && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Retail Price (XAF) *
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="block text-sm font-medium text-blue-900 mb-2">
+                      Farm Cost per Retail Unit (What we pay farmer) *
                     </label>
                     <input
                       type="number"
-                      name="retailPrice"
-                      value={formData.retailPrice}
+                      step="0.01"
+                      name="farmCostRetail"
+                      value={formData.farmCostRetail}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D] ${
-                        errors.retailPrice ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="500"
+                      className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., 1000"
                     />
-                    {errors.retailPrice && <p className="text-red-500 text-sm mt-1">{errors.retailPrice}</p>}
+                    {formData.farmCostRetail && (
+                      <div className="mt-3 text-sm space-y-1">
+                        <div className="flex justify-between text-gray-700">
+                          <span>Farm Cost:</span>
+                          <span className="font-semibold">{parseFloat(formData.farmCostRetail).toLocaleString()} XAF</span>
+                        </div>
+                        <div className="flex justify-between text-gray-700">
+                          <span>Transport (20%):</span>
+                          <span className="font-semibold">{(parseFloat(formData.farmCostRetail) * 0.2).toLocaleString()} XAF</span>
+                        </div>
+                        <div className="flex justify-between text-gray-700">
+                          <span>Our Profit (20%):</span>
+                          <span className="font-semibold">{(parseFloat(formData.farmCostRetail) * 0.2).toLocaleString()} XAF</span>
+                        </div>
+                        <div className="flex justify-between text-green-800 font-bold text-base pt-2 border-t border-blue-300">
+                          <span>Customer Pays:</span>
+                          <span>{formData.retailPrice ? parseFloat(formData.retailPrice).toLocaleString() : '0'} XAF</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Retail Price (XAF) * (Auto-calculated)
+                      </label>
+                      <input
+                        type="number"
+                        name="retailPrice"
+                        value={formData.retailPrice}
+                        onChange={handleChange}
+                        readOnly
+                        className={`w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed ${
+                          errors.retailPrice ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Auto-calculated"
+                      />
+                      {errors.retailPrice && <p className="text-red-500 text-sm mt-1">{errors.retailPrice}</p>}
+                    </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -532,23 +594,60 @@ export default function NewFarmProductPage() {
               )}
 
               {(formData.priceType === 'BULK_ONLY' || formData.priceType === 'BOTH') && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bulk Price (XAF) *
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="block text-sm font-medium text-blue-900 mb-2">
+                      Farm Cost per Bulk Unit (What we pay farmer) *
                     </label>
                     <input
                       type="number"
-                      name="bulkPrice"
-                      value={formData.bulkPrice}
+                      step="0.01"
+                      name="farmCostBulk"
+                      value={formData.farmCostBulk}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D] ${
-                        errors.bulkPrice ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="10000"
+                      className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., 10000"
                     />
-                    {errors.bulkPrice && <p className="text-red-500 text-sm mt-1">{errors.bulkPrice}</p>}
+                    {formData.farmCostBulk && (
+                      <div className="mt-3 text-sm space-y-1">
+                        <div className="flex justify-between text-gray-700">
+                          <span>Farm Cost:</span>
+                          <span className="font-semibold">{parseFloat(formData.farmCostBulk).toLocaleString()} XAF</span>
+                        </div>
+                        <div className="flex justify-between text-gray-700">
+                          <span>Transport (20%):</span>
+                          <span className="font-semibold">{(parseFloat(formData.farmCostBulk) * 0.2).toLocaleString()} XAF</span>
+                        </div>
+                        <div className="flex justify-between text-gray-700">
+                          <span>Our Profit (20%):</span>
+                          <span className="font-semibold">{(parseFloat(formData.farmCostBulk) * 0.2).toLocaleString()} XAF</span>
+                        </div>
+                        <div className="flex justify-between text-green-800 font-bold text-base pt-2 border-t border-blue-300">
+                          <span>Customer Pays:</span>
+                          <span>{formData.bulkPrice ? parseFloat(formData.bulkPrice).toLocaleString() : '0'} XAF</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bulk Price (XAF) * (Auto-calculated)
+                      </label>
+                      <input
+                        type="number"
+                        name="bulkPrice"
+                        value={formData.bulkPrice}
+                        onChange={handleChange}
+                        readOnly
+                        className={`w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed ${
+                          errors.bulkPrice ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Auto-calculated"
+                      />
+                      {errors.bulkPrice && <p className="text-red-500 text-sm mt-1">{errors.bulkPrice}</p>}
+                    </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -1692,12 +1692,16 @@ model FarmProduct {
   // Pricing Configuration
   priceType PriceType @default(RETAIL_ONLY)
 
-  // Retail pricing (sold by weight/volume)
+  // Farm cost (what we pay the farmer)
+  farmCostRetail Decimal? @db.Decimal(10, 2) // Cost per retail unit from farmer
+  farmCostBulk   Decimal? @db.Decimal(10, 2) // Cost per bulk unit from farmer
+
+  // Retail pricing (sold by weight/volume) - AUTO-CALCULATED as farmCost * 1.4
   retailPrice  Decimal? // Price per unit (XAF)
   retailUnit   String? // kg, g, L, ml, pieces
   retailMinQty Decimal? // Minimum purchase quantity
 
-  // Bulk pricing (sold in bags/crates)
+  // Bulk pricing (sold in bags/crates) - AUTO-CALCULATED as farmCost * 1.4
   bulkPrice       Decimal? // Price per bag/crate (XAF)
   bulkUnit        String? // "25kg bag", "50kg sack", "crate"
   bulkQtyPerUnit  Decimal? // How much in each unit (25, 50, etc.)
@@ -1903,11 +1907,12 @@ model FarmOrder {
   guestName  String?
 
   // Order Details
-  items         FarmOrderItem[]
-  totalAmount   Decimal // Total (XAF)
-  subtotal      Decimal // Before delivery (XAF)
-  deliveryFee   Decimal @default(0) // Delivery cost (XAF)
-  discount      Decimal @default(0) // Any discounts (XAF)
+  items            FarmOrderItem[]
+  totalAmount      Decimal // Total (XAF)
+  subtotal         Decimal // Before delivery (XAF)
+  deliveryFee      Decimal @default(0) // Delivery cost (XAF)
+  discount         Decimal @default(0) // Any discounts (XAF)
+  referralDiscount Decimal @default(0) @db.Decimal(12, 2) // 5% discount when using referral code
 
   // NEW: Booking system
   orderType            FarmOrderType       @default(REGULAR)
@@ -2017,11 +2022,15 @@ model FarmOrderItem {
   productImage String?
 
   // Pricing
-  purchaseType PurchaseType
-  quantity     Decimal
-  unit         String
-  pricePerUnit Decimal // XAF
-  totalPrice   Decimal // XAF
+  purchaseType   PurchaseType
+  quantity       Decimal
+  unit           String
+  pricePerUnit   Decimal // XAF (customer pays)
+  totalPrice     Decimal // XAF (customer pays)
+
+  // Cost tracking (for profit calculation)
+  farmCostPerUnit Decimal? @db.Decimal(10, 2) // What we paid farmer per unit
+  farmCostTotal   Decimal? @db.Decimal(10, 2) // farmCostPerUnit * quantity
 
   createdAt DateTime @default(now())
 

@@ -146,6 +146,8 @@ export async function POST(request: NextRequest) {
 
         // Pricing
         priceType: body.priceType || 'RETAIL_ONLY',
+        farmCostRetail: body.farmCostRetail ? parseFloat(body.farmCostRetail) : null,
+        farmCostBulk: body.farmCostBulk ? parseFloat(body.farmCostBulk) : null,
         retailPrice: body.retailPrice ? parseFloat(body.retailPrice) : null,
         retailUnit: body.retailUnit || null,
         retailMinQty: body.retailMinQty ? parseFloat(body.retailMinQty) : null,

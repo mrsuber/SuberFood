@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { ChevronDown, Menu, X, ShoppingCart, User, LogOut, Settings, Heart, Package } from 'lucide-react'
+import { ChevronDown, Menu, X, ShoppingCart, User, LogOut, Settings, Heart, Package, Wallet, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface SubNavItem {
@@ -259,6 +259,22 @@ export function Navbar() {
                       >
                         <User className="w-4 h-4 mr-3" />
                         My Profile
+                      </Link>
+                      <Link
+                        href="/wallet"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Wallet className="w-4 h-4 mr-3" />
+                        My Wallet
+                      </Link>
+                      <Link
+                        href="/referrals"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Gift className="w-4 h-4 mr-3" />
+                        Referrals
                       </Link>
                       <Link
                         href="/orders"

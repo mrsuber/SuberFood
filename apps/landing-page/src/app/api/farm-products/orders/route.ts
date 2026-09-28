@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -7,6 +9,7 @@ export const dynamic = 'force-dynamic'
 // POST /api/farm-products/orders - Create a new farm product order
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
     const body = await req.json()
     const {
       items,
@@ -16,6 +19,9 @@ export async function POST(req: NextRequest) {
       subtotal,
       deliveryFee,
       totalAmount,
+      useWallet,
+      walletAmount,
+      referralCode,
     } = body
 
     // Validate required fields
@@ -43,14 +49,123 @@ export async function POST(req: NextRequest) {
     // Generate order number
     const orderNumber = `FPO-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
 
-    // Create order with items
-    const order = await prisma.farmOrder.create({
+    // Handle wallet payment and referral in a transaction
+    let referrerId: string | null = null
+
+    // If wallet payment is used, we need to be authenticated
+    if (useWallet && walletAmount > 0) {
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { success: false, message: 'Authentication required to use wallet payment' },
+          { status: 401 }
+        )
+      }
+
+      // Verify wallet balance
+      const wallet = await prisma.wallet.findUnique({
+        where: { userId: session.user.id },
+      })
+
+      if (!wallet) {
+        return NextResponse.json(
+          { success: false, message: 'Wallet not found' },
+          { status: 404 }
+        )
+      }
+
+      const walletAmountDecimal = new Decimal(walletAmount)
+      if (wallet.balance.lessThan(walletAmountDecimal)) {
+        return NextResponse.json(
+          { success: false, message: 'Insufficient wallet balance' },
+          { status: 400 }
+        )
+      }
+
+      // Deduct from wallet (will be done in transaction below)
+    }
+
+    // Handle referral code
+    if (referralCode) {
+      const referralCodeData = await prisma.referralCode.findUnique({
+        where: { code: referralCode },
+      })
+
+      if (referralCodeData) {
+        referrerId = referralCodeData.userId
+
+        // Check if user is authenticated and create referral relationship if it doesn't exist
+        if (session?.user?.id) {
+          const existingReferral = await prisma.referral.findFirst({
+            where: {
+              refereeId: session.user.id,
+            },
+          })
+
+          // Create referral relationship if doesn't exist
+          if (!existingReferral && referralCodeData.userId !== session.user.id) {
+            await prisma.referral.create({
+              data: {
+                referrerId: referralCodeData.userId,
+                referralCodeId: referralCodeData.id,
+                refereeId: session.user.id,
+                status: 'ACTIVE',
+              },
+            })
+          }
+        }
+      }
+    }
+
+    // Create order with items (use transaction if wallet payment)
+    const order = await prisma.$transaction(async (tx) => {
+      // Handle wallet deduction if needed
+      if (useWallet && walletAmount > 0 && session?.user?.id) {
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: session.user.id },
+        })
+
+        if (!wallet) {
+          throw new Error('Wallet not found')
+        }
+
+        const walletAmountDecimal = new Decimal(walletAmount)
+        const balanceBefore = wallet.balance
+        const balanceAfter = balanceBefore.minus(walletAmountDecimal)
+
+        // Create wallet transaction
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: 'PURCHASE',
+            amount: walletAmountDecimal,
+            balanceBefore,
+            balanceAfter,
+            description: `Payment for order ${orderNumber}`,
+            referenceType: 'ORDER',
+            referenceId: '', // Will be updated with orderId after order creation
+          },
+        })
+
+        // Update wallet balance
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: {
+            balance: balanceAfter,
+            totalSpent: wallet.totalSpent.add(walletAmountDecimal),
+          },
+        })
+      }
+
+      // Create the order
+      return await tx.farmOrder.create({
       data: {
         orderNumber,
-        isGuest: true, // For now, all orders are guest orders (can be updated for authenticated users)
+        isGuest: !session?.user?.id,
+        userId: session?.user?.id || null,
         guestName: contactInfo.fullName,
         guestPhone: contactInfo.phone,
         guestEmail: contactInfo.email || null,
+        referredById: referrerId,
 
         fulfillmentType: deliveryMethod === 'delivery' ? 'DELIVERY' : 'PICKUP',
 
@@ -104,6 +219,7 @@ export async function POST(req: NextRequest) {
       include: {
         items: true,
       },
+    })
     })
 
     return NextResponse.json({

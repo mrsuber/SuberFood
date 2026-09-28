@@ -23,6 +23,8 @@ import {
   ArrowLeft,
   Lock,
   CreditCard,
+  Wallet,
+  Gift,
 } from 'lucide-react'
 
 type DeliveryMethod = 'delivery' | 'pickup'
@@ -58,12 +60,49 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [processing, setProcessing] = useState(false)
 
+  // Wallet Payment
+  const [walletBalance, setWalletBalance] = useState(0)
+  const [useWallet, setUseWallet] = useState(false)
+  const [walletAmount, setWalletAmount] = useState(0)
+
+  // Referral Code
+  const [referralCode, setReferralCode] = useState('')
+  const [referralValid, setReferralValid] = useState<boolean | null>(null)
+  const [referralMessage, setReferralMessage] = useState('')
+
   // Redirect if cart is empty
   useEffect(() => {
     if (items.length === 0) {
       router.push('/distribution/farm-products')
     }
   }, [items.length, router])
+
+  // Fetch wallet balance on mount
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        const res = await fetch('/api/wallet')
+        const data = await res.json()
+        if (data.success) {
+          setWalletBalance(Number(data.wallet.balance))
+        }
+      } catch (error) {
+        console.error('Failed to fetch wallet:', error)
+      }
+    }
+    fetchWallet()
+  }, [])
+
+  // Calculate wallet amount to use
+  useEffect(() => {
+    if (useWallet) {
+      // Use wallet to cover as much as possible
+      const amountToCover = Math.min(walletBalance, finalTotal)
+      setWalletAmount(amountToCover)
+    } else {
+      setWalletAmount(0)
+    }
+  }, [useWallet, walletBalance, finalTotal])
 
   const formatPrice = (price: number) => {
     return `${price.toLocaleString()} XAF`
@@ -72,6 +111,35 @@ export default function CheckoutPage() {
   // Delivery fee calculation (simplified - you can make this more complex)
   const deliveryFee = deliveryMethod === 'delivery' ? 2000 : 0
   const finalTotal = totalAmount + deliveryFee
+
+  // Calculate amounts after wallet payment
+  const balanceAfterWallet = finalTotal - walletAmount
+  const needsAdditionalPayment = balanceAfterWallet > 0
+
+  // Validate referral code
+  const validateReferralCode = async () => {
+    if (!referralCode.trim()) {
+      setReferralValid(null)
+      setReferralMessage('')
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/referral/apply?code=${referralCode}`)
+      const data = await res.json()
+
+      if (data.valid) {
+        setReferralValid(true)
+        setReferralMessage(data.message)
+      } else {
+        setReferralValid(false)
+        setReferralMessage(data.error || 'Invalid referral code')
+      }
+    } catch (error) {
+      setReferralValid(false)
+      setReferralMessage('Failed to validate code')
+    }
+  }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -133,6 +201,11 @@ export default function CheckoutPage() {
         subtotal: totalAmount,
         deliveryFee,
         totalAmount: finalTotal,
+        // NEW: Wallet payment info
+        useWallet,
+        walletAmount: useWallet ? walletAmount : 0,
+        // NEW: Referral code
+        referralCode: referralValid === true ? referralCode : null,
       }
 
       // Create order in database
@@ -155,9 +228,12 @@ export default function CheckoutPage() {
       // Clear cart
       clearCart()
 
-      // Handle payment based on selected method
-      if (paymentMethod === 'online') {
-        // Initialize PayWithCamsol payment
+      // Handle payment based on wallet balance and selected method
+      if (balanceAfterWallet === 0) {
+        // Fully paid with wallet - redirect to confirmation
+        router.push(`/distribution/farm-products/order-confirmation?orderId=${orderId}`)
+      } else if (paymentMethod === 'online') {
+        // Online payment for remaining balance (or full amount if no wallet)
         const paymentResponse = await fetch('/api/farm-products/payment/initialize', {
           method: 'POST',
           headers: {
@@ -165,7 +241,7 @@ export default function CheckoutPage() {
           },
           body: JSON.stringify({
             orderId,
-            amount: finalTotal,
+            amount: balanceAfterWallet, // Pay remaining amount after wallet
             customerEmail: contactInfo.email || undefined,
             customerPhone: contactInfo.phone,
             customerName: contactInfo.fullName,
@@ -343,6 +419,121 @@ export default function CheckoutPage() {
                   </CardContent>
                 </Card>
 
+                {/* Wallet Payment Option */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wallet className="h-5 w-5 text-[#15803D]" />
+                      Wallet Payment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-purple-900">Your Wallet Balance:</span>
+                        <span className="text-2xl font-bold text-purple-600">
+                          {walletBalance.toLocaleString()} XAF
+                        </span>
+                      </div>
+                      {walletBalance > 0 && (
+                        <div className="mt-3">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={useWallet}
+                              onChange={(e) => setUseWallet(e.target.checked)}
+                              className="w-4 h-4 text-[#15803D] focus:ring-[#15803D]"
+                            />
+                            <span className="text-sm font-medium text-purple-900">
+                              Use wallet to pay (will use {Math.min(walletBalance, finalTotal).toLocaleString()} XAF)
+                            </span>
+                          </label>
+                        </div>
+                      )}
+                      {walletBalance === 0 && (
+                        <p className="text-sm text-purple-700 mt-2">
+                          Your wallet is empty. <a href="/wallet" className="underline font-semibold">Add funds</a> to use wallet payment.
+                        </p>
+                      )}
+                    </div>
+
+                    {useWallet && walletAmount > 0 && (
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Order Total:</span>
+                          <span className="font-semibold">{finalTotal.toLocaleString()} XAF</span>
+                        </div>
+                        <div className="flex justify-between text-green-600">
+                          <span>Paid from Wallet:</span>
+                          <span className="font-semibold">- {walletAmount.toLocaleString()} XAF</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between text-lg font-bold">
+                          <span>Remaining Balance:</span>
+                          <span>{balanceAfterWallet.toLocaleString()} XAF</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Referral Code */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-[#15803D]" />
+                      Referral Code (Optional)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Have a referral code?
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={referralCode}
+                            onChange={(e) => {
+                              setReferralCode(e.target.value.toUpperCase())
+                              setReferralValid(null)
+                            }}
+                            onBlur={validateReferralCode}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                            placeholder="ENTER CODE"
+                            maxLength={10}
+                          />
+                          <Button
+                            type="button"
+                            onClick={validateReferralCode}
+                            variant="outline"
+                            disabled={!referralCode.trim()}
+                          >
+                            Validate
+                          </Button>
+                        </div>
+                      </div>
+
+                      {referralValid === true && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                          <p className="text-green-800">✓ {referralMessage}</p>
+                        </div>
+                      )}
+
+                      {referralValid === false && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
+                          <p className="text-red-800">✗ {referralMessage}</p>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-gray-500">
+                        By using a referral code, you'll help someone earn rewards on your purchase!
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Delivery Address */}
                 {deliveryMethod === 'delivery' && (
                   <Card>
@@ -460,10 +651,20 @@ export default function CheckoutPage() {
                     <CardTitle className="flex items-center gap-2">
                       <CreditCard className="h-5 w-5 text-[#15803D]" />
                       Payment Method
+                      {useWallet && walletAmount > 0 && balanceAfterWallet > 0 && (
+                        <Badge variant="outline">Mixed Payment</Badge>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {needsAdditionalPayment ? (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          {useWallet && walletAmount > 0
+                            ? `Select payment method for remaining ${balanceAfterWallet.toLocaleString()} XAF`
+                            : 'Select how you want to pay'}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <button
                         type="button"
                         onClick={() => setPaymentMethod('cash')}
@@ -502,6 +703,13 @@ export default function CheckoutPage() {
                             You'll be redirected to PayWithCamsol to complete your payment securely using Mobile Money or Card.
                           </p>
                         </div>
+                      </div>
+                    )}
+                      </>
+                    ) : (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                        <p className="text-green-900 font-semibold">✓ Fully paid with wallet!</p>
+                        <p className="text-sm text-green-700 mt-1">No additional payment needed</p>
                       </div>
                     )}
                   </CardContent>
@@ -557,6 +765,30 @@ export default function CheckoutPage() {
                       <span>Total</span>
                       <span className="text-[#15803D]">{formatPrice(finalTotal)}</span>
                     </div>
+
+                    {/* Wallet payment display */}
+                    {useWallet && walletAmount > 0 && (
+                      <>
+                        <div className="flex justify-between text-purple-600">
+                          <span>Paid from Wallet:</span>
+                          <span className="font-semibold">- {formatPrice(walletAmount)}</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between font-bold text-lg">
+                          <span>Amount Due:</span>
+                          <span className="text-[#15803D]">{formatPrice(balanceAfterWallet)}</span>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Referral code display */}
+                    {referralValid === true && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
+                        <p className="text-xs text-purple-800">
+                          ✓ Referral code applied: <strong>{referralCode}</strong>
+                        </p>
+                      </div>
+                    )}
 
                     {/* Payment Button */}
                     <Button

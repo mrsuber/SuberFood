@@ -69,6 +69,7 @@ export default function CheckoutPage() {
   const [referralCode, setReferralCode] = useState('')
   const [referralValid, setReferralValid] = useState<boolean | null>(null)
   const [referralMessage, setReferralMessage] = useState('')
+  const [referralDiscount, setReferralDiscount] = useState(0)
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -110,34 +111,65 @@ export default function CheckoutPage() {
 
   // Delivery fee calculation (simplified - you can make this more complex)
   const deliveryFee = deliveryMethod === 'delivery' ? 2000 : 0
-  const finalTotal = totalAmount + deliveryFee
+
+  // Apply referral discount if valid
+  const subtotalAfterDiscount = totalAmount - referralDiscount
+  const finalTotal = subtotalAfterDiscount + deliveryFee
 
   // Calculate amounts after wallet payment
   const balanceAfterWallet = finalTotal - walletAmount
   const needsAdditionalPayment = balanceAfterWallet > 0
 
-  // Validate referral code
+  // Validate referral code and calculate discount
   const validateReferralCode = async () => {
     if (!referralCode.trim()) {
       setReferralValid(null)
       setReferralMessage('')
+      setReferralDiscount(0)
       return
     }
 
     try {
+      // First validate the code
       const res = await fetch(`/api/referral/apply?code=${referralCode}`)
       const data = await res.json()
 
       if (data.valid) {
         setReferralValid(true)
         setReferralMessage(data.message)
+
+        // Calculate discount (5% of farm cost)
+        // Fetch farm costs for all items in cart
+        let totalFarmCost = 0
+        for (const item of items) {
+          try {
+            const productRes = await fetch(`/api/admin/farm-products/products/${item.productId}`)
+            const productData = await productRes.json()
+            if (productData.success) {
+              const product = productData.data
+              const farmCost = item.priceType === 'retail'
+                ? Number(product.farmCostRetail || 0)
+                : Number(product.farmCostBulk || 0)
+              totalFarmCost += farmCost * item.quantity
+            }
+          } catch (error) {
+            console.error('Error fetching product farm cost:', error)
+          }
+        }
+
+        // 5% discount on total farm cost
+        const discount = totalFarmCost * 0.05
+        setReferralDiscount(discount)
+        setReferralMessage(`${data.message} - You'll save ${discount.toLocaleString()} XAF!`)
       } else {
         setReferralValid(false)
         setReferralMessage(data.error || 'Invalid referral code')
+        setReferralDiscount(0)
       }
     } catch (error) {
       setReferralValid(false)
       setReferralMessage('Failed to validate code')
+      setReferralDiscount(0)
     }
   }
 
@@ -751,6 +783,18 @@ export default function CheckoutPage() {
                         <span className="text-gray-600">Subtotal ({itemCount} items)</span>
                         <span className="font-semibold">{formatPrice(totalAmount)}</span>
                       </div>
+
+                      {/* Referral Discount */}
+                      {referralValid === true && referralDiscount > 0 && (
+                        <div className="flex justify-between text-sm text-purple-600">
+                          <span className="flex items-center gap-1">
+                            <Gift className="h-4 w-4" />
+                            Referral Discount (5%)
+                          </span>
+                          <span className="font-semibold">- {formatPrice(referralDiscount)}</span>
+                        </div>
+                      )}
+
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Delivery Fee</span>
                         <span className="font-semibold">
@@ -765,6 +809,15 @@ export default function CheckoutPage() {
                       <span>Total</span>
                       <span className="text-[#15803D]">{formatPrice(finalTotal)}</span>
                     </div>
+
+                    {/* Show savings from referral */}
+                    {referralValid === true && referralDiscount > 0 && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+                        <p className="text-xs text-purple-800 text-center">
+                          🎉 You're saving {formatPrice(referralDiscount)} with referral code <strong>{referralCode}</strong>!
+                        </p>
+                      </div>
+                    )}
 
                     {/* Wallet payment display */}
                     {useWallet && walletAmount > 0 && (

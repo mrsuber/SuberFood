@@ -116,6 +116,46 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Fetch product details to get farm costs
+    const productIds = items.map((item: any) => item.productId)
+    const products = await prisma.farmProduct.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        farmCostRetail: true,
+        farmCostBulk: true,
+        retailPrice: true,
+        bulkPrice: true,
+      },
+    })
+
+    const productMap = new Map(products.map(p => [p.id, p]))
+
+    // Calculate farm costs and referral discount
+    let totalFarmCost = 0
+    const itemsWithCosts = items.map((item: any) => {
+      const product = productMap.get(item.productId)
+      const isRetail = item.priceType === 'retail'
+      const farmCostPerUnit = isRetail
+        ? (product?.farmCostRetail ? Number(product.farmCostRetail) : 0)
+        : (product?.farmCostBulk ? Number(product.farmCostBulk) : 0)
+
+      const farmCostTotal = farmCostPerUnit * item.quantity
+      totalFarmCost += farmCostTotal
+
+      return {
+        ...item,
+        farmCostPerUnit,
+        farmCostTotal,
+      }
+    })
+
+    // Calculate referral discount (5% of total farm cost)
+    const referralDiscountAmount = referralCode ? totalFarmCost * 0.05 : 0
+
+    // Calculate adjusted total
+    const adjustedTotal = totalAmount - referralDiscountAmount
+
     // Create order with items (use transaction if wallet payment)
     const order = await prisma.$transaction(async (tx) => {
       // Handle wallet deduction if needed
@@ -156,6 +196,12 @@ export async function POST(req: NextRequest) {
         })
       }
 
+      // Calculate cost breakdown
+      const transportCost = totalFarmCost * 0.2
+      const profitWithoutReferral = totalFarmCost * 0.2
+      const profitWithReferral = referralCode ? totalFarmCost * 0.1 : profitWithoutReferral
+      const referrerCommission = referralCode ? totalFarmCost * 0.05 : 0
+
       // Create the order
       return await tx.farmOrder.create({
       data: {
@@ -184,7 +230,14 @@ export async function POST(req: NextRequest) {
         // Amounts
         subtotal: new Decimal(subtotal),
         deliveryFee: new Decimal(deliveryFee),
-        totalAmount: new Decimal(totalAmount),
+        referralDiscount: new Decimal(referralDiscountAmount),
+        totalAmount: new Decimal(adjustedTotal + deliveryFee),
+
+        // Cost tracking
+        costPrice: new Decimal(totalFarmCost),
+        transportCost: new Decimal(transportCost),
+        totalCost: new Decimal(totalFarmCost + transportCost),
+        profitAmount: new Decimal(profitWithReferral),
 
         // Payment
         paymentMethod: 'MOBILE_MONEY', // Will be determined by PayWithCamsol
@@ -195,7 +248,7 @@ export async function POST(req: NextRequest) {
 
         // Order items
         items: {
-          create: items.map((item: any) => ({
+          create: itemsWithCosts.map((item: any) => ({
             productId: item.productId,
             productName: item.name,
             productSku: item.productSlug,
@@ -205,6 +258,8 @@ export async function POST(req: NextRequest) {
             unit: item.unit,
             pricePerUnit: new Decimal(item.price),
             totalPrice: new Decimal(item.price * item.quantity),
+            farmCostPerUnit: item.farmCostPerUnit ? new Decimal(item.farmCostPerUnit) : null,
+            farmCostTotal: item.farmCostTotal ? new Decimal(item.farmCostTotal) : null,
           })),
         },
 

@@ -93,6 +93,21 @@ model User {
   farmOrders          FarmOrder[]
   farmProductReviews  FarmProductReview[]
 
+  // NEW: Wallet System
+  wallet                  Wallet?
+  paymentTransactions     PaymentTransaction[]
+
+  // NEW: Referral System
+  referralCode            ReferralCode?
+  verification            UserVerification?
+  myReferrals             Referral[]       @relation("UserReferrals")
+  referredByRelation      Referral?        @relation("UserReferredBy")
+  referredOrders          FarmOrder[]      @relation("ReferredOrders")
+
+  // NEW: Customer Reliability & Red Flags
+  reliability             CustomerReliability?
+  redFlagIncidents        RedFlagIncident[]
+
   @@map("users")
 }
 
@@ -174,6 +189,379 @@ model Address {
   updatedAt DateTime @updatedAt
 
   @@map("addresses")
+}
+
+// ========================================
+// WALLET SYSTEM
+// ========================================
+
+model Wallet {
+  id                      String              @id @default(cuid())
+  userId                  String              @unique
+  user                    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Balances
+  balance                 Decimal             @default(0) @db.Decimal(12, 2)
+  totalDeposits           Decimal             @default(0) @db.Decimal(12, 2)
+  totalWithdrawals        Decimal             @default(0) @db.Decimal(12, 2)
+  totalSpent              Decimal             @default(0) @db.Decimal(12, 2)
+  totalReferralEarnings   Decimal             @default(0) @db.Decimal(12, 2)
+
+  // Relationships
+  transactions            WalletTransaction[]
+  withdrawalRequests      WithdrawalRequest[]
+
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  @@index([userId])
+  @@map("wallets")
+}
+
+enum WalletTransactionType {
+  DEPOSIT              // Customer adds money
+  WITHDRAWAL           // Customer withdraws money
+  PURCHASE             // Payment for order
+  REFUND               // Order cancelled/overpayment
+  REFERRAL_EARNING     // Commission from referral
+  ADMIN_ADJUSTMENT     // Manual admin correction
+}
+
+model WalletTransaction {
+  id                String                 @id @default(cuid())
+  walletId          String
+  wallet            Wallet                 @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  type              WalletTransactionType
+  amount            Decimal                @db.Decimal(12, 2)
+  balanceBefore     Decimal                @db.Decimal(12, 2)
+  balanceAfter      Decimal                @db.Decimal(12, 2)
+
+  // Reference tracking
+  referenceType     String?                // "ORDER", "REFERRAL", "WITHDRAWAL", "DEPOSIT"
+  referenceId       String?                // ID of the related entity
+
+  description       String
+  metadata          Json?                  // Flexible field for extra data
+
+  createdBy         String?
+  createdAt         DateTime               @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([referenceType, referenceId])
+  @@map("wallet_transactions")
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+model WithdrawalRequest {
+  id                String            @id @default(cuid())
+  walletId          String
+  wallet            Wallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  amount            Decimal           @db.Decimal(12, 2)
+  method            String            // "CASH", "MTN_MOMO", "ORANGE_MOMO", "BANK_TRANSFER"
+
+  // Customer details for withdrawal
+  phoneNumber       String?
+  accountDetails    Json?             // Bank account, MoMo name, etc.
+
+  status            WithdrawalStatus  @default(PENDING)
+
+  // Admin handling
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  adminNotes        String?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([walletId, status])
+  @@index([status, createdAt])
+  @@map("withdrawal_requests")
+}
+
+// ========================================
+// REFERRAL SYSTEM
+// ========================================
+
+model ReferralCode {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  code                  String              @unique // e.g., "JOHN2024"
+  isActive              Boolean             @default(true)
+  isSuspended           Boolean             @default(false)
+  suspensionReason      String?
+
+  // Verification status
+  isVerified            Boolean             @default(false)
+  verification          UserVerification?
+
+  // Stats
+  totalReferrals        Int                 @default(0)
+  activeReferrals       Int                 @default(0) // Customers who made at least 1 order
+  totalEarnings         Decimal             @default(0) @db.Decimal(12, 2)
+  lifetimeEarnings      Decimal             @default(0) @db.Decimal(12, 2)
+
+  // Relationships
+  referrals             Referral[]          @relation("ReferrerReferrals")
+  earnings              ReferralEarning[]
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([code])
+  @@index([userId])
+  @@map("referral_codes")
+}
+
+enum ReferralStatus {
+  PENDING      // Referee signed up but no order yet
+  ACTIVE       // Referee made at least one order
+  INACTIVE     // Referee account suspended/deleted
+}
+
+model Referral {
+  id                String            @id @default(cuid())
+
+  // Referrer (person who referred)
+  referrerId        String
+  referrer          User              @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referralCodeId    String
+  referralCode      ReferralCode      @relation("ReferrerReferrals", fields: [referralCodeId], references: [id])
+
+  // Referee (person who was referred)
+  refereeId         String            @unique
+  referee           User              @relation("UserReferredBy", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  status            ReferralStatus    @default(PENDING)
+
+  // Stats
+  totalOrders       Int               @default(0)
+  totalEarned       Decimal           @default(0) @db.Decimal(12, 2)
+
+  // Relationships
+  earnings          ReferralEarning[]
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([referrerId])
+  @@index([refereeId])
+  @@index([referralCodeId])
+  @@map("referrals")
+}
+
+model ReferralEarning {
+  id                  String         @id @default(cuid())
+
+  referralId          String
+  referral            Referral       @relation(fields: [referralId], references: [id], onDelete: Cascade)
+
+  referralCodeId      String
+  referralCode        ReferralCode   @relation(fields: [referralCodeId], references: [id])
+
+  orderId             String
+  order               FarmOrder      @relation(fields: [orderId], references: [id])
+
+  // Financial breakdown
+  orderTotal          Decimal        @db.Decimal(12, 2)
+  orderCost           Decimal        @db.Decimal(12, 2)  // What you paid farmers + transport
+  profitAmount        Decimal        @db.Decimal(12, 2)  // orderTotal - orderCost
+  commissionRate      Decimal        @default(50) @db.Decimal(5, 2) // 50% by default
+  commissionAmount    Decimal        @db.Decimal(12, 2)  // profitAmount * (commissionRate / 100)
+
+  // Payout tracking
+  isPaid              Boolean        @default(false)
+  paidAt              DateTime?
+  walletTransactionId String?        @unique
+
+  createdAt           DateTime       @default(now())
+
+  @@index([referralId])
+  @@index([orderId])
+  @@index([isPaid])
+  @@map("referral_earnings")
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+model UserVerification {
+  id                  String              @id @default(cuid())
+  userId              String              @unique
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  referralCodeId      String              @unique
+  referralCode        ReferralCode        @relation(fields: [referralCodeId], references: [id])
+
+  // Verification documents
+  idCardUrl           String?
+  photoUrl            String?
+  phoneNumber         String
+  phoneVerified       Boolean             @default(false)
+  phoneVerifiedAt     DateTime?
+
+  // Admin review
+  status              VerificationStatus  @default(PENDING)
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  rejectionReason     String?
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("user_verifications")
+}
+
+// ========================================
+// CUSTOMER RELIABILITY & RED FLAGS
+// ========================================
+
+model CustomerReliability {
+  id                      String             @id @default(cuid())
+  userId                  String             @unique
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Red flags tracking
+  redFlagsCount           Int                @default(0)
+  requiresPrepayment      Boolean            @default(false)
+  prepaymentSince         DateTime?
+
+  // Positive tracking
+  successfulOrdersCount   Int                @default(0)
+  totalOrdersCount        Int                @default(0)
+  reliabilityScore        Decimal            @default(100) @db.Decimal(5, 2) // 0-100
+
+  // Redemption tracking (to unlock referral account)
+  referralsNeeded         Int                @default(0)  // How many refs needed to redeem
+  redemptionReferrals     Int                @default(0)  // How many refs done for redemption
+  isRedeemed              Boolean            @default(false)
+
+  // Relationships
+  incidents               RedFlagIncident[]
+
+  lastIncidentAt          DateTime?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([requiresPrepayment])
+  @@map("customer_reliability")
+}
+
+enum RedFlagReason {
+  NO_SHOW_PICKUP       // Didn't show up to collect
+  NO_PAYMENT           // Refused to pay after collection
+  CANCELLED_LATE       // Cancelled after you already collected from farmer
+  UNREACHABLE          // Couldn't contact after multiple attempts
+  FRAUDULENT_ACTIVITY  // Suspected fraud
+  OTHER
+}
+
+model RedFlagIncident {
+  id                      String                @id @default(cuid())
+
+  customerReliabilityId   String
+  customerReliability     CustomerReliability   @relation(fields: [customerReliabilityId], references: [id], onDelete: Cascade)
+
+  userId                  String
+  user                    User                  @relation(fields: [userId], references: [id])
+
+  orderId                 String?
+  order                   FarmOrder?            @relation(fields: [orderId], references: [id])
+
+  reason                  RedFlagReason
+  description             String
+
+  // Admin notes
+  createdBy               String
+  adminNotes              String?
+
+  // Can be cleared if customer redeems themselves
+  isCleared               Boolean               @default(false)
+  clearedAt               DateTime?
+  clearedBy               String?
+
+  createdAt               DateTime              @default(now())
+
+  @@index([userId])
+  @@index([customerReliabilityId])
+  @@map("red_flag_incidents")
+}
+
+// ========================================
+// PAYMENT INTEGRATION
+// ========================================
+
+enum PaymentProvider {
+  CASH
+  MTN_MOMO
+  ORANGE_MOMO
+  WALLET
+  PAYWITHCAMSOL
+}
+
+enum PaymentIntegrationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+model PaymentTransaction {
+  id                    String                     @id @default(cuid())
+
+  // Links
+  orderId               String?
+  order                 FarmOrder?                 @relation(fields: [orderId], references: [id])
+
+  walletTransactionId   String?                    @unique
+
+  userId                String
+  user                  User                       @relation(fields: [userId], references: [id])
+
+  // Payment details
+  provider              PaymentProvider
+  amount                Decimal                    @db.Decimal(12, 2)
+  currency              String                     @default("XAF")
+
+  // External reference (from PayWithCamsol, MoMo, etc.)
+  externalReference     String?                    @unique
+  providerResponse      Json?
+
+  status                PaymentIntegrationStatus   @default(PENDING)
+
+  // Metadata
+  metadata              Json?
+  notes                 String?
+
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  completedAt           DateTime?
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([externalReference])
+  @@map("payment_transactions")
 }
 
 // ========================================
@@ -1210,6 +1598,46 @@ model ActivityLog {
 }
 
 // ============================================
+// DELIVERY ZONES
+// ============================================
+
+model DeliveryZone {
+  id              String              @id @default(cuid())
+
+  name            String              @unique // "Zone 1 - Central Buea"
+  description     String?
+  deliveryFee     Decimal             @db.Decimal(10, 2)
+
+  // Geographic data
+  areas           DeliveryZoneArea[]
+
+  isActive        Boolean             @default(true)
+
+  // Relationships
+  orders          FarmOrder[]
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([isActive])
+  @@map("delivery_zones")
+}
+
+model DeliveryZoneArea {
+  id                String         @id @default(cuid())
+  zoneId            String
+  zone              DeliveryZone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  areaName          String         // "Molyko", "Great Soppo", etc.
+
+  createdAt         DateTime       @default(now())
+
+  @@unique([zoneId, areaName])
+  @@index([zoneId])
+  @@map("delivery_zone_areas")
+}
+
+// ============================================
 // FARM PRODUCTS DISTRIBUTION
 // ============================================
 
@@ -1232,6 +1660,13 @@ enum PriceType {
   RETAIL_ONLY // Only sold by weight/volume
   BULK_ONLY // Only sold in bags/crates
   BOTH // Available in both retail and bulk
+}
+
+enum StockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  LOW_STOCK
+  BOOKABLE         // Out of stock but accepting pre-orders
 }
 
 enum FarmProductStatus {
@@ -1268,6 +1703,24 @@ model FarmProduct {
   bulkQtyPerUnit  Decimal? // How much in each unit (25, 50, etc.)
   bulkMinOrder    Int? // Minimum number of bags/crates
 
+  // NEW: Booking & Pricing for out-of-stock items
+  stockStatus       StockStatus @default(OUT_OF_STOCK)
+  isBookable        Boolean     @default(false)
+
+  // Price range for bookable items (when exact price unknown)
+  priceMin          Decimal?    @db.Decimal(10, 2)
+  priceMax          Decimal?    @db.Decimal(10, 2)
+  priceUnit         String?     // "per kg", "per bag", etc.
+
+  // Confirmed price (after farm visit)
+  confirmedPrice    Decimal?    @db.Decimal(10, 2)
+  confirmedAt       DateTime?
+  confirmedBy       String?
+
+  // Seasonal info
+  seasonStartMonth  Int?        // 1-12
+  seasonEndMonth    Int?        // 1-12
+
   // Inventory
   stockQuantity     Decimal // Total available (in base unit)
   stockUnit         String // Base unit (kg, L, pieces)
@@ -1300,6 +1753,9 @@ model FarmProduct {
   status      FarmProductStatus @default(ACTIVE)
   isAvailable Boolean           @default(true)
 
+  // NEW: Bulk discount tiers
+  bulkDiscounts BulkDiscount[]
+
   // Relationships
   cartItems  FarmCartItem[]
   orderItems FarmOrderItem[]
@@ -1312,7 +1768,25 @@ model FarmProduct {
   @@index([category])
   @@index([status])
   @@index([slug])
+  @@index([stockStatus])
   @@map("farm_products")
+}
+
+model BulkDiscount {
+  id                String       @id @default(cuid())
+  productId         String
+  product           FarmProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  minQuantity       Decimal      @db.Decimal(10, 2)  // e.g., 50kg
+  discountPercent   Decimal      @db.Decimal(5, 2)   // e.g., 10% off
+
+  isActive          Boolean      @default(true)
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([productId])
+  @@map("bulk_discounts")
 }
 
 // ============================================
@@ -1387,6 +1861,22 @@ enum FarmPaymentStatus {
   CANCELLED
 }
 
+enum FarmOrderType {
+  REGULAR          // Normal in-stock purchase
+  BOOKING          // Pre-order for out-of-stock item
+}
+
+enum BookingStatus {
+  PENDING_PRICE    // Waiting for you to visit farm & confirm price
+  PRICE_CONFIRMED  // You confirmed price, waiting for customer approval
+  CUSTOMER_APPROVED // Customer approved price, order locked
+  CUSTOMER_DECLINED // Customer declined price
+  COLLECTED        // You collected from farmer
+  READY_PICKUP     // Stock arrived, ready for customer pickup/delivery
+  COMPLETED        // Customer collected
+  CANCELLED
+}
+
 enum FarmOrderStatus {
   PENDING // Just placed
   CONFIRMED // Admin confirmed
@@ -1419,6 +1909,35 @@ model FarmOrder {
   deliveryFee   Decimal @default(0) // Delivery cost (XAF)
   discount      Decimal @default(0) // Any discounts (XAF)
 
+  // NEW: Booking system
+  orderType            FarmOrderType       @default(REGULAR)
+  bookingStatus        BookingStatus?
+
+  // Pricing
+  estimatedTotal       Decimal?            @db.Decimal(12, 2)  // Initial estimate
+  confirmedTotal       Decimal?            @db.Decimal(12, 2)  // After farm visit
+
+  // Payment tracking
+  depositAmount        Decimal             @default(0) @db.Decimal(12, 2)
+  amountPaid           Decimal             @default(0) @db.Decimal(12, 2)
+  balanceDue           Decimal             @default(0) @db.Decimal(12, 2)
+
+  // Wallet integration
+  paidFromWallet       Decimal             @default(0) @db.Decimal(12, 2)
+  paidCash             Decimal             @default(0) @db.Decimal(12, 2)
+  paidMomo             Decimal             @default(0) @db.Decimal(12, 2)
+
+  // Cost tracking (for referral commission calculation)
+  costPrice            Decimal?            @db.Decimal(12, 2)  // What you paid farmers
+  transportCost        Decimal?            @db.Decimal(12, 2)
+  totalCost            Decimal?            @db.Decimal(12, 2)  // costPrice + transportCost
+  profitAmount         Decimal?            @db.Decimal(12, 2)  // confirmedTotal - totalCost
+
+  // Price confirmation tracking
+  priceConfirmedAt     DateTime?
+  priceConfirmedBy     String?
+  customerApprovedAt   DateTime?
+
   // Fulfillment
   fulfillmentType FulfillmentType
 
@@ -1435,6 +1954,10 @@ model FarmOrder {
   deliveryInstructions String?
   estimatedDelivery    DateTime?
 
+  // NEW: Delivery zone
+  deliveryZoneId       String?
+  deliveryZone         DeliveryZone?       @relation(fields: [deliveryZoneId], references: [id])
+
   // Payment
   paymentMethod    FarmPaymentMethod
   paymentStatus    FarmPaymentStatus @default(PENDING)
@@ -1445,6 +1968,20 @@ model FarmOrder {
   // Order Status
   status        FarmOrderStatus              @default(PENDING)
   statusHistory FarmOrderStatusHistory[]
+
+  // NEW: Referral tracking
+  referredById        String?
+  referredBy          User?               @relation("ReferredOrders", fields: [referredById], references: [id])
+  referralEarnings    ReferralEarning[]
+
+  // NEW: Payment transactions
+  paymentTransactions PaymentTransaction[]
+
+  // NEW: Receipt
+  receipt             Receipt?
+
+  // NEW: Red flag tracking
+  redFlagIncidents    RedFlagIncident[]
 
   // Notes
   customerNotes String?
@@ -1460,6 +1997,9 @@ model FarmOrder {
   @@index([orderNumber])
   @@index([status])
   @@index([paymentStatus])
+  @@index([orderType])
+  @@index([bookingStatus])
+  @@index([deliveryZoneId])
   @@map("farm_orders")
 }
 
@@ -1531,4 +2071,32 @@ model FarmProductReview {
   @@index([productId])
   @@index([userId])
   @@map("farm_product_reviews")
+}
+
+// ============================================
+// RECEIPTS
+// ============================================
+
+model Receipt {
+  id                String       @id @default(cuid())
+  orderId           String       @unique
+  order             FarmOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  receiptNumber     String       @unique  // e.g., "SF-2024-001234"
+  pdfUrl            String?
+
+  issuedAt          DateTime     @default(now())
+  issuedBy          String
+  issuedToUserId    String
+
+  // Delivery method
+  sentViaEmail      Boolean      @default(false)
+  sentViaWhatsapp   Boolean      @default(false)
+  printed           Boolean      @default(false)
+
+  createdAt         DateTime     @default(now())
+
+  @@index([orderId])
+  @@index([receiptNumber])
+  @@map("receipts")
 }

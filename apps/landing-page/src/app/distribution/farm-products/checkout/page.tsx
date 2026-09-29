@@ -71,6 +71,22 @@ export default function CheckoutPage() {
   const [referralMessage, setReferralMessage] = useState('')
   const [referralDiscount, setReferralDiscount] = useState(0)
 
+  // Calculate prices BEFORE using them in hooks
+  const formatPrice = (price: number) => {
+    return `${price.toLocaleString()} XAF`
+  }
+
+  // Delivery fee calculation (simplified - you can make this more complex)
+  const deliveryFee = deliveryMethod === 'delivery' ? 2000 : 0
+
+  // Apply referral discount if valid
+  const subtotalAfterDiscount = totalAmount - referralDiscount
+  const finalTotal = subtotalAfterDiscount + deliveryFee
+
+  // Calculate amounts after wallet payment
+  const balanceAfterWallet = finalTotal - walletAmount
+  const needsAdditionalPayment = balanceAfterWallet > 0
+
   // Redirect if cart is empty
   useEffect(() => {
     if (items.length === 0) {
@@ -109,21 +125,6 @@ export default function CheckoutPage() {
       setWalletAmount(0)
     }
   }, [useWallet, walletBalance, finalTotal])
-
-  const formatPrice = (price: number) => {
-    return `${price.toLocaleString()} XAF`
-  }
-
-  // Delivery fee calculation (simplified - you can make this more complex)
-  const deliveryFee = deliveryMethod === 'delivery' ? 2000 : 0
-
-  // Apply referral discount if valid
-  const subtotalAfterDiscount = totalAmount - referralDiscount
-  const finalTotal = subtotalAfterDiscount + deliveryFee
-
-  // Calculate amounts after wallet payment
-  const balanceAfterWallet = finalTotal - walletAmount
-  const needsAdditionalPayment = balanceAfterWallet > 0
 
   // Validate referral code and calculate discount
   const validateReferralCode = async () => {

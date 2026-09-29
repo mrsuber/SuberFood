@@ -11,7 +11,7 @@
 ## Deployment Details
 
 ### Application
-- **Location:** `/root/suberfood`
+- **Location:** `/home/mohamaduser/suberfood`
 - **Process Manager:** PM2
 - **Process Name:** `suberfood-landing`
 - **Port:** 3030 (internal)
@@ -43,10 +43,10 @@
 ### Update Application
 ```bash
 # SSH into server
-ssh -p 2222 mohamaduser@76.13.41.99
+ssh -i ~/.ssh/id_ed25519 -p 2222 mohamaduser@76.13.41.99
 
 # Navigate to project
-cd /root/suberfood
+cd ~/suberfood
 
 # Pull latest changes
 git pull origin main
@@ -148,7 +148,7 @@ journalctl -u nginx -f
 ```
 
 ## Environment Configuration
-- **File:** `/root/suberfood/.env.production`
+- **File:** `/home/mohamaduser/suberfood/.env.production`
 - **Important Variables:**
   - `DATABASE_URL` - PostgreSQL connection
   - `NODE_ENV=production`

@@ -83,12 +83,17 @@ export default function CheckoutPage() {
     const fetchWallet = async () => {
       try {
         const res = await fetch('/api/wallet')
+        if (!res.ok) {
+          // User not authenticated or error - skip wallet fetch
+          return
+        }
         const data = await res.json()
-        if (data.success) {
+        if (data.success && data.wallet) {
           setWalletBalance(Number(data.wallet.balance))
         }
       } catch (error) {
-        console.error('Failed to fetch wallet:', error)
+        // Silent fail for wallet fetch (guest users won't have wallets)
+        console.debug('Wallet fetch skipped:', error)
       }
     }
     fetchWallet()

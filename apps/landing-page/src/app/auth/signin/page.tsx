@@ -19,12 +19,14 @@ function SignInForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
+    setSuccessMessage('');
 
     try {
       const result = await signIn('credentials', {
@@ -35,23 +37,33 @@ function SignInForm() {
 
       if (result?.error) {
         setErrorMessage('Invalid email or password');
-      } else {
-        // Fetch user session to check role
-        const response = await fetch('/api/auth/session');
-        const session = await response.json();
+        setIsLoading(false);
+      } else if (result?.ok) {
+        // Show success message
+        setSuccessMessage('Login successful! Redirecting...');
 
-        // Redirect based on user role
-        if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
-          router.push('/admin');
-        } else {
-          // Redirect customers to profile page
-          router.push(callbackUrl === '/' ? '/profile' : callbackUrl);
-        }
-        router.refresh();
+        // Small delay to fetch updated session
+        setTimeout(async () => {
+          try {
+            // Fetch user session to check role
+            const response = await fetch('/api/auth/session');
+            const session = await response.json();
+
+            // Redirect based on user role
+            if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
+              window.location.href = '/admin';
+            } else {
+              // Redirect customers to profile page
+              window.location.href = callbackUrl === '/' ? '/profile' : callbackUrl;
+            }
+          } catch (error) {
+            // Fallback redirect to profile
+            window.location.href = '/profile';
+          }
+        }, 500);
       }
     } catch (error) {
       setErrorMessage('An error occurred. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -76,6 +88,18 @@ function SignInForm() {
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Success Messages */}
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-start gap-3">
+              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <div className="text-sm">
+                {successMessage}
+              </div>
+            </div>
+          )}
+
           {/* Error Messages */}
           {(error || errorMessage) && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-start gap-3">

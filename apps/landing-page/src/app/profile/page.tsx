@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { User, Mail, Calendar, Shield, Heart, Settings, ShoppingBag } from 'lucide-react';
+import { User, Mail, Calendar, Shield, Heart, Settings, ShoppingBag, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Navbar } from '@/components/navigation/Navbar';
@@ -95,6 +95,19 @@ export default function ProfilePage() {
             <CardDescription>Manage your account and preferences</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Admin Dashboard Link - Only visible to admins */}
+            {(session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') && (
+              <Link href="/admin" className="flex items-center justify-between p-4 rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 transition-colors">
+                <div className="flex items-center gap-3">
+                  <LayoutDashboard className="w-5 h-5 text-green-700" />
+                  <div>
+                    <p className="font-medium text-green-900">Admin Dashboard</p>
+                    <p className="text-sm text-green-700">Access admin panel and management tools</p>
+                  </div>
+                </div>
+              </Link>
+            )}
+
             <Link href="/profile/settings" className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-3">
                 <Settings className="w-5 h-5 text-gray-600" />

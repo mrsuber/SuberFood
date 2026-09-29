@@ -482,10 +482,7 @@ export default function NewFarmProductPage() {
           {/* Pricing */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Pricing (Auto-Calculated)</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                Enter farm cost, retail price will be auto-calculated at 140% (Farm: 100% + Transport: 20% + Profit: 20%)
-              </p>
+              <CardTitle>Pricing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -505,7 +502,7 @@ export default function NewFarmProductPage() {
               </div>
 
               {(formData.priceType === 'RETAIL_ONLY' || formData.priceType === 'BOTH') && (
-                <div className="space-y-4">
+                <>
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <label className="block text-sm font-medium text-blue-900 mb-2">
                       Farm Cost per Retail Unit (What we pay farmer) *
@@ -516,7 +513,7 @@ export default function NewFarmProductPage() {
                       name="farmCostRetail"
                       value={formData.farmCostRetail}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
                       placeholder="e.g., 1000"
                     />
                     {formData.farmCostRetail && (
@@ -533,7 +530,7 @@ export default function NewFarmProductPage() {
                           <span>Our Profit (20%):</span>
                           <span className="font-semibold">{(parseFloat(formData.farmCostRetail) * 0.2).toLocaleString()} XAF</span>
                         </div>
-                        <div className="flex justify-between text-green-800 font-bold text-base pt-2 border-t border-blue-300">
+                        <div className="flex justify-between text-green-800 font-bold text-base pt-2 border-t">
                           <span>Customer Pays:</span>
                           <span>{formData.retailPrice ? parseFloat(formData.retailPrice).toLocaleString() : '0'} XAF</span>
                         </div>
@@ -550,12 +547,9 @@ export default function NewFarmProductPage() {
                         type="number"
                         name="retailPrice"
                         value={formData.retailPrice}
-                        onChange={handleChange}
                         readOnly
-                        className={`w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed ${
-                          errors.retailPrice ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Auto-calculated"
+                        className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed border-gray-300"
+                        placeholder="Auto-calculated from farm cost"
                       />
                       {errors.retailPrice && <p className="text-red-500 text-sm mt-1">{errors.retailPrice}</p>}
                     </div>
@@ -591,10 +585,11 @@ export default function NewFarmProductPage() {
                     />
                   </div>
                 </div>
+                </>
               )}
 
               {(formData.priceType === 'BULK_ONLY' || formData.priceType === 'BOTH') && (
-                <div className="space-y-4">
+                <>
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <label className="block text-sm font-medium text-blue-900 mb-2">
                       Farm Cost per Bulk Unit (What we pay farmer) *
@@ -605,8 +600,8 @@ export default function NewFarmProductPage() {
                       name="farmCostBulk"
                       value={formData.farmCostBulk}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 10000"
+                      className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                      placeholder="e.g., 20000"
                     />
                     {formData.farmCostBulk && (
                       <div className="mt-3 text-sm space-y-1">
@@ -622,7 +617,7 @@ export default function NewFarmProductPage() {
                           <span>Our Profit (20%):</span>
                           <span className="font-semibold">{(parseFloat(formData.farmCostBulk) * 0.2).toLocaleString()} XAF</span>
                         </div>
-                        <div className="flex justify-between text-green-800 font-bold text-base pt-2 border-t border-blue-300">
+                        <div className="flex justify-between text-green-800 font-bold text-base pt-2 border-t">
                           <span>Customer Pays:</span>
                           <span>{formData.bulkPrice ? parseFloat(formData.bulkPrice).toLocaleString() : '0'} XAF</span>
                         </div>
@@ -639,12 +634,9 @@ export default function NewFarmProductPage() {
                         type="number"
                         name="bulkPrice"
                         value={formData.bulkPrice}
-                        onChange={handleChange}
                         readOnly
-                        className={`w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed ${
-                          errors.bulkPrice ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Auto-calculated"
+                        className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed border-gray-300"
+                        placeholder="Auto-calculated from farm cost"
                       />
                       {errors.bulkPrice && <p className="text-red-500 text-sm mt-1">{errors.bulkPrice}</p>}
                     </div>
@@ -697,6 +689,7 @@ export default function NewFarmProductPage() {
                     />
                   </div>
                 </div>
+                </>
               )}
             </CardContent>
           </Card>

@@ -58,7 +58,7 @@ const navigationSections: NavSection[] = [
     ]
   },
   {
-    title: 'Distribution',
+    title: 'Restaurant',
     items: [
       {
         name: 'Restaurant Locations',
@@ -132,19 +132,52 @@ const navigationSections: NavSection[] = [
         icon: ShoppingCart,
         badge: 12,
       },
+    ]
+  },
+  {
+    title: 'Farm Products',
+    items: [
       {
-        name: 'E-commerce',
+        name: 'Dashboard',
         href: '/admin/farm-products',
+        icon: LayoutDashboard,
+      },
+      {
+        name: 'Products',
+        href: '/admin/farm-products/products',
         icon: ShoppingBag,
         submenu: [
-          { name: 'Dashboard', href: '/admin/farm-products' },
-          { name: 'Products', href: '/admin/farm-products/products' },
+          { name: 'All Products', href: '/admin/farm-products/products' },
           { name: 'Add Product', href: '/admin/farm-products/products/new' },
-          { name: 'Orders', href: '/admin/farm-products/orders' },
+          { name: 'Categories', href: '/admin/farm-products/categories' },
+          { name: 'Inventory', href: '/admin/farm-products/inventory' },
         ]
       },
       {
-        name: 'B2B Partners',
+        name: 'Orders',
+        href: '/admin/farm-products/orders',
+        icon: ShoppingCart,
+        submenu: [
+          { name: 'All Orders', href: '/admin/farm-products/orders' },
+          { name: 'Delivery Orders', href: '/admin/farm-products/orders?type=delivery' },
+          { name: 'Pickup Orders', href: '/admin/farm-products/orders?type=pickup' },
+          { name: 'Pre-Orders', href: '/admin/farm-products/orders?type=preorder' },
+          { name: 'Pending', href: '/admin/farm-products/orders?status=pending' },
+          { name: 'Completed', href: '/admin/farm-products/orders?status=completed' },
+        ]
+      },
+      {
+        name: 'Customers',
+        href: '/admin/customers',
+        icon: Users,
+      },
+    ]
+  },
+  {
+    title: 'B2B Partners',
+    items: [
+      {
+        name: 'Partners',
         href: '/admin/distribution/partners',
         icon: Handshake,
         submenu: [
@@ -152,11 +185,6 @@ const navigationSections: NavSection[] = [
           { name: 'Add Partner', href: '/admin/distribution/partners/new' },
           { name: 'Bulk Orders', href: '/admin/distribution/partners/orders' },
         ]
-      },
-      {
-        name: 'Customers',
-        href: '/admin/customers',
-        icon: Users,
       },
     ]
   },

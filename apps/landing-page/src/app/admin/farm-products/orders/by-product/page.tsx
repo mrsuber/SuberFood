@@ -36,15 +36,22 @@ export default function OrdersByProductPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'quantity' | 'revenue' | 'orders'>('quantity')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [fulfillmentFilter, setFulfillmentFilter] = useState<'ALL' | 'PREORDER' | 'DELIVERY' | 'PICKUP'>('ALL')
 
   useEffect(() => {
     fetchProductStats()
-  }, [])
+  }, [fulfillmentFilter])
 
   const fetchProductStats = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/farm-products/orders/by-product')
+      let url = '/api/admin/farm-products/orders/by-product'
+
+      if (fulfillmentFilter !== 'ALL') {
+        url += `?fulfillmentType=${fulfillmentFilter}`
+      }
+
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setProductStats(data.products || [])
@@ -54,6 +61,10 @@ export default function OrdersByProductPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePrint = () => {
+    window.print()
   }
 
   const filteredProducts = productStats.filter((product) =>
@@ -150,6 +161,58 @@ export default function OrdersByProductPage() {
         {/* Filters and Search */}
         <Card className="mb-6">
           <CardContent className="p-6">
+            {/* Fulfillment Type Filter */}
+            <div className="mb-4 flex flex-wrap gap-2 items-center">
+              <span className="text-sm font-medium text-gray-700 mr-2">Filter by:</span>
+              <button
+                onClick={() => setFulfillmentFilter('ALL')}
+                className={`px-4 py-2 rounded-lg border text-sm ${
+                  fulfillmentFilter === 'ALL'
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                All Orders
+              </button>
+              <button
+                onClick={() => setFulfillmentFilter('PREORDER')}
+                className={`px-4 py-2 rounded-lg border text-sm ${
+                  fulfillmentFilter === 'PREORDER'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Pre-Orders Only
+              </button>
+              <button
+                onClick={() => setFulfillmentFilter('DELIVERY')}
+                className={`px-4 py-2 rounded-lg border text-sm ${
+                  fulfillmentFilter === 'DELIVERY'
+                    ? 'bg-green-600 text-white border-green-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Delivery Only
+              </button>
+              <button
+                onClick={() => setFulfillmentFilter('PICKUP')}
+                className={`px-4 py-2 rounded-lg border text-sm ${
+                  fulfillmentFilter === 'PICKUP'
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Pickup Only
+              </button>
+              <button
+                onClick={handlePrint}
+                className="ml-auto px-4 py-2 rounded-lg border text-sm bg-gray-700 text-white border-gray-700 hover:bg-gray-800 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Print List
+              </button>
+            </div>
+
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />

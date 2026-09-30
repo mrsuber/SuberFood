@@ -6,8 +6,25 @@ export const dynamic = 'force-dynamic'
 // GET /api/admin/farm-products/orders/by-product - Get orders grouped by product
 export async function GET(req: NextRequest) {
   try {
+    // Get filter parameters
+    const { searchParams } = new URL(req.url)
+    const fulfillmentType = searchParams.get('fulfillmentType') // 'DELIVERY', 'PICKUP', 'PREORDER'
+    const status = searchParams.get('status') // 'PENDING', 'COMPLETED', etc.
+
+    // Build where clause for filtering
+    const where: any = {}
+
+    if (fulfillmentType) {
+      where.fulfillmentType = fulfillmentType.toUpperCase()
+    }
+
+    if (status) {
+      where.status = status.toUpperCase()
+    }
+
     // Fetch all orders with their items and product details
     const orders = await prisma.farmOrder.findMany({
+      where,
       include: {
         items: {
           include: {
@@ -68,8 +85,9 @@ export async function GET(req: NextRequest) {
         // Track unique orders
         stats.orderIds.add(order.id)
 
-        // Calculate revenue (quantity * unit price)
-        stats.totalRevenue += item.quantity * parseFloat(item.unitPrice.toString())
+        // Calculate revenue (quantity * unit price) - handle null unitPrice
+        const unitPrice = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0
+        stats.totalRevenue += item.quantity * unitPrice
 
         // Track pending vs completed quantities
         if (order.status === 'PENDING' || order.status === 'PROCESSING') {

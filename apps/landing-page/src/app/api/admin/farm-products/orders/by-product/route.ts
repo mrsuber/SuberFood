@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -8,12 +6,6 @@ export const dynamic = 'force-dynamic'
 // GET /api/admin/farm-products/orders/by-product - Get orders grouped by product
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session || session.user?.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Fetch all orders with their items and product details
     const orders = await prisma.farmOrder.findMany({
       include: {

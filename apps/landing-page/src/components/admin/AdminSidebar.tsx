@@ -159,6 +159,7 @@ const navigationSections: NavSection[] = [
         icon: ShoppingCart,
         submenu: [
           { name: 'All Orders', href: '/admin/farm-products/orders' },
+          { name: 'By Product', href: '/admin/farm-products/orders/by-product' },
           { name: 'Delivery Orders', href: '/admin/farm-products/orders?type=delivery' },
           { name: 'Pickup Orders', href: '/admin/farm-products/orders?type=pickup' },
           { name: 'Pre-Orders', href: '/admin/farm-products/orders?type=preorder' },

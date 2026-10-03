@@ -5,9 +5,17 @@ import { useRouter } from 'next/navigation'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Save, Loader2, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Upload, X, Image as ImageIcon, Plus } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function NewFarmProductPage() {
   const router = useRouter()
@@ -17,6 +25,12 @@ export default function NewFarmProductPage() {
   const [images, setImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+
+  // New category dialog state
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [customCategories, setCustomCategories] = useState<string[]>([])
+  const [addingCategory, setAddingCategory] = useState(false)
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -116,6 +130,12 @@ export default function NewFarmProductPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     const checked = (e.target as HTMLInputElement).checked
+
+    // Check if "OTHER" was selected in category dropdown
+    if (name === 'category' && value === 'OTHER') {
+      setShowCategoryDialog(true)
+      return // Don't update formData yet
+    }
 
     setFormData((prev) => {
       const updated = {
@@ -221,7 +241,34 @@ export default function NewFarmProductPage() {
     }
   }
 
-  const categories = [
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      alert('Please enter a category name')
+      return
+    }
+
+    const categoryValue = newCategoryName
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/(^_|_$)/g, '')
+
+    if (!categoryValue) {
+      alert('Invalid category name')
+      return
+    }
+
+    // Add to custom categories
+    setCustomCategories([...customCategories, categoryValue])
+
+    // Update form data with new category
+    setFormData({ ...formData, category: categoryValue })
+
+    // Close dialog and reset
+    setShowCategoryDialog(false)
+    setNewCategoryName('')
+  }
+
+  const baseCategories = [
     'LEAFY_GREENS',
     'ROOT_VEGETABLES',
     'FRUITS',
@@ -235,6 +282,8 @@ export default function NewFarmProductPage() {
     'LIVESTOCK_MEAT',
     'FISH_SEAFOOD',
   ]
+
+  const categories = [...baseCategories, ...customCategories, 'OTHER']
 
   return (
     <div>
@@ -911,6 +960,66 @@ export default function NewFarmProductPage() {
           </div>
         </form>
       </div>
+
+      {/* Add Category Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Category</DialogTitle>
+            <DialogDescription>
+              Create a new product category. The category name will be automatically formatted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category Name *
+              </label>
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="e.g., Processed Foods, Beverages, etc."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddCategory()
+                  }
+                }}
+              />
+              {newCategoryName && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Will be saved as: <span className="font-mono font-semibold">
+                    {newCategoryName.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/(^_|_$)/g, '')}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowCategoryDialog(false)
+                setNewCategoryName('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAddCategory}
+              disabled={!newCategoryName.trim()}
+              className="bg-[#15803D] hover:bg-[#166534]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

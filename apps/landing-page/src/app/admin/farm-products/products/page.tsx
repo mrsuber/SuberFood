@@ -28,25 +28,18 @@ export default function FarmProductsListPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  // Fetch all products once on mount
   useEffect(() => {
     fetchProducts()
-  }, [categoryFilter, statusFilter])
+  }, [])
 
   const fetchProducts = async () => {
     setLoading(true)
     try {
-      let url = '/api/admin/farm-products/products?'
-
-      if (categoryFilter !== 'all') {
-        url += `category=${categoryFilter}&`
-      }
-
-      if (statusFilter !== 'all') {
-        url += `status=${statusFilter}&`
-      }
-
-      const response = await fetch(url)
+      // Fetch ALL products at once (faster than multiple requests)
+      const response = await fetch('/api/admin/farm-products/products')
       const data = await response.json()
 
       if (data.success) {
@@ -64,6 +57,8 @@ export default function FarmProductsListPage() {
       return
     }
 
+    setDeletingId(id)
+
     try {
       const response = await fetch(`/api/admin/farm-products/products/${id}`, {
         method: 'DELETE',
@@ -72,20 +67,34 @@ export default function FarmProductsListPage() {
       const data = await response.json()
 
       if (data.success) {
-        fetchProducts()
+        // Instant UI update - remove from state instead of refetching
+        setProducts(products.filter(p => p.id !== id))
+        alert('Product deleted successfully')
       } else {
         alert(data.message || 'Failed to delete product')
       }
     } catch (error) {
       console.error('Error deleting product:', error)
       alert('Failed to delete product')
+    } finally {
+      setDeletingId(null)
     }
   }
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Client-side filtering (much faster than server requests)
+  const filteredProducts = products.filter((product) => {
+    // Search filter
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchTerm.toLowerCase())
+
+    // Category filter
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter
+
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || product.status === statusFilter
+
+    return matchesSearch && matchesCategory && matchesStatus
+  })
 
   const getStockStatus = (product: any) => {
     const stock = parseFloat(product.stockQuantity)
@@ -309,6 +318,7 @@ export default function FarmProductsListPage() {
                               View
                             </Button>
                           </Link>
+                          {/* TODO: Create edit and stock management pages
                           <Link href={`/admin/farm-products/products/${product.id}`}>
                             <Button variant="outline" size="sm">
                               <Edit className="h-4 w-4 mr-2" />
@@ -321,14 +331,25 @@ export default function FarmProductsListPage() {
                               Manage Stock
                             </Button>
                           </Link>
+                          */}
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDelete(product.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            disabled={deletingId === product.id}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            {deletingId === product.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 mr-2 border-b-2 border-red-600"></div>
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>

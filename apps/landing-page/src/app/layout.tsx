@@ -23,6 +23,10 @@ export const metadata: Metadata = {
   description: 'Experience the complete journey from farm to your table. Fresh, traceable, sustainable food from our farms, processing facilities, and restaurants.',
   keywords: 'farm to table, organic food, sustainable farming, fresh produce, restaurants, food delivery',
   authors: [{ name: 'SuberFood' }],
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   openGraph: {
     title: 'SuberFood - Farm to Table Excellence',
     description: 'Experience the complete journey from farm to your table.',

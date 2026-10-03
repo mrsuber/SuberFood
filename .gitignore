@@ -42,3 +42,11 @@ yarn-error.log*
 # Misc
 *.pem
 .vercel
+
+# Uploads (but keep directory structure)
+public/uploads/*
+!public/uploads/.gitkeep
+!public/uploads/**/.gitkeep
+apps/landing-page/public/uploads/*
+!apps/landing-page/public/uploads/.gitkeep
+!apps/landing-page/public/uploads/**/.gitkeep

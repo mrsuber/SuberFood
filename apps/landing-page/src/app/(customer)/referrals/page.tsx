@@ -80,10 +80,11 @@ export default function ReferralsPage() {
 
   // Verification form
   const [showVerifyForm, setShowVerifyForm] = useState(false);
-  const [idCardUrl, setIdCardUrl] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [idCardFile, setIdCardFile] = useState<File | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [verifyLoading, setVerifyLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -143,32 +144,65 @@ export default function ReferralsPage() {
     e.preventDefault();
     setVerifyLoading(true);
     setError('');
+    setUploadProgress('');
 
     try {
-      const res = await fetch('/api/referral/verify', {
+      // Validate files
+      if (!idCardFile || !photoFile) {
+        setError('Please select both ID card and photo');
+        setVerifyLoading(false);
+        return;
+      }
+
+      // Step 1: Upload files
+      setUploadProgress('Uploading files...');
+      const uploadFormData = new FormData();
+      uploadFormData.append('idCard', idCardFile);
+      uploadFormData.append('photo', photoFile);
+
+      const uploadRes = await fetch('/api/upload/verification', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      const uploadData = await uploadRes.json();
+
+      if (!uploadData.success) {
+        setError(uploadData.error || 'Failed to upload files');
+        setVerifyLoading(false);
+        return;
+      }
+
+      // Step 2: Submit verification with uploaded file URLs
+      setUploadProgress('Submitting verification...');
+      const verifyRes = await fetch('/api/referral/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          idCardUrl,
-          photoUrl,
+          idCardUrl: uploadData.idCardUrl,
+          photoUrl: uploadData.photoUrl,
           phoneNumber,
         }),
       });
 
-      const data = await res.json();
+      const verifyData = await verifyRes.json();
 
-      if (data.success) {
+      if (verifyData.success) {
         alert('Verification submitted! Admin will review your documents soon.');
         setShowVerifyForm(false);
+        setIdCardFile(null);
+        setPhotoFile(null);
+        setPhoneNumber('');
         fetchReferralData();
       } else {
-        setError(data.error || 'Verification submission failed');
+        setError(verifyData.error || 'Verification submission failed');
       }
     } catch (err) {
       setError('Verification submission failed');
       console.error(err);
     } finally {
       setVerifyLoading(false);
+      setUploadProgress('');
     }
   };
 
@@ -331,29 +365,47 @@ export default function ReferralsPage() {
 
           {/* Verification Form */}
           {showVerifyForm && (
-            <div className="mt-4 p-4 border rounded">
+            <div className="mt-4 p-4 border rounded bg-gray-50">
               <h3 className="font-semibold mb-4">Submit Verification Documents</h3>
               <form onSubmit={handleVerify} className="space-y-4">
                 <div>
-                  <Label htmlFor="idCardUrl">ID Card URL (Upload to image host first)</Label>
+                  <Label htmlFor="idCard">ID Card Photo</Label>
                   <Input
-                    id="idCardUrl"
-                    type="url"
-                    placeholder="https://..."
-                    value={idCardUrl}
-                    onChange={(e) => setIdCardUrl(e.target.value)}
+                    id="idCard"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={(e) => setIdCardFile(e.target.files?.[0] || null)}
+                    required
+                    className="cursor-pointer"
                   />
+                  {idCardFile && (
+                    <p className="text-sm text-green-600 mt-1">
+                      ✓ {idCardFile.name} ({(idCardFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload a clear photo of your ID card (max 5MB)
+                  </p>
                 </div>
 
                 <div>
-                  <Label htmlFor="photoUrl">Your Photo URL</Label>
+                  <Label htmlFor="photo">Your Photo</Label>
                   <Input
-                    id="photoUrl"
-                    type="url"
-                    placeholder="https://..."
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
+                    id="photo"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                    required
+                    className="cursor-pointer"
                   />
+                  {photoFile && (
+                    <p className="text-sm text-green-600 mt-1">
+                      ✓ {photoFile.name} ({(photoFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload a clear photo of yourself (max 5MB)
+                  </p>
                 </div>
 
                 <div>
@@ -368,16 +420,28 @@ export default function ReferralsPage() {
                   />
                 </div>
 
+                {uploadProgress && (
+                  <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-2 rounded text-sm">
+                    {uploadProgress}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowVerifyForm(false)}
+                    onClick={() => {
+                      setShowVerifyForm(false);
+                      setIdCardFile(null);
+                      setPhotoFile(null);
+                      setPhoneNumber('');
+                    }}
+                    disabled={verifyLoading}
                   >
                     Cancel
                   </Button>
                   <Button type="submit" disabled={verifyLoading}>
-                    {verifyLoading ? 'Submitting...' : 'Submit'}
+                    {verifyLoading ? 'Uploading...' : 'Submit Verification'}
                   </Button>
                 </div>
               </form>

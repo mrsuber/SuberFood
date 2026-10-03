@@ -39,3 +39,46 @@ export async function GET(
     )
   }
 }
+
+// DELETE /api/admin/farm-products/products/[id] - Delete a product
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Check if product exists
+    const product = await prisma.farmProduct.findUnique({
+      where: { id: params.id },
+    })
+
+    if (!product) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Product not found',
+        },
+        { status: 404 }
+      )
+    }
+
+    // Delete the product
+    await prisma.farmProduct.delete({
+      where: { id: params.id },
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product deleted successfully',
+    })
+  } catch (error: any) {
+    console.error('Error deleting product:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to delete product',
+        error: error.message,
+      },
+      { status: 500 }
+    )
+  }
+}

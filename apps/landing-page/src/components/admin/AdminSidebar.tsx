@@ -24,7 +24,8 @@ import {
   ChefHat,
   UtensilsCrossed,
   Beef,
-  ClipboardList
+  ClipboardList,
+  ShieldCheck
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -171,6 +172,11 @@ const navigationSections: NavSection[] = [
         name: 'Customers',
         href: '/admin/customers',
         icon: Users,
+      },
+      {
+        name: 'Verifications',
+        href: '/admin/verifications',
+        icon: ShieldCheck,
       },
     ]
   },

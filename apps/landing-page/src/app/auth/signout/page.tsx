@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { CheckCircle, LogOut } from 'lucide-react'
@@ -12,28 +12,41 @@ export default function SignOutPage() {
   const { data: session, status } = useSession()
   const [countdown, setCountdown] = useState(3)
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const redirectUrlRef = useRef<string>('')
 
-  // Determine redirect URL based on user role
+  // Determine redirect URL based on user role - capture BEFORE sign out
   const getRedirectUrl = () => {
+    // Return cached URL if already determined
+    if (redirectUrlRef.current) {
+      return redirectUrlRef.current
+    }
+
     // Check if there's a callbackUrl in the search params
     const callbackUrl = searchParams.get('callbackUrl')
     if (callbackUrl) {
+      redirectUrlRef.current = callbackUrl
       return callbackUrl
     }
 
     // If user is still authenticated (hasn't been signed out yet), check their role
     if (session?.user?.role) {
       const isAdmin = session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN'
-      return isAdmin ? '/auth/signin' : '/'
+      const url = isAdmin ? '/auth/signin' : '/'
+      redirectUrlRef.current = url
+      return url
     }
 
     // Default to homepage
+    redirectUrlRef.current = '/'
     return '/'
   }
 
   useEffect(() => {
     // If user is still authenticated, sign them out
     if (status === 'authenticated' && !isSigningOut) {
+      // Capture redirect URL BEFORE signing out (while session is still available)
+      getRedirectUrl()
+
       setIsSigningOut(true)
       signOut({ redirect: false }).then(() => {
         // Start countdown after sign out

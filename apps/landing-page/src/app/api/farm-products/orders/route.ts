@@ -223,6 +223,8 @@ export async function POST(req: NextRequest) {
         deliveryState: deliveryAddress?.region || null,
         deliveryPhone: contactInfo.phone,
         deliveryInstructions: deliveryAddress?.additionalInfo || null,
+        deliveryLatitude: deliveryAddress?.latitude || null,
+        deliveryLongitude: deliveryAddress?.longitude || null,
 
         // Pickup details
         pickupLocation: deliveryMethod === 'pickup' ? 'SuberFood Distribution Center, Douala' : null,

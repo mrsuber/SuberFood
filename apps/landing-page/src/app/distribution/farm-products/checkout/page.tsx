@@ -54,7 +54,13 @@ export default function CheckoutPage() {
     region: '',
     postalCode: '',
     additionalInfo: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
   })
+
+  // GPS Location states
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [gpsError, setGpsError] = useState('')
 
   // Validation & Processing
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -177,6 +183,50 @@ export default function CheckoutPage() {
       setReferralMessage('Failed to validate code')
       setReferralDiscount(0)
     }
+  }
+
+  // Get current GPS location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsError('Geolocation is not supported by your browser')
+      return
+    }
+
+    setGpsLoading(true)
+    setGpsError('')
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setDeliveryAddress({
+          ...deliveryAddress,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        })
+        setGpsLoading(false)
+        setGpsError('')
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setGpsError('Location permission denied. Please enable location access.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            setGpsError('Location information unavailable.')
+            break
+          case error.TIMEOUT:
+            setGpsError('Location request timed out.')
+            break
+          default:
+            setGpsError('An error occurred while getting location.')
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    )
   }
 
   const validateForm = () => {
@@ -678,6 +728,96 @@ export default function CheckoutPage() {
                           rows={3}
                           placeholder="Apartment, suite, landmarks, delivery instructions..."
                         />
+                      </div>
+
+                      {/* GPS Coordinates */}
+                      <div className="border-t pt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Location Coordinates (Optional but recommended)
+                        </label>
+                        <p className="text-xs text-gray-500 mb-3">
+                          Providing your GPS coordinates helps us deliver to your exact location
+                        </p>
+
+                        {/* Automatic GPS */}
+                        <div className="mb-3">
+                          <Button
+                            type="button"
+                            onClick={getCurrentLocation}
+                            disabled={gpsLoading}
+                            className="w-full sm:w-auto bg-[#15803D] hover:bg-[#166534]"
+                          >
+                            {gpsLoading ? (
+                              <>
+                                <span className="animate-spin mr-2">⟳</span>
+                                Getting Location...
+                              </>
+                            ) : (
+                              <>
+                                <MapPin className="h-4 w-4 mr-2" />
+                                Use My Current Location
+                              </>
+                            )}
+                          </Button>
+                          {gpsError && (
+                            <p className="text-red-500 text-sm mt-2">{gpsError}</p>
+                          )}
+                        </div>
+
+                        {/* Manual GPS Entry */}
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-600">Or enter manually:</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Latitude
+                              </label>
+                              <input
+                                type="number"
+                                step="any"
+                                value={deliveryAddress.latitude || ''}
+                                onChange={(e) =>
+                                  setDeliveryAddress({
+                                    ...deliveryAddress,
+                                    latitude: e.target.value ? parseFloat(e.target.value) : null,
+                                  })
+                                }
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                                placeholder="e.g., 4.0511"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Longitude
+                              </label>
+                              <input
+                                type="number"
+                                step="any"
+                                value={deliveryAddress.longitude || ''}
+                                onChange={(e) =>
+                                  setDeliveryAddress({
+                                    ...deliveryAddress,
+                                    longitude: e.target.value ? parseFloat(e.target.value) : null,
+                                  })
+                                }
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                                placeholder="e.g., 9.7679"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Display current coordinates */}
+                          {deliveryAddress.latitude && deliveryAddress.longitude && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+                              <p className="text-sm text-green-800 font-medium">
+                                ✓ Location Set
+                              </p>
+                              <p className="text-xs text-green-700 mt-1">
+                                Lat: {deliveryAddress.latitude.toFixed(6)}, Lon: {deliveryAddress.longitude.toFixed(6)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

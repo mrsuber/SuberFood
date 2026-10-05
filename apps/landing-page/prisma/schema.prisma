@@ -183,6 +183,10 @@ model Address {
   country    String  @default("USA")
   isDefault  Boolean @default(false)
 
+  // GPS Coordinates for delivery location
+  latitude   Float?
+  longitude  Float?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
@@ -1958,6 +1962,10 @@ model FarmOrder {
   deliveryPhone        String?
   deliveryInstructions String?
   estimatedDelivery    DateTime?
+
+  // GPS Coordinates for delivery location
+  deliveryLatitude     Float?
+  deliveryLongitude    Float?
 
   // NEW: Delivery zone
   deliveryZoneId       String?

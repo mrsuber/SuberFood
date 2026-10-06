@@ -159,18 +159,26 @@ export default function CheckoutPage() {
             const productData = await productRes.json()
             if (productData.success) {
               const product = productData.data
-              const farmCost = item.priceType === 'retail'
+              let farmCost = item.priceType === 'retail'
                 ? Number(product.farmCostRetail || 0)
                 : Number(product.farmCostBulk || 0)
+
+              // If farm cost is not set, use 70% of selling price as estimate
+              if (farmCost === 0) {
+                farmCost = item.price * 0.7
+              }
+
               totalFarmCost += farmCost * item.quantity
             }
           } catch (error) {
             console.error('Error fetching product farm cost:', error)
+            // Use fallback: 70% of selling price
+            totalFarmCost += item.price * item.quantity * 0.7
           }
         }
 
         // 5% discount on total farm cost
-        const discount = totalFarmCost * 0.05
+        const discount = Math.round(totalFarmCost * 0.05)
         setReferralDiscount(discount)
         setReferralMessage(`${data.message} - You'll save ${discount.toLocaleString()} XAF!`)
       } else {

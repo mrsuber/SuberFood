@@ -20,6 +20,7 @@ import {
   MapPin,
   ChevronDown,
   ChevronUp,
+  Gift,
 } from 'lucide-react'
 
 export default function FarmProductsOrdersPage() {
@@ -353,6 +354,26 @@ export default function FarmProductsOrdersPage() {
                                   {order.deliveryAddress}
                                 </p>
                               )}
+                              {order.deliveryLatitude && order.deliveryLongitude && (
+                                <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                                  <p className="text-xs font-semibold text-blue-900 mb-1 flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    GPS Coordinates
+                                  </p>
+                                  <p className="text-xs text-blue-700">
+                                    Lat: {parseFloat(order.deliveryLatitude).toFixed(6)},
+                                    Lng: {parseFloat(order.deliveryLongitude).toFixed(6)}
+                                  </p>
+                                  <a
+                                    href={`https://www.google.com/maps?q=${order.deliveryLatitude},${order.deliveryLongitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                                  >
+                                    View on Google Maps →
+                                  </a>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -360,10 +381,32 @@ export default function FarmProductsOrdersPage() {
                           <div>
                             <h4 className="font-semibold text-gray-900 mb-3">Payment Details</h4>
                             <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Subtotal</span>
-                                <span className="font-semibold">{formatPrice(order.subtotal)}</span>
-                              </div>
+                              {order.referralDiscount > 0 ? (
+                                <>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Original Subtotal</span>
+                                    <span className="font-semibold line-through text-gray-400">
+                                      {formatPrice(parseFloat(order.subtotal) + parseFloat(order.referralDiscount))}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm bg-purple-50 -mx-3 px-3 py-1.5 rounded">
+                                    <span className="text-purple-700 font-semibold flex items-center gap-1">
+                                      <Gift className="h-3 w-3" />
+                                      Referral Discount
+                                    </span>
+                                    <span className="font-bold text-purple-600">- {formatPrice(order.referralDiscount)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm bg-green-50 -mx-3 px-3 py-1.5 rounded">
+                                    <span className="text-green-700 font-semibold">New Subtotal</span>
+                                    <span className="font-bold text-green-600">{formatPrice(order.subtotal)}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">Subtotal</span>
+                                  <span className="font-semibold">{formatPrice(order.subtotal)}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Delivery Fee</span>
                                 <span className="font-semibold">
@@ -374,6 +417,13 @@ export default function FarmProductsOrdersPage() {
                                 <span>Total</span>
                                 <span className="text-[#15803D]">{formatPrice(order.totalAmount)}</span>
                               </div>
+                              {order.referralDiscount > 0 && (
+                                <div className="mt-2 p-2 bg-purple-50 rounded border border-purple-200">
+                                  <p className="text-xs text-purple-900 font-semibold">
+                                    💜 Customer saved {formatPrice(order.referralDiscount)} with referral code!
+                                  </p>
+                                </div>
+                              )}
                               {order.paymentReference && (
                                 <p className="text-xs text-gray-600 mt-2">
                                   Ref: {order.paymentReference}

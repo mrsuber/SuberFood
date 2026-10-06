@@ -925,19 +925,33 @@ export default function CheckoutPage() {
 
                     {/* Calculations */}
                     <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Subtotal ({itemCount} items)</span>
-                        <span className="font-semibold">{formatPrice(totalAmount)}</span>
-                      </div>
+                      {/* Show original price with strikethrough if discount applied */}
+                      {referralValid === true && referralDiscount > 0 ? (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Original Subtotal ({itemCount} items)</span>
+                            <span className="font-semibold text-gray-400 line-through">{formatPrice(totalAmount)}</span>
+                          </div>
 
-                      {/* Referral Discount */}
-                      {referralValid === true && referralDiscount > 0 && (
-                        <div className="flex justify-between text-sm text-purple-600">
-                          <span className="flex items-center gap-1">
-                            <Gift className="h-4 w-4" />
-                            Referral Discount (5%)
-                          </span>
-                          <span className="font-semibold">- {formatPrice(referralDiscount)}</span>
+                          {/* Referral Discount */}
+                          <div className="flex justify-between text-sm bg-purple-50 -mx-4 px-4 py-2 border-l-4 border-purple-500">
+                            <span className="flex items-center gap-1 text-purple-700 font-semibold">
+                              <Gift className="h-4 w-4" />
+                              Referral Discount (5%)
+                            </span>
+                            <span className="font-bold text-purple-600">- {formatPrice(referralDiscount)}</span>
+                          </div>
+
+                          {/* New discounted subtotal */}
+                          <div className="flex justify-between text-sm bg-green-50 -mx-4 px-4 py-2">
+                            <span className="text-green-700 font-semibold">New Subtotal</span>
+                            <span className="font-bold text-green-600">{formatPrice(subtotalAfterDiscount)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Subtotal ({itemCount} items)</span>
+                          <span className="font-semibold">{formatPrice(totalAmount)}</span>
                         </div>
                       )}
 

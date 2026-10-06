@@ -207,11 +207,11 @@ export async function POST(req: NextRequest) {
       data: {
         orderNumber,
         isGuest: !session?.user?.id,
-        userId: session?.user?.id || null,
+        ...(session?.user?.id ? { user: { connect: { id: session.user.id } } } : {}),
         guestName: contactInfo.fullName,
         guestPhone: contactInfo.phone,
         guestEmail: contactInfo.email || null,
-        referredById: referrerId,
+        ...(referrerId ? { referredBy: { connect: { id: referrerId } } } : {}),
 
         fulfillmentType: deliveryMethod === 'delivery' ? 'DELIVERY' : 'PICKUP',
 

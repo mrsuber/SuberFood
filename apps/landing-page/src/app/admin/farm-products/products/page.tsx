@@ -18,7 +18,16 @@ import {
   AlertCircle,
   Leaf,
   Eye,
+  TrendingUp,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function FarmProductsListPage() {
   const router = useRouter()
@@ -29,6 +38,17 @@ export default function FarmProductsListPage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Restock modal state
+  const [restockDialog, setRestockDialog] = useState(false)
+  const [restockingProduct, setRestockingProduct] = useState<any | null>(null)
+  const [restockData, setRestockData] = useState({
+    quantity: '',
+    farmCostPerUnit: '',
+    supplier: '',
+    notes: '',
+  })
+  const [restocking, setRestocking] = useState(false)
 
   // Fetch all products once on mount
   useEffect(() => {
@@ -78,6 +98,59 @@ export default function FarmProductsListPage() {
       alert('Failed to delete product')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const openRestockDialog = (product: any) => {
+    setRestockingProduct(product)
+    setRestockData({
+      quantity: '',
+      farmCostPerUnit: '',
+      supplier: '',
+      notes: '',
+    })
+    setRestockDialog(true)
+  }
+
+  const handleRestock = async () => {
+    if (!restockingProduct) return
+
+    if (!restockData.quantity || parseFloat(restockData.quantity) <= 0) {
+      alert('Please enter a valid quantity')
+      return
+    }
+
+    setRestocking(true)
+
+    try {
+      const response = await fetch(`/api/admin/farm-products/products/${restockingProduct.id}/restock`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quantity: parseFloat(restockData.quantity),
+          farmCostPerUnit: restockData.farmCostPerUnit ? parseFloat(restockData.farmCostPerUnit) : null,
+          supplier: restockData.supplier || null,
+          notes: restockData.notes || null,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert(`Restocked successfully! ${data.data.summary.preOrdersFulfilled} pre-orders fulfilled.`)
+        setRestockDialog(false)
+        // Refresh products to show updated stock
+        fetchProducts()
+      } else {
+        alert(data.message || 'Failed to restock product')
+      }
+    } catch (error) {
+      console.error('Error restocking product:', error)
+      alert('Failed to restock product')
+    } finally {
+      setRestocking(false)
     }
   }
 
@@ -327,6 +400,15 @@ export default function FarmProductsListPage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => openRestockDialog(product)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Restock
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleDelete(product.id)}
                             disabled={deletingId === product.id}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
@@ -353,6 +435,106 @@ export default function FarmProductsListPage() {
           </div>
         )}
       </div>
+
+      {/* Restock Dialog */}
+      <Dialog open={restockDialog} onOpenChange={setRestockDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Restock Product</DialogTitle>
+            <DialogDescription>
+              Add stock for {restockingProduct?.name}. Pre-orders will be automatically fulfilled.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Quantity */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Quantity <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={restockData.quantity}
+                onChange={(e) => setRestockData({ ...restockData, quantity: e.target.value })}
+                placeholder={`Enter quantity in ${restockingProduct?.stockUnit || 'units'}`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                required
+              />
+            </div>
+
+            {/* Farm Cost Per Unit */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Farm Cost Per Unit (XAF) <span className="text-gray-400">(Optional)</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={restockData.farmCostPerUnit}
+                onChange={(e) => setRestockData({ ...restockData, farmCostPerUnit: e.target.value })}
+                placeholder="e.g., 500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              />
+              <p className="text-xs text-gray-500 mt-1">Cost you paid to acquire this stock</p>
+            </div>
+
+            {/* Supplier */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Supplier <span className="text-gray-400">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={restockData.supplier}
+                onChange={(e) => setRestockData({ ...restockData, supplier: e.target.value })}
+                placeholder="e.g., Green Valley Farms"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={restockData.notes}
+                onChange={(e) => setRestockData({ ...restockData, notes: e.target.value })}
+                placeholder="Any additional notes about this restock"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRestockDialog(false)}
+              disabled={restocking}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleRestock}
+              disabled={restocking}
+              className="bg-[#15803D] hover:bg-[#166534]"
+            >
+              {restocking ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 mr-2 border-b-2 border-white"></div>
+                  Restocking...
+                </>
+              ) : (
+                'Restock'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

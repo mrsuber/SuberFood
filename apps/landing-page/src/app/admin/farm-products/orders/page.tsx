@@ -21,7 +21,18 @@ import {
   ChevronDown,
   ChevronUp,
   Gift,
+  Bell,
+  Send,
+  MessageSquare,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function FarmProductsOrdersPage() {
   const [orders, setOrders] = useState<any[]>([])
@@ -30,6 +41,22 @@ export default function FarmProductsOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+
+  // Notifications state
+  const [notifications, setNotifications] = useState<Record<string, any[]>>({})
+  const [loadingNotifications, setLoadingNotifications] = useState<Record<string, boolean>>({})
+  const [notificationDialog, setNotificationDialog] = useState(false)
+  const [currentOrder, setCurrentOrder] = useState<any | null>(null)
+  const [notificationData, setNotificationData] = useState({
+    step: 1,
+    message: '',
+    sentVia: 'WHATSAPP' as const,
+    response: '',
+    useTemplate: true,
+    productName: '',
+    price: '',
+  })
+  const [sendingNotification, setSendingNotification] = useState(false)
 
   useEffect(() => {
     fetchOrders()
@@ -81,6 +108,97 @@ export default function FarmProductsOrdersPage() {
     } catch (error) {
       console.error('Error updating order status:', error)
       alert('Failed to update order status')
+    }
+  }
+
+  const fetchNotifications = async (orderId: string) => {
+    setLoadingNotifications({ ...loadingNotifications, [orderId]: true })
+    try {
+      const response = await fetch(`/api/admin/farm-products/orders/${orderId}/notifications`)
+      const data = await response.json()
+
+      if (data.success) {
+        setNotifications({ ...notifications, [orderId]: data.data.notifications })
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    } finally {
+      setLoadingNotifications({ ...loadingNotifications, [orderId]: false })
+    }
+  }
+
+  const openNotificationDialog = (order: any) => {
+    setCurrentOrder(order)
+    setNotificationData({
+      step: 1,
+      message: '',
+      sentVia: 'WHATSAPP',
+      response: '',
+      useTemplate: true,
+      productName: order.items[0]?.productName || '',
+      price: order.items[0]?.pricePerUnit || '',
+    })
+    setNotificationDialog(true)
+
+    // Fetch existing notifications if not already loaded
+    if (!notifications[order.id]) {
+      fetchNotifications(order.id)
+    }
+  }
+
+  const handleSendNotification = async () => {
+    if (!currentOrder) return
+
+    if (!notificationData.useTemplate && !notificationData.message) {
+      alert('Please enter a message')
+      return
+    }
+
+    if (notificationData.step === 1 && notificationData.useTemplate) {
+      if (!notificationData.productName || !notificationData.price) {
+        alert('Product name and price are required for Step 1 template')
+        return
+      }
+    }
+
+    setSendingNotification(true)
+
+    try {
+      const response = await fetch(`/api/admin/farm-products/orders/${currentOrder.id}/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          step: notificationData.step,
+          message: notificationData.useTemplate ? undefined : notificationData.message,
+          sentVia: notificationData.sentVia,
+          response: notificationData.response || undefined,
+          productName: notificationData.step === 1 ? notificationData.productName : undefined,
+          price: notificationData.step === 1 ? parseFloat(notificationData.price) : undefined,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('Notification sent successfully')
+        // Refresh notifications
+        fetchNotifications(currentOrder.id)
+        // Reset form
+        setNotificationData({
+          ...notificationData,
+          message: '',
+          response: '',
+        })
+      } else {
+        alert(data.message || 'Failed to send notification')
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error)
+      alert('Failed to send notification')
+    } finally {
+      setSendingNotification(false)
     }
   }
 
@@ -306,6 +424,16 @@ export default function FarmProductsOrdersPage() {
                         )}
                       </Button>
 
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openNotificationDialog(order)}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Bell className="h-4 w-4 mr-2" />
+                        Notify
+                      </Button>
+
                       {getNextStatus(order.status) && (
                         <Button
                           size="sm"
@@ -434,7 +562,7 @@ export default function FarmProductsOrdersPage() {
                         </div>
 
                         {/* Order Items */}
-                        <div>
+                        <div className="mb-6">
                           <h4 className="font-semibold text-gray-900 mb-3">Order Items</h4>
                           <div className="space-y-2">
                             {order.items.map((item: any) => (
@@ -455,6 +583,74 @@ export default function FarmProductsOrdersPage() {
                             ))}
                           </div>
                         </div>
+
+                        {/* Notifications History */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900">Notification History</h4>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => fetchNotifications(order.id)}
+                              disabled={loadingNotifications[order.id]}
+                            >
+                              {loadingNotifications[order.id] ? 'Loading...' : 'Refresh'}
+                            </Button>
+                          </div>
+
+                          {!notifications[order.id] && !loadingNotifications[order.id] ? (
+                            <p className="text-sm text-gray-500 text-center py-4">
+                              Click "Notify" to send customer notifications
+                            </p>
+                          ) : loadingNotifications[order.id] ? (
+                            <div className="text-center py-4">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#15803D] mx-auto"></div>
+                            </div>
+                          ) : notifications[order.id]?.length === 0 ? (
+                            <p className="text-sm text-gray-500 text-center py-4">
+                              No notifications sent yet
+                            </p>
+                          ) : (
+                            <div className="space-y-3">
+                              {notifications[order.id]?.map((notif: any) => (
+                                <div
+                                  key={notif.id}
+                                  className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <Badge className="bg-blue-100 text-blue-700">
+                                        Step {notif.step}
+                                      </Badge>
+                                      <Badge variant="outline" className="text-xs">
+                                        {notif.sentVia}
+                                      </Badge>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(notif.sentAt).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="bg-white p-2 rounded border border-gray-200 mb-2">
+                                    <p className="text-sm text-gray-900">{notif.message}</p>
+                                  </div>
+                                  {notif.response && (
+                                    <div className="bg-green-50 p-2 rounded border border-green-200">
+                                      <p className="text-xs font-semibold text-green-900 mb-1">
+                                        Customer Response:
+                                      </p>
+                                      <p className="text-sm text-green-800">{notif.response}</p>
+                                      {notif.respondedAt && (
+                                        <p className="text-xs text-green-600 mt-1">
+                                          {new Date(notif.respondedAt).toLocaleString()}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -464,6 +660,236 @@ export default function FarmProductsOrdersPage() {
           </div>
         )}
       </div>
+
+      {/* Notification Dialog */}
+      <Dialog open={notificationDialog} onOpenChange={setNotificationDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Send Notification</DialogTitle>
+            <DialogDescription>
+              Send a customer notification for order {currentOrder?.orderNumber}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Step Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notification Step <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((step) => (
+                  <button
+                    key={step}
+                    type="button"
+                    onClick={() => setNotificationData({ ...notificationData, step })}
+                    className={`p-3 rounded-lg border-2 text-center transition-colors ${
+                      notificationData.step === step
+                        ? 'border-[#15803D] bg-green-50 text-[#15803D]'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <p className="font-semibold">Step {step}</p>
+                    <p className="text-xs mt-1">
+                      {step === 1 && 'At Farm'}
+                      {step === 2 && 'Ready in Buea'}
+                      {step === 3 && 'Being Fulfilled'}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Template Toggle */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="useTemplate"
+                checked={notificationData.useTemplate}
+                onChange={(e) =>
+                  setNotificationData({ ...notificationData, useTemplate: e.target.checked })
+                }
+                className="h-4 w-4 text-[#15803D] border-gray-300 rounded focus:ring-[#15803D]"
+              />
+              <label htmlFor="useTemplate" className="text-sm font-medium text-gray-700">
+                Use template message
+              </label>
+            </div>
+
+            {/* Step 1 Template Fields */}
+            {notificationData.useTemplate && notificationData.step === 1 && (
+              <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Product Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={notificationData.productName}
+                    onChange={(e) =>
+                      setNotificationData({ ...notificationData, productName: e.target.value })
+                    }
+                    placeholder="e.g., Tomatoes"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Price (XAF) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={notificationData.price}
+                    onChange={(e) =>
+                      setNotificationData({ ...notificationData, price: e.target.value })
+                    }
+                    placeholder="e.g., 500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                  />
+                </div>
+                <div className="col-span-2 mt-2">
+                  <p className="text-xs text-blue-700 font-medium mb-1">Template Preview:</p>
+                  <div className="p-2 bg-white rounded border border-blue-200">
+                    <p className="text-sm">
+                      Hi! I'm at the farm. {notificationData.productName || '[Product]'} is
+                      available at {notificationData.price || '[Price]'} XAF. Should I lock in your
+                      order?
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 Template Preview */}
+            {notificationData.useTemplate && notificationData.step === 2 && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-700 font-medium mb-1">Template Preview:</p>
+                <div className="p-2 bg-white rounded border border-blue-200">
+                  <p className="text-sm">
+                    Your order {currentOrder?.orderNumber} is ready in Buea! Would you like to pick
+                    it up or should we deliver it to you?
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3 Template Preview */}
+            {notificationData.useTemplate && notificationData.step === 3 && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-700 font-medium mb-1">Template Preview:</p>
+                <div className="p-2 bg-white rounded border border-blue-200">
+                  <p className="text-sm">
+                    Order {currentOrder?.orderNumber} is being fulfilled. Please sign upon
+                    receipt/delivery.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Message */}
+            {!notificationData.useTemplate && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Custom Message <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={notificationData.message}
+                  onChange={(e) =>
+                    setNotificationData({ ...notificationData, message: e.target.value })
+                  }
+                  placeholder="Enter your custom message"
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                />
+              </div>
+            )}
+
+            {/* Sent Via */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Send Via <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={notificationData.sentVia}
+                onChange={(e) =>
+                  setNotificationData({
+                    ...notificationData,
+                    sentVia: e.target.value as any,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              >
+                <option value="WHATSAPP">WhatsApp</option>
+                <option value="SMS">SMS</option>
+                <option value="CALL">Phone Call</option>
+                <option value="MANUAL">Manual/Other</option>
+              </select>
+            </div>
+
+            {/* Customer Response */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Customer Response <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={notificationData.response}
+                onChange={(e) =>
+                  setNotificationData({ ...notificationData, response: e.target.value })
+                }
+                placeholder="Record customer's response (optional)"
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              />
+            </div>
+
+            {/* Existing Notifications Preview */}
+            {notifications[currentOrder?.id]?.length > 0 && (
+              <div className="pt-4 border-t">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Previous Notifications ({notifications[currentOrder?.id]?.length})
+                </p>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {notifications[currentOrder?.id]?.map((notif: any) => (
+                    <div key={notif.id} className="p-2 bg-gray-50 rounded text-xs">
+                      <span className="font-semibold">Step {notif.step}</span> •{' '}
+                      {new Date(notif.sentAt).toLocaleDateString()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setNotificationDialog(false)}
+              disabled={sendingNotification}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSendNotification}
+              disabled={sendingNotification}
+              className="bg-[#15803D] hover:bg-[#166534]"
+            >
+              {sendingNotification ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 mr-2 border-b-2 border-white"></div>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Notification
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

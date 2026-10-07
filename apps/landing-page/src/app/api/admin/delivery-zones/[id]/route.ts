@@ -14,6 +14,9 @@ export async function GET(
 
     const zone = await prisma.deliveryZone.findUnique({
       where: { id },
+      include: {
+        areas: true,
+      },
     })
 
     if (!zone) {
@@ -52,9 +55,14 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
 
+    const { name, description, deliveryFee, areas, isActive } = body
+
     // Check if zone exists
     const existingZone = await prisma.deliveryZone.findUnique({
       where: { id },
+      include: {
+        areas: true,
+      },
     })
 
     if (!existingZone) {
@@ -68,7 +76,7 @@ export async function PUT(
     }
 
     // Validate fee if provided
-    if (body.fee !== undefined && parseFloat(body.fee) < 0) {
+    if (deliveryFee !== undefined && parseFloat(deliveryFee) < 0) {
       return NextResponse.json(
         {
           success: false,
@@ -78,52 +86,61 @@ export async function PUT(
       )
     }
 
-    // Check for duplicate name if name or city changed
-    if (
-      (body.name && body.name !== existingZone.name) ||
-      (body.city && body.city !== existingZone.city)
-    ) {
-      const newName = body.name || existingZone.name
-      const newCity = body.city || existingZone.city
-
-      const duplicate = await prisma.deliveryZone.findFirst({
-        where: {
-          name: newName,
-          city: newCity,
-          id: { not: id },
-        },
+    // Check for duplicate name if name changed
+    if (name && name !== existingZone.name) {
+      const duplicate = await prisma.deliveryZone.findUnique({
+        where: { name },
       })
 
       if (duplicate) {
         return NextResponse.json(
           {
             success: false,
-            message: `A delivery zone named "${newName}" already exists in ${newCity}`,
+            message: `A delivery zone named "${name}" already exists`,
           },
           { status: 400 }
         )
       }
     }
 
-    // Update zone
-    const zone = await prisma.deliveryZone.update({
-      where: { id },
-      data: {
-        ...(body.name && { name: body.name }),
-        ...(body.region && { region: body.region }),
-        ...(body.city && { city: body.city }),
-        ...(body.fee !== undefined && { fee: new Decimal(body.fee) }),
-        ...(body.latitude !== undefined && {
-          latitude: body.latitude ? new Decimal(body.latitude) : null,
-        }),
-        ...(body.longitude !== undefined && {
-          longitude: body.longitude ? new Decimal(body.longitude) : null,
-        }),
-        ...(body.radius !== undefined && {
-          radius: body.radius ? new Decimal(body.radius) : null,
-        }),
-        ...(body.isActive !== undefined && { isActive: body.isActive }),
-      },
+    // Update zone and areas in a transaction
+    const zone = await prisma.$transaction(async (tx) => {
+      // Update the zone
+      const updated = await tx.deliveryZone.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(description !== undefined && { description: description || null }),
+          ...(deliveryFee !== undefined && { deliveryFee: new Decimal(deliveryFee) }),
+          ...(isActive !== undefined && { isActive }),
+        },
+      })
+
+      // Update areas if provided
+      if (areas !== undefined) {
+        // Delete existing areas
+        await tx.deliveryZoneArea.deleteMany({
+          where: { zoneId: id },
+        })
+
+        // Create new areas
+        if (areas.length > 0) {
+          await tx.deliveryZoneArea.createMany({
+            data: areas.map((areaName: string) => ({
+              zoneId: id,
+              areaName,
+            })),
+          })
+        }
+      }
+
+      // Fetch updated zone with areas
+      return await tx.deliveryZone.findUnique({
+        where: { id },
+        include: {
+          areas: true,
+        },
+      })
     })
 
     return NextResponse.json({

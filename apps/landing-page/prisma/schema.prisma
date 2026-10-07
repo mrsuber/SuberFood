@@ -2242,35 +2242,6 @@ model FinancialSummary {
 }
 
 // ============================================
-// DELIVERY ZONES
-// ============================================
-
-model DeliveryZone {
-  id          String    @id @default(cuid())
-  name        String    // "Buea Town", "Molyko", "Mile 17", etc.
-  region      String    // "Southwest", "Littoral", etc.
-  city        String    // "Buea", "Douala", etc.
-
-  fee         Decimal   @db.Decimal(10, 2) // Delivery fee in XAF
-
-  // Optional geofencing (for future map integration)
-  latitude    Decimal?  @db.Decimal(10, 8)
-  longitude   Decimal?  @db.Decimal(11, 8)
-  radius      Decimal?  @db.Decimal(6, 2) // In kilometers
-
-  isActive    Boolean   @default(true)
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  createdBy   String?   // Admin user ID
-
-  @@index([city])
-  @@index([region])
-  @@index([isActive])
-  @@map("delivery_zones")
-}
-
-// ============================================
 // SYSTEM CONFIGURATION
 // ============================================
 

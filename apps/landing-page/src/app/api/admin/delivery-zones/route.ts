@@ -8,20 +8,10 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const city = searchParams.get('city')
-    const region = searchParams.get('region')
     const isActive = searchParams.get('isActive')
 
     // Build where clause
     const where: any = {}
-
-    if (city) {
-      where.city = city
-    }
-
-    if (region) {
-      where.region = region
-    }
 
     if (isActive !== null && isActive !== undefined) {
       where.isActive = isActive === 'true'
@@ -29,11 +19,12 @@ export async function GET(request: NextRequest) {
 
     const zones = await prisma.deliveryZone.findMany({
       where,
-      orderBy: [
-        { region: 'asc' },
-        { city: 'asc' },
-        { name: 'asc' },
-      ],
+      include: {
+        areas: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
     })
 
     return NextResponse.json({
@@ -60,28 +51,24 @@ export async function POST(request: NextRequest) {
 
     const {
       name,
-      region,
-      city,
-      fee,
-      latitude,
-      longitude,
-      radius,
+      description,
+      deliveryFee,
+      areas = [], // Array of area names: ["Molyko", "Great Soppo", etc.]
       isActive = true,
-      createdBy,
     } = body
 
     // Validate required fields
-    if (!name || !region || !city || fee === undefined) {
+    if (!name || deliveryFee === undefined) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Name, region, city, and fee are required',
+          message: 'Name and delivery fee are required',
         },
         { status: 400 }
       )
     }
 
-    if (parseFloat(fee) < 0) {
+    if (parseFloat(deliveryFee) < 0) {
       return NextResponse.json(
         {
           success: false,
@@ -91,36 +78,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for duplicate zone name in same city
-    const existingZone = await prisma.deliveryZone.findFirst({
-      where: {
-        name,
-        city,
-      },
+    // Check for duplicate zone name
+    const existingZone = await prisma.deliveryZone.findUnique({
+      where: { name },
     })
 
     if (existingZone) {
       return NextResponse.json(
         {
           success: false,
-          message: `A delivery zone named "${name}" already exists in ${city}`,
+          message: `A delivery zone named "${name}" already exists`,
         },
         { status: 400 }
       )
     }
 
-    // Create delivery zone
+    // Create delivery zone with areas
     const zone = await prisma.deliveryZone.create({
       data: {
         name,
-        region,
-        city,
-        fee: new Decimal(fee),
-        latitude: latitude ? new Decimal(latitude) : null,
-        longitude: longitude ? new Decimal(longitude) : null,
-        radius: radius ? new Decimal(radius) : null,
+        description: description || null,
+        deliveryFee: new Decimal(deliveryFee),
         isActive,
-        createdBy: createdBy || null,
+        areas: {
+          create: areas.map((areaName: string) => ({
+            areaName,
+          })),
+        },
+      },
+      include: {
+        areas: true,
       },
     })
 

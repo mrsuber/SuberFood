@@ -16,6 +16,8 @@ export async function POST(req: NextRequest) {
       deliveryMethod,
       contactInfo,
       deliveryAddress,
+      deliveryZoneId,
+      selectedArea,
       subtotal,
       deliveryFee,
       totalAmount,
@@ -241,7 +243,7 @@ export async function POST(req: NextRequest) {
 
         // Delivery details
         deliveryAddress: deliveryAddress
-          ? `${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.region}`
+          ? `${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.region}${selectedArea ? ` (${selectedArea})` : ''}`
           : null,
         deliveryCity: deliveryAddress?.city || null,
         deliveryState: deliveryAddress?.region || null,
@@ -249,6 +251,7 @@ export async function POST(req: NextRequest) {
         deliveryInstructions: deliveryAddress?.additionalInfo || null,
         deliveryLatitude: deliveryAddress?.latitude || null,
         deliveryLongitude: deliveryAddress?.longitude || null,
+        ...(deliveryZoneId ? { deliveryZone: { connect: { id: deliveryZoneId } } } : {}),
 
         // Pickup details
         pickupLocation: deliveryMethod === 'pickup' ? 'SuberFood Distribution Center, Douala' : null,

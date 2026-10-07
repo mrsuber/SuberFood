@@ -26,7 +26,10 @@ import {
   Beef,
   ClipboardList,
   ShieldCheck,
-  MapPin
+  MapPin,
+  Wallet,
+  CreditCard,
+  Receipt,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -247,6 +250,26 @@ const navigationSections: NavSection[] = [
           { name: 'Harvests', href: '/admin/farming/harvests' },
           { name: 'Supply Chain', href: '/admin/farming/supply-chain' },
         ]
+      },
+    ]
+  },
+  {
+    title: 'Wallet & Payments',
+    items: [
+      {
+        name: 'Wallet Management',
+        href: '/admin/wallet-management',
+        icon: Wallet,
+      },
+      {
+        name: 'Payment Transactions',
+        href: '/admin/payment-transactions',
+        icon: CreditCard,
+      },
+      {
+        name: 'Financial Ledger',
+        href: '/admin/financial-ledger',
+        icon: Receipt,
       },
     ]
   },

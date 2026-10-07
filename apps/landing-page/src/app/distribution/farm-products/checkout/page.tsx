@@ -77,13 +77,25 @@ export default function CheckoutPage() {
   const [referralMessage, setReferralMessage] = useState('')
   const [referralDiscount, setReferralDiscount] = useState(0)
 
+  // Delivery Zones
+  const [deliveryZones, setDeliveryZones] = useState<any[]>([])
+  const [selectedZone, setSelectedZone] = useState<string | null>(null)
+  const [selectedArea, setSelectedArea] = useState<string | null>(null)
+  const [zonesLoading, setZonesLoading] = useState(false)
+
   // Calculate prices BEFORE using them in hooks
   const formatPrice = (price: number) => {
     return `${price.toLocaleString()} XAF`
   }
 
-  // Delivery fee calculation (simplified - you can make this more complex)
-  const deliveryFee = deliveryMethod === 'delivery' ? 2000 : 0
+  // Delivery fee calculation based on selected zone
+  const deliveryFee = (() => {
+    if (deliveryMethod !== 'delivery') return 0
+    if (!selectedZone) return 0
+
+    const zone = deliveryZones.find(z => z.id === selectedZone)
+    return zone ? Number(zone.deliveryFee) : 0
+  })()
 
   // Apply referral discount if valid
   const subtotalAfterDiscount = totalAmount - referralDiscount
@@ -99,6 +111,25 @@ export default function CheckoutPage() {
       router.push('/distribution/farm-products')
     }
   }, [items.length, router])
+
+  // Fetch delivery zones on mount
+  useEffect(() => {
+    const fetchZones = async () => {
+      setZonesLoading(true)
+      try {
+        const res = await fetch('/api/delivery-zones')
+        const data = await res.json()
+        if (data.success && data.deliveryZones) {
+          setDeliveryZones(data.deliveryZones)
+        }
+      } catch (error) {
+        console.error('Failed to fetch delivery zones:', error)
+      } finally {
+        setZonesLoading(false)
+      }
+    }
+    fetchZones()
+  }, [])
 
   // Fetch wallet balance on mount
   useEffect(() => {
@@ -255,6 +286,9 @@ export default function CheckoutPage() {
 
     // Validate delivery address if delivery method is selected
     if (deliveryMethod === 'delivery') {
+      if (!selectedZone) {
+        newErrors.zone = 'Please select a delivery zone'
+      }
       if (!deliveryAddress.street.trim()) {
         newErrors.street = 'Street address is required'
       }
@@ -294,6 +328,8 @@ export default function CheckoutPage() {
         deliveryMethod,
         contactInfo,
         deliveryAddress: deliveryMethod === 'delivery' ? deliveryAddress : null,
+        deliveryZoneId: deliveryMethod === 'delivery' ? selectedZone : null,
+        selectedArea: deliveryMethod === 'delivery' ? selectedArea : null,
         subtotal: totalAmount,
         deliveryFee,
         totalAmount: finalTotal,
@@ -404,7 +440,11 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <button
                         type="button"
-                        onClick={() => setDeliveryMethod('delivery')}
+                        onClick={() => {
+                          setDeliveryMethod('delivery')
+                          setSelectedZone(null)
+                          setSelectedArea(null)
+                        }}
                         className={`p-4 border-2 rounded-lg transition-all ${
                           deliveryMethod === 'delivery'
                             ? 'border-[#15803D] bg-green-50'
@@ -413,11 +453,17 @@ export default function CheckoutPage() {
                       >
                         <Truck className="h-8 w-8 mb-2 mx-auto text-[#15803D]" />
                         <p className="font-semibold">Delivery</p>
-                        <p className="text-sm text-gray-600 mt-1">2,000 XAF</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {selectedZone ? `${deliveryFee.toLocaleString()} XAF` : 'Select zone'}
+                        </p>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDeliveryMethod('pickup')}
+                        onClick={() => {
+                          setDeliveryMethod('pickup')
+                          setSelectedZone(null)
+                          setSelectedArea(null)
+                        }}
                         className={`p-4 border-2 rounded-lg transition-all ${
                           deliveryMethod === 'pickup'
                             ? 'border-[#15803D] bg-green-50'
@@ -429,6 +475,89 @@ export default function CheckoutPage() {
                         <p className="text-sm text-gray-600 mt-1">Free</p>
                       </button>
                     </div>
+
+                    {/* Zone Selection for Delivery */}
+                    {deliveryMethod === 'delivery' && (
+                      <div className="space-y-3 pt-2 border-t">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Select Delivery Zone *
+                        </label>
+                        {zonesLoading ? (
+                          <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#15803D] mx-auto"></div>
+                            <p className="text-sm text-gray-600 mt-2">Loading zones...</p>
+                          </div>
+                        ) : deliveryZones.length === 0 ? (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                            No delivery zones available. Please contact support or choose pickup.
+                          </div>
+                        ) : (
+                          <>
+                            <select
+                              value={selectedZone || ''}
+                              onChange={(e) => {
+                                setSelectedZone(e.target.value || null)
+                                setSelectedArea(null)
+                              }}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D] ${
+                                errors.zone ? 'border-red-500' : 'border-gray-300'
+                              }`}
+                            >
+                              <option value="">-- Select Zone --</option>
+                              {deliveryZones.map((zone) => (
+                                <option key={zone.id} value={zone.id}>
+                                  {zone.name} - {Number(zone.deliveryFee).toLocaleString()} XAF
+                                </option>
+                              ))}
+                            </select>
+                            {errors.zone && (
+                              <p className="text-red-500 text-sm">{errors.zone}</p>
+                            )}
+
+                            {/* Area Selection (optional) */}
+                            {selectedZone && (() => {
+                              const zone = deliveryZones.find(z => z.id === selectedZone)
+                              return zone && zone.areas && zone.areas.length > 0 && (
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Specific Area (Optional)
+                                  </label>
+                                  <select
+                                    value={selectedArea || ''}
+                                    onChange={(e) => setSelectedArea(e.target.value || null)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                                  >
+                                    <option value="">-- Select Area --</option>
+                                    {zone.areas.map((area: any) => (
+                                      <option key={area.id} value={area.areaName}>
+                                        {area.areaName}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )
+                            })()}
+
+                            {/* Selected zone info */}
+                            {selectedZone && (() => {
+                              const zone = deliveryZones.find(z => z.id === selectedZone)
+                              return zone && (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                                  <p className="font-semibold text-green-900">{zone.name}</p>
+                                  {zone.description && (
+                                    <p className="text-green-700 mt-1">{zone.description}</p>
+                                  )}
+                                  <p className="text-green-800 mt-2">
+                                    Delivery Fee: <strong>{Number(zone.deliveryFee).toLocaleString()} XAF</strong>
+                                  </p>
+                                </div>
+                              )
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    )}
+
                     {deliveryMethod === 'pickup' && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
                         <p className="font-semibold text-green-900 mb-1">Pickup Location:</p>

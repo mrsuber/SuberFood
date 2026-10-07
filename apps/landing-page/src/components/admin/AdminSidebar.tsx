@@ -25,7 +25,8 @@ import {
   UtensilsCrossed,
   Beef,
   ClipboardList,
-  ShieldCheck
+  ShieldCheck,
+  MapPin
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -167,6 +168,11 @@ const navigationSections: NavSection[] = [
           { name: 'Pending', href: '/admin/farm-products/orders?status=pending' },
           { name: 'Completed', href: '/admin/farm-products/orders?status=completed' },
         ]
+      },
+      {
+        name: 'Delivery Zones',
+        href: '/admin/delivery-zones',
+        icon: MapPin,
       },
       {
         name: 'Customers',

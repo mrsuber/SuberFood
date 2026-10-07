@@ -249,10 +249,11 @@ export default function ProductDetailPage() {
               <div className="relative h-96 bg-gradient-to-br from-green-50 to-green-100 rounded-lg overflow-hidden mb-4">
                 {product.thumbnail ? (
                   <Image
-                    src={product.thumbnail.startsWith('http') ? product.thumbnail : `https://suberfoods.com${product.thumbnail}`}
+                    src={product.thumbnail}
                     alt={product.name}
                     fill
                     className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -265,10 +266,11 @@ export default function ProductDetailPage() {
                   {product.images.map((img, idx) => (
                     <div key={idx} className="relative h-20 bg-gray-100 rounded overflow-hidden">
                       <Image
-                        src={img.startsWith('http') ? img : `https://suberfoods.com${img}`}
+                        src={img}
                         alt={`${product.name} ${idx + 1}`}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                     </div>
                   ))}

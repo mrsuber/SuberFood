@@ -135,10 +135,11 @@ export default function CartPage() {
                         <div className="relative h-24 w-24 flex-shrink-0 bg-gradient-to-br from-green-50 to-green-100 rounded-lg overflow-hidden">
                           {item.image ? (
                             <Image
-                              src={item.image.startsWith('http') ? item.image : `https://suberfoods.com${item.image}`}
+                              src={item.image}
                               alt={item.name}
                               fill
                               className="object-cover"
+                              unoptimized
                             />
                           ) : (
                             <div className="absolute inset-0 flex items-center justify-center">

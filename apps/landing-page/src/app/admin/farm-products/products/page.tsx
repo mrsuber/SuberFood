@@ -318,20 +318,12 @@ export default function FarmProductsListPage() {
                               View
                             </Button>
                           </Link>
-                          {/* TODO: Create edit and stock management pages
                           <Link href={`/admin/farm-products/products/${product.id}`}>
                             <Button variant="outline" size="sm">
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </Button>
                           </Link>
-                          <Link href={`/admin/farm-products/products/${product.id}/stock`}>
-                            <Button variant="outline" size="sm">
-                              <Package className="h-4 w-4 mr-2" />
-                              Manage Stock
-                            </Button>
-                          </Link>
-                          */}
                           <Button
                             variant="outline"
                             size="sm"

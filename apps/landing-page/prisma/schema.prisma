@@ -1729,11 +1729,13 @@ model FarmProduct {
   seasonStartMonth  Int?        // 1-12
   seasonEndMonth    Int?        // 1-12
 
-  // Inventory
-  stockQuantity     Decimal // Total available (in base unit)
-  stockUnit         String // Base unit (kg, L, pieces)
-  lowStockThreshold Decimal?
-  reorderPoint      Decimal?
+  // Inventory - Pre-Order System
+  stockQuantity      Decimal @default(0) // Total available (in base unit)
+  preOrderedQuantity Decimal @default(0) // Total pre-ordered (reserved)
+  availableQuantity  Decimal @default(0) // stockQuantity - preOrderedQuantity
+  stockUnit          String // Base unit (kg, L, pieces)
+  lowStockThreshold  Decimal?
+  reorderPoint       Decimal?
 
   // Traceability
   farmSource  String? // Farm name/location
@@ -1765,9 +1767,10 @@ model FarmProduct {
   bulkDiscounts BulkDiscount[]
 
   // Relationships
-  cartItems  FarmCartItem[]
-  orderItems FarmOrderItem[]
-  reviews    FarmProductReview[]
+  cartItems      FarmCartItem[]
+  orderItems     FarmOrderItem[]
+  reviews        FarmProductReview[]
+  restockHistory StockRestock[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -1996,6 +1999,11 @@ model FarmOrder {
   // NEW: Red flag tracking
   redFlagIncidents    RedFlagIncident[]
 
+  // NEW: Notifications & Receipts
+  notifications       OrderNotification[]
+  orderReceipt        OrderReceipt?
+  financialTransactions FinancialTransaction[]
+
   // Notes
   customerNotes String?
   adminNotes    String?
@@ -2116,4 +2124,136 @@ model Receipt {
   @@index([orderId])
   @@index([receiptNumber])
   @@map("receipts")
+}
+
+// ============================================
+// STOCK RESTOCK SYSTEM (PRE-ORDER)
+// ============================================
+
+model StockRestock {
+  id              String       @id @default(cuid())
+  productId       String
+  product         FarmProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity        Decimal      @db.Decimal(10, 2) // Quantity restocked
+  preOrdersFilled Decimal      @db.Decimal(10, 2) // Pre-orders fulfilled from this restock
+  remainingStock  Decimal      @db.Decimal(10, 2) // Stock remaining after pre-orders
+
+  farmCost        Decimal?     @db.Decimal(10, 2) // Cost per unit from farmer
+  totalCost       Decimal?     @db.Decimal(10, 2) // Total cost of restock
+
+  supplier        String?      // Farmer/supplier name
+  restockedBy     String?      // Admin user ID
+  restockedAt     DateTime     @default(now())
+  notes           String?
+
+  createdAt       DateTime     @default(now())
+
+  @@index([productId])
+  @@index([restockedAt])
+  @@map("stock_restocks")
+}
+
+// ============================================
+// ORDER NOTIFICATION SYSTEM
+// ============================================
+
+model OrderNotification {
+  id            String     @id @default(cuid())
+  orderId       String
+  order         FarmOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  step          Int        // 1, 2, or 3
+  template      String     // Message template
+  message       String     // Actual message sent
+
+  sentAt        DateTime?
+  sentVia       String?    // "SMS" | "WHATSAPP" | "CALL" | "MANUAL"
+  response      String?    // Customer response
+  respondedAt   DateTime?
+
+  createdAt     DateTime   @default(now())
+
+  @@index([orderId])
+  @@index([step])
+  @@map("order_notifications")
+}
+
+model OrderReceipt {
+  id            String     @id @default(cuid())
+  orderId       String     @unique
+  order         FarmOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  receiptNumber String     @unique // Format: RCP-YYYY-XXXXXX
+  signatureData String?    // Base64 image
+  signedBy      String     // Customer name
+  signedAt      DateTime
+  pdfUrl        String?
+
+  createdAt     DateTime   @default(now())
+
+  @@index([orderId])
+  @@index([receiptNumber])
+  @@map("order_receipts")
+}
+
+// ============================================
+// FINANCIAL TRACKING SYSTEM
+// ============================================
+
+model FinancialTransaction {
+  id              String    @id @default(cuid())
+  type            String    // REVENUE, EXPENSE, COMMISSION, REFUND
+  category        String    // PRODUCT_SALE, DELIVERY_FEE, REFERRAL_COMMISSION, FARM_PURCHASE, TRANSPORT_COST
+  amount          Decimal   @db.Decimal(12, 2)
+
+  orderId         String?
+  order           FarmOrder? @relation(fields: [orderId], references: [id])
+  referralId      String?
+
+  description     String
+  metadata        Json?     // Additional details
+
+  recordedAt      DateTime  @default(now())
+  recordedBy      String?   // Admin user ID
+
+  @@index([type])
+  @@index([category])
+  @@index([orderId])
+  @@index([recordedAt])
+  @@map("financial_transactions")
+}
+
+model FinancialSummary {
+  id               String    @id @default(cuid())
+  date             DateTime  @unique // Daily summary
+
+  totalRevenue     Decimal   @default(0) @db.Decimal(12, 2)
+  totalExpenses    Decimal   @default(0) @db.Decimal(12, 2)
+  totalCommissions Decimal   @default(0) @db.Decimal(12, 2)
+  netProfit        Decimal   @default(0) @db.Decimal(12, 2)
+
+  orderCount       Int       @default(0)
+
+  updatedAt        DateTime  @updatedAt
+
+  @@index([date])
+  @@map("financial_summaries")
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemConfiguration {
+  id          String    @id @default(cuid())
+  key         String    @unique // "TRANSPORT_COST_PERCENTAGE", "REFERRAL_COMMISSION_RATE"
+  value       String    // JSON string
+  description String?
+
+  updatedAt   DateTime  @updatedAt
+  updatedBy   String?   // Admin user ID
+
+  @@index([key])
+  @@map("system_configurations")
 }

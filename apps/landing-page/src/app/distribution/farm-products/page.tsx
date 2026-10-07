@@ -203,7 +203,7 @@ export default function FarmProductsPage() {
                       <div className="relative h-48 bg-gradient-to-br from-green-50 to-green-100 rounded-t-lg overflow-hidden">
                         {product.thumbnail ? (
                           <Image
-                            src={product.thumbnail}
+                            src={product.thumbnail.startsWith('http') ? product.thumbnail : `https://suberfoods.com${product.thumbnail}`}
                             alt={product.name}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"

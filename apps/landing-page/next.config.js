@@ -9,6 +9,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'suberfoods.com',
+        pathname: '/uploads/**',
+      },
     ],
   },
   // Skip type checking during build (types are validated in IDE)

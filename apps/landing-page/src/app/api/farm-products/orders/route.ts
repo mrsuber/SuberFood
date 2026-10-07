@@ -196,6 +196,30 @@ export async function POST(req: NextRequest) {
         })
       }
 
+      // Increment preOrderedQuantity for each product (PRE-ORDER SYSTEM)
+      for (const item of items) {
+        const product = await tx.farmProduct.findUnique({
+          where: { id: item.productId },
+          select: {
+            preOrderedQuantity: true,
+            stockQuantity: true,
+          },
+        })
+
+        if (product) {
+          const newPreOrdered = product.preOrderedQuantity.add(new Decimal(item.quantity))
+          const newAvailable = product.stockQuantity.minus(newPreOrdered)
+
+          await tx.farmProduct.update({
+            where: { id: item.productId },
+            data: {
+              preOrderedQuantity: newPreOrdered,
+              availableQuantity: newAvailable,
+            },
+          })
+        }
+      }
+
       // Calculate cost breakdown
       const transportCost = totalFarmCost * 0.2
       const profitWithoutReferral = totalFarmCost * 0.2

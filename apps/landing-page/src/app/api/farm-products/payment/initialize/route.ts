@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // PayWithCamsol API configuration
-    const PAYWITHCAMSOL_API_URL = process.env.PAYWITHCAMSOL_API_URL || 'https://api.paywithcamsol.com'
+    const PAYWITHCAMSOL_API_URL = process.env.PAYWITHCAMSOL_API_URL || 'https://paywithcamsol.com'
     const PAYWITHCAMSOL_API_KEY = process.env.PAYWITHCAMSOL_API_KEY
     const PAYWITHCAMSOL_SECRET_KEY = process.env.PAYWITHCAMSOL_SECRET_KEY
 
@@ -76,53 +76,31 @@ export async function POST(req: NextRequest) {
       cancel_url: cancelUrl,
     }
 
-    // Try multiple possible API endpoints
-    const possibleEndpoints = [
-      `${PAYWITHCAMSOL_API_URL}/api/v1/payment/initialize`,
-      `${PAYWITHCAMSOL_API_URL}/v1/payment/initialize`,
-      `${PAYWITHCAMSOL_API_URL}/api/payment/initialize`,
-      `${PAYWITHCAMSOL_API_URL}/payment/initialize`,
-    ]
+    // Call PayWithCamsol API
+    // Correct endpoint: /api/v1/payments/initiate
+    const endpoint = `${PAYWITHCAMSOL_API_URL}/api/v1/payments/initiate`
+    console.log(`Initiating payment with PayWithCamsol at: ${endpoint}`)
 
-    let response: Response | null = null
-    let result: any = null
-    let lastError: any = null
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': PAYWITHCAMSOL_SECRET_KEY, // Use secret key for backend operations
+      },
+      body: JSON.stringify(paymentData),
+    })
 
-    for (const endpoint of possibleEndpoints) {
-      try {
-        console.log(`Trying PayWithCamsol endpoint: ${endpoint}`)
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${PAYWITHCAMSOL_SECRET_KEY}`,
-            'X-API-Key': PAYWITHCAMSOL_API_KEY,
-          },
-          body: JSON.stringify(paymentData),
-        })
+    const result = await response.json()
 
-        result = await response.json()
-
-        if (response.ok && result.success) {
-          console.log(`Successfully connected to PayWithCamsol at: ${endpoint}`)
-          break
-        }
-      } catch (error) {
-        console.error(`Failed to connect to ${endpoint}:`, error)
-        lastError = error
-        continue
-      }
-    }
-
-    if (!response || !response.ok || !result || !result.success) {
-      console.error('PayWithCamsol initialization failed:', result || lastError)
+    if (!response.ok) {
+      console.error('PayWithCamsol initialization failed:', result)
       return NextResponse.json(
         {
           success: false,
-          message: result?.message || lastError?.message || 'Failed to initialize payment. Please try again or contact support.',
-          error: lastError?.message,
+          message: result?.message || result?.error || 'Failed to initialize payment',
+          details: result
         },
-        { status: 500 }
+        { status: response.status }
       )
     }
 

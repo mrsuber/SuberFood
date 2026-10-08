@@ -26,6 +26,7 @@ import {
   CreditCard,
   Wallet,
   Gift,
+  CheckCircle2,
 } from 'lucide-react'
 
 type DeliveryMethod = 'delivery' | 'pickup'
@@ -628,6 +629,43 @@ export default function CheckoutPage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Create Account Banner */}
+                <div className="bg-gradient-to-r from-[#15803D] to-[#166534] text-white rounded-lg p-6 shadow-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <User className="h-8 w-8" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold mb-2">Create an Account & Get More Benefits!</h3>
+                      <ul className="text-sm space-y-1 mb-4 opacity-90">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Track all your orders in one place
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Faster checkout with saved addresses
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Exclusive deals and early access to new products
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Earn rewards with every purchase
+                        </li>
+                      </ul>
+                      <Button
+                        variant="outline"
+                        className="bg-white text-[#15803D] hover:bg-gray-100 border-white"
+                        onClick={() => router.push('/auth/signup')}
+                      >
+                        Create Account - It's Free!
+                      </Button>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Wallet Payment Option */}
                 <Card>

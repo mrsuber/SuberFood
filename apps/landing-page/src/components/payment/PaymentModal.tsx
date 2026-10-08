@@ -59,16 +59,11 @@ export function PaymentModal({
         throw new Error(result.message || 'Failed to initialize payment')
       }
 
-      // If there's a payment URL, redirect to it
-      if (result.data?.paymentUrl) {
-        window.location.href = result.data.paymentUrl
-      } else {
-        // If no payment URL, show success and redirect to confirmation
-        setPaymentStatus('success')
-        setTimeout(() => {
-          window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`
-        }, 2000)
-      }
+      // Payment initiated successfully - show success message
+      setPaymentStatus('success')
+
+      // Don't redirect immediately - let user see the success message
+      // and check their phone for the payment prompt
     } catch (error) {
       console.error('Payment error:', error)
       setPaymentStatus('error')
@@ -100,10 +95,23 @@ export function PaymentModal({
           )}
 
           {paymentStatus === 'success' && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-              <CheckCircle className="h-8 w-8 mx-auto text-green-600 mb-2" />
-              <p className="text-green-900 font-semibold">Payment Initiated!</p>
-              <p className="text-sm text-green-700 mt-1">Redirecting to confirmation...</p>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+              <CheckCircle className="h-12 w-12 mx-auto text-green-600 mb-3" />
+              <p className="text-green-900 font-bold text-lg mb-2">Payment Request Sent!</p>
+              <div className="bg-white rounded-lg p-4 mb-4 text-left">
+                <p className="text-sm text-green-800 mb-2 font-semibold">📱 Check your phone now:</p>
+                <ol className="text-xs text-green-700 space-y-1 list-decimal list-inside">
+                  <li>You'll receive a payment prompt on your phone</li>
+                  <li>Enter your Mobile Money PIN to confirm</li>
+                  <li>Your order will be confirmed once payment is complete</li>
+                </ol>
+              </div>
+              <Button
+                onClick={() => window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Go to Order Confirmation
+              </Button>
             </div>
           )}
 

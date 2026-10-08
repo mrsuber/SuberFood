@@ -25,6 +25,7 @@ export default function CartPage() {
   const router = useRouter()
   const { items, itemCount, totalAmount, updateQuantity, removeItem, clearCart } = useFarmCart()
   const [removing, setRemoving] = useState<string | null>(null)
+  const [proceeding, setProceeding] = useState(false)
 
   const formatPrice = (price: number) => {
     return `${price.toLocaleString()} XAF`
@@ -49,7 +50,10 @@ export default function CartPage() {
   }
 
   const handleCheckout = () => {
-    router.push('/distribution/farm-products/checkout')
+    setProceeding(true)
+    setTimeout(() => {
+      router.push('/distribution/farm-products/checkout')
+    }, 300)
   }
 
   if (items.length === 0) {
@@ -245,9 +249,19 @@ export default function CartPage() {
                   <Button
                     className="w-full bg-[#15803D] hover:bg-[#166534] h-12 text-lg mb-4"
                     onClick={handleCheckout}
+                    disabled={proceeding}
                   >
-                    Proceed to Checkout
-                    <ArrowRight className="h-5 w-5 ml-2" />
+                    {proceeding ? (
+                      <>
+                        <div className="h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Proceed to Checkout
+                        <ArrowRight className="h-5 w-5 ml-2" />
+                      </>
+                    )}
                   </Button>
 
                   <Button

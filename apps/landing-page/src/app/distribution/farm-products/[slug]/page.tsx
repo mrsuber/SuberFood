@@ -189,6 +189,7 @@ export default function ProductDetailPage() {
       stockUnit: product.stockUnit,
     })
 
+    // Navigate to cart after a short delay to show loading state
     setTimeout(() => {
       setAddingToCart(false)
       router.push('/distribution/farm-products/cart')

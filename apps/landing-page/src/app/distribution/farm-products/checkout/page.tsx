@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { useFarmCart } from '@/contexts/FarmCartContext'
+import { PaymentModal } from '@/components/payment/PaymentModal'
 import {
   ShoppingCart,
   Truck,
@@ -39,6 +40,11 @@ export default function CheckoutPage() {
 
   // Payment Method
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
+
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null)
 
   // Contact Information
   const [contactInfo, setContactInfo] = useState({
@@ -356,6 +362,7 @@ export default function CheckoutPage() {
       }
 
       const orderId = result.data.id
+      const orderNumber = result.data.orderNumber
 
       // Clear cart
       clearCart()
@@ -363,38 +370,16 @@ export default function CheckoutPage() {
       // Handle payment based on wallet balance and selected method
       if (balanceAfterWallet === 0) {
         // Fully paid with wallet - redirect to confirmation
-        router.push(`/distribution/farm-products/order-confirmation?orderId=${orderId}`)
+        router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`)
       } else if (paymentMethod === 'online') {
-        // Online payment for remaining balance (or full amount if no wallet)
-        const paymentResponse = await fetch('/api/farm-products/payment/initialize', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            orderId,
-            amount: balanceAfterWallet, // Pay remaining amount after wallet
-            customerEmail: contactInfo.email || undefined,
-            customerPhone: contactInfo.phone,
-            customerName: contactInfo.fullName,
-          }),
-        })
-
-        const paymentResult = await paymentResponse.json()
-
-        if (!paymentResult.success) {
-          throw new Error(paymentResult.message || 'Failed to initialize payment')
-        }
-
-        // Redirect to PayWithCamsol payment page
-        if (paymentResult.data.paymentUrl) {
-          window.location.href = paymentResult.data.paymentUrl
-        } else {
-          throw new Error('Payment URL not provided')
-        }
+        // Online payment - show payment modal
+        setCreatedOrderId(orderId)
+        setCreatedOrderNumber(orderNumber)
+        setProcessing(false)
+        setShowPaymentModal(true)
       } else {
         // Cash payment - redirect to order confirmation
-        router.push(`/distribution/farm-products/order-confirmation?orderId=${orderId}`)
+        router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`)
       }
     } catch (error) {
       console.error('Checkout error:', error)
@@ -1177,6 +1162,20 @@ export default function CheckoutPage() {
         </div>
       </main>
       <Footer />
+
+      {/* Payment Modal */}
+      {showPaymentModal && createdOrderId && createdOrderNumber && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          amount={balanceAfterWallet}
+          orderId={createdOrderId}
+          orderNumber={createdOrderNumber}
+          customerName={contactInfo.fullName}
+          customerPhone={contactInfo.phone}
+          customerEmail={contactInfo.email}
+        />
+      )}
     </>
   )
 }

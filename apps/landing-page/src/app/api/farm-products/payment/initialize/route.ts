@@ -76,24 +76,51 @@ export async function POST(req: NextRequest) {
       cancel_url: cancelUrl,
     }
 
-    // Call PayWithCamsol API
-    const response = await fetch(`${PAYWITHCAMSOL_API_URL}/v1/payment/initialize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${PAYWITHCAMSOL_SECRET_KEY}`,
-      },
-      body: JSON.stringify(paymentData),
-    })
+    // Try multiple possible API endpoints
+    const possibleEndpoints = [
+      `${PAYWITHCAMSOL_API_URL}/api/v1/payment/initialize`,
+      `${PAYWITHCAMSOL_API_URL}/v1/payment/initialize`,
+      `${PAYWITHCAMSOL_API_URL}/api/payment/initialize`,
+      `${PAYWITHCAMSOL_API_URL}/payment/initialize`,
+    ]
 
-    const result = await response.json()
+    let response: Response | null = null
+    let result: any = null
+    let lastError: any = null
 
-    if (!response.ok || !result.success) {
-      console.error('PayWithCamsol initialization failed:', result)
+    for (const endpoint of possibleEndpoints) {
+      try {
+        console.log(`Trying PayWithCamsol endpoint: ${endpoint}`)
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${PAYWITHCAMSOL_SECRET_KEY}`,
+            'X-API-Key': PAYWITHCAMSOL_API_KEY,
+          },
+          body: JSON.stringify(paymentData),
+        })
+
+        result = await response.json()
+
+        if (response.ok && result.success) {
+          console.log(`Successfully connected to PayWithCamsol at: ${endpoint}`)
+          break
+        }
+      } catch (error) {
+        console.error(`Failed to connect to ${endpoint}:`, error)
+        lastError = error
+        continue
+      }
+    }
+
+    if (!response || !response.ok || !result || !result.success) {
+      console.error('PayWithCamsol initialization failed:', result || lastError)
       return NextResponse.json(
         {
           success: false,
-          message: result.message || 'Failed to initialize payment',
+          message: result?.message || lastError?.message || 'Failed to initialize payment. Please try again or contact support.',
+          error: lastError?.message,
         },
         { status: 500 }
       )

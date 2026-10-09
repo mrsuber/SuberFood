@@ -172,25 +172,39 @@ export function stopPolling(orderId: string): void {
  */
 async function checkPaymentStatus(refillId: string): Promise<{ status: string; data?: any } | null> {
   try {
-    const response = await fetch(
-      `${PAYWITHCAMSOL_API_URL}/balance/refill/${refillId}/status`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': PAYWITHCAMSOL_SECRET_KEY,
-        },
-      }
-    )
+    const url = `${PAYWITHCAMSOL_API_URL}/balance/refill/${refillId}/status`
+    console.log('[PAYMENT POLLING SERVICE] Checking status at URL:', url)
+    console.log('[PAYMENT POLLING SERVICE] Using API Key:', PAYWITHCAMSOL_SECRET_KEY ? `${PAYWITHCAMSOL_SECRET_KEY.substring(0, 10)}...` : 'NOT SET')
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': PAYWITHCAMSOL_SECRET_KEY,
+      },
+    })
+
+    console.log('[PAYMENT POLLING SERVICE] Response status:', response.status, response.statusText)
 
     if (!response.ok) {
-      console.error('[PAYMENT POLLING SERVICE] PayWithCamsol API error:', response.status)
+      const errorData = await response.json().catch(() => ({}))
+      console.error('[PAYMENT POLLING SERVICE] PayWithCamsol API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      })
       return null
     }
 
     const data = await response.json()
+    console.log('[PAYMENT POLLING SERVICE] Raw API response:', JSON.stringify(data, null, 2))
+
+    const extractedStatus = data.data?.status || data.data?.refillState || data.status
+    console.log('[PAYMENT POLLING SERVICE] Extracted status:', extractedStatus)
+    console.log('[PAYMENT POLLING SERVICE] Full data.data:', JSON.stringify(data.data, null, 2))
+
     return {
-      status: data.data?.status || data.data?.refillState || data.status,
+      status: extractedStatus,
       data: data.data,
     }
   } catch (error) {

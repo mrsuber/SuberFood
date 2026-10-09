@@ -92,6 +92,8 @@ export async function POST(req: NextRequest) {
     })
 
     const result = await response.json()
+    console.log('[PAYMENT INIT] PayWithCamsol response status:', response.status)
+    console.log('[PAYMENT INIT] PayWithCamsol response body:', JSON.stringify(result, null, 2))
 
     if (!response.ok) {
       console.error('PayWithCamsol initialization failed:', result)
@@ -105,13 +107,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Handle different response structures from PayWithCamsol
+    // The actual data might be in result.data or directly in result
+    const paymentData = result.data || result
+    const reference = paymentData.reference || paymentData.transaction_id || paymentData.id
+    const paymentUrl = paymentData.payment_url || paymentData.authorization_url || paymentData.url
+
+    console.log('[PAYMENT INIT] Extracted reference:', reference)
+    console.log('[PAYMENT INIT] Extracted payment URL:', paymentUrl)
+
     // Update order with payment reference
     await prisma.farmOrder.update({
       where: { id: orderId },
       data: {
-        paymentReference: result.data.reference || result.data.transaction_id,
+        paymentReference: reference,
         paymentStatus: 'PROCESSING',
-        paymentDetails: result.data,
+        paymentDetails: paymentData,
       },
     })
 
@@ -119,8 +130,8 @@ export async function POST(req: NextRequest) {
       success: true,
       message: 'Payment initialized successfully',
       data: {
-        paymentUrl: result.data.payment_url || result.data.authorization_url,
-        reference: result.data.reference || result.data.transaction_id,
+        paymentUrl,
+        reference,
       },
     })
   } catch (error) {

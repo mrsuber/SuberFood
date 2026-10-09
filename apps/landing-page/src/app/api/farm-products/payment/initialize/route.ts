@@ -54,32 +54,24 @@ export async function POST(req: NextRequest) {
     const returnUrl = `${baseUrl}/distribution/farm-products/order-confirmation?orderNumber=${order.orderNumber}`
     const cancelUrl = `${baseUrl}/distribution/farm-products/checkout?failed=true`
 
-    // Initialize payment with PayWithCamsol
-    // PayWithCamsol expects snake_case parameters
+    // Initialize payment with PayWithCamsol using balance/refill endpoint
+    // This endpoint triggers mobile money prompt directly
     const paymentData = {
       amount: Math.round(parseFloat(amount.toString())), // Ensure it's an integer
-      currency: 'XAF',
-      description: `Farm Products Order ${order.orderNumber}`,
-      reference: order.orderNumber,
-      customer_name: customerName || order.guestName,
-      customer_email: customerEmail || order.guestEmail || undefined,
-      customer_phone: customerPhone || order.guestPhone,
-      payment_method: paymentMethod || 'MTN', // MTN or ORANGE
-      callback_url: callbackUrl,
-      return_url: returnUrl,
-      cancel_url: cancelUrl,
-      metadata: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        type: 'farm_products',
-      },
+      accountNumber: customerPhone || order.guestPhone, // Phone number for mobile money
     }
 
     console.log('[PAYMENT INIT] Payment data:', JSON.stringify(paymentData, null, 2))
+    console.log('[PAYMENT INIT] Order metadata:', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerName: customerName || order.guestName,
+      paymentMethod: paymentMethod || 'MTN',
+    })
 
-    // Call PayWithCamsol API
-    // Correct endpoint: /api/v1/payments/initiate
-    const endpoint = `${PAYWITHCAMSOL_API_URL}/api/v1/payments/initiate`
+    // Call PayWithCamsol API using balance/refill endpoint
+    // This is the correct endpoint that triggers mobile money prompt
+    const endpoint = `${PAYWITHCAMSOL_API_URL}/api/v1/balance/refill`
     console.log(`Initiating payment with PayWithCamsol at: ${endpoint}`)
 
     const response = await fetch(endpoint, {
@@ -107,20 +99,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Handle different response structures from PayWithCamsol
-    // The actual data might be in result.data or directly in result
+    // Handle balance/refill response structure
+    // Response format: { success: true, data: { refillId: "...", ... } }
     const responseData = result.data || result
-    const reference = responseData.reference || responseData.transaction_id || responseData.id
-    const paymentUrl = responseData.payment_url || responseData.authorization_url || responseData.url
+    const refillId = responseData.refillId || responseData.id || responseData.reference
 
-    console.log('[PAYMENT INIT] Extracted reference:', reference)
-    console.log('[PAYMENT INIT] Extracted payment URL:', paymentUrl)
+    console.log('[PAYMENT INIT] Extracted refillId:', refillId)
+    console.log('[PAYMENT INIT] Payment sent to phone:', customerPhone || order.guestPhone)
 
     // Update order with payment reference
     await prisma.farmOrder.update({
       where: { id: orderId },
       data: {
-        paymentReference: reference,
+        paymentReference: refillId,
         paymentStatus: 'PROCESSING',
         paymentDetails: responseData,
       },
@@ -130,8 +121,8 @@ export async function POST(req: NextRequest) {
       success: true,
       message: 'Payment initialized successfully',
       data: {
-        paymentUrl,
-        reference,
+        refillId,
+        reference: refillId,
       },
     })
   } catch (error) {

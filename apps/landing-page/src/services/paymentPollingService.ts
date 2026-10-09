@@ -91,7 +91,13 @@ export async function startPaymentPolling(
         return
       }
 
-      console.log('[PAYMENT POLLING SERVICE] Payment status:', paymentStatus.status, 'for refillId:', refillId)
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log('[PAYMENT POLLING SERVICE] 📊 BACKEND POLL RESULT')
+      console.log('[PAYMENT POLLING SERVICE] Attempt:', attempts, '/', finalConfig.maxAttempts)
+      console.log('[PAYMENT POLLING SERVICE] RefillId:', refillId)
+      console.log('[PAYMENT POLLING SERVICE] Raw PayWithCamsol Status:', paymentStatus.status)
+      console.log('[PAYMENT POLLING SERVICE] Full PayWithCamsol Data:', JSON.stringify(paymentStatus.data, null, 2))
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
       // Check if payment is completed
       if (
@@ -99,7 +105,8 @@ export async function startPaymentPolling(
         paymentStatus.status === 'PROCESSING' ||
         paymentStatus.status === 'Processing'
       ) {
-        console.log('[PAYMENT POLLING SERVICE] Payment COMPLETED! Confirming order:', orderId)
+        console.log('🎉 [PAYMENT POLLING SERVICE] ✅ PAYMENT CONFIRMED BY CUSTOMER!')
+        console.log('[PAYMENT POLLING SERVICE] Order to confirm:', orderId)
 
         // Update order in database
         await confirmOrder(order, paymentStatus)
@@ -115,7 +122,9 @@ export async function startPaymentPolling(
         paymentStatus.status === 'FAILED' ||
         paymentStatus.status === 'Cancelled'
       ) {
-        console.log('[PAYMENT POLLING SERVICE] Payment FAILED for order:', orderId)
+        console.log('❌ [PAYMENT POLLING SERVICE] PAYMENT FAILED/CANCELLED')
+        console.log('[PAYMENT POLLING SERVICE] Order:', orderId)
+        console.log('[PAYMENT POLLING SERVICE] Failure status:', paymentStatus.status)
 
         await prisma.farmOrder.update({
           where: { id: orderId },
@@ -131,6 +140,8 @@ export async function startPaymentPolling(
       }
 
       // Continue polling if still pending
+      console.log('⏳ [PAYMENT POLLING SERVICE] Status still "Pending" - Customer has NOT confirmed yet')
+      console.log('[PAYMENT POLLING SERVICE] Will check again in', finalConfig.intervalMs / 1000, 'seconds...')
       scheduleNextPoll()
 
     } catch (error) {
@@ -218,19 +229,33 @@ async function checkPaymentStatus(refillId: string): Promise<{ status: string; d
  */
 async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
   try {
-    console.log('[PAYMENT POLLING SERVICE] Confirming order:', order.orderNumber)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('💾 [PAYMENT POLLING SERVICE] STARTING ORDER CONFIRMATION')
+    console.log('[PAYMENT POLLING SERVICE] Order Number:', order.orderNumber)
+    console.log('[PAYMENT POLLING SERVICE] Order ID:', order.id)
+    console.log('[PAYMENT POLLING SERVICE] Payment Reference:', order.paymentReference)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
     // Double-check to prevent race condition with webhook
     const currentOrder = await prisma.farmOrder.findUnique({
       where: { id: order.id },
     })
 
+    console.log('[PAYMENT POLLING SERVICE] Current DB state BEFORE update:')
+    console.log('  - paymentStatus:', currentOrder?.paymentStatus)
+    console.log('  - status:', currentOrder?.status)
+
     if (currentOrder?.paymentStatus === 'COMPLETED' && currentOrder?.status === 'CONFIRMED') {
-      console.log('[PAYMENT POLLING SERVICE] Order already confirmed (likely by webhook)')
+      console.log('⚠️ [PAYMENT POLLING SERVICE] Order already confirmed (likely by webhook)')
+      console.log('[PAYMENT POLLING SERVICE] Skipping duplicate confirmation')
       return
     }
 
     // Update order status
+    console.log('[PAYMENT POLLING SERVICE] 📝 Updating order in database...')
+    console.log('[PAYMENT POLLING SERVICE] Setting paymentStatus: COMPLETED')
+    console.log('[PAYMENT POLLING SERVICE] Setting status: CONFIRMED')
+
     await prisma.farmOrder.update({
       where: { id: order.id },
       data: {
@@ -241,7 +266,10 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
       },
     })
 
+    console.log('✅ [PAYMENT POLLING SERVICE] Order updated in database successfully!')
+
     // Add status history
+    console.log('[PAYMENT POLLING SERVICE] 📝 Adding status history entry...')
     await prisma.farmOrderStatusHistory.create({
       data: {
         orderId: order.id,
@@ -252,7 +280,8 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
 
     // Decrease stock ONLY if order wasn't already confirmed
     if (currentOrder?.status !== 'CONFIRMED') {
-      console.log('[PAYMENT POLLING SERVICE] Decreasing stock for order:', order.orderNumber)
+      console.log('[PAYMENT POLLING SERVICE] 📦 Decreasing stock for order:', order.orderNumber)
+      console.log('[PAYMENT POLLING SERVICE] Number of items:', order.items.length)
       for (const item of order.items) {
         await prisma.farmProduct.update({
           where: { id: item.productId },
@@ -262,13 +291,19 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
             },
           },
         })
-        console.log(`[PAYMENT POLLING SERVICE] Decreased stock for product ${item.productId} by ${item.quantity}`)
+        console.log(`  ✅ Product ${item.product.name} (ID: ${item.productId}): Decreased by ${item.quantity}`)
       }
+      console.log('[PAYMENT POLLING SERVICE] ✅ Stock decremented for all items')
     } else {
-      console.log('[PAYMENT POLLING SERVICE] Stock already decremented, skipping')
+      console.log('⚠️ [PAYMENT POLLING SERVICE] Stock already decremented, skipping')
     }
 
-    console.log('[PAYMENT POLLING SERVICE] Order confirmed successfully:', order.orderNumber)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('🎉 [PAYMENT POLLING SERVICE] ✅✅✅ ORDER CONFIRMATION COMPLETE! ✅✅✅')
+    console.log('[PAYMENT POLLING SERVICE] Order Number:', order.orderNumber)
+    console.log('[PAYMENT POLLING SERVICE] Status: CONFIRMED')
+    console.log('[PAYMENT POLLING SERVICE] Payment: COMPLETED')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
     // TODO: Send order confirmation email/SMS
   } catch (error) {

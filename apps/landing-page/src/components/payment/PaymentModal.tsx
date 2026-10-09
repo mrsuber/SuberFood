@@ -103,12 +103,11 @@ export function PaymentModal({
         console.log('[PAYMENT MODAL] Payment status:', result.paymentStatus, 'Order status:', result.orderStatus)
         console.log('[PAYMENT MODAL] Raw PayWithCamsol data:', result.data?.data)
 
-        // CRITICAL: Only trust the backend's paymentStatus mapping
-        // Backend only sets COMPLETED when customer actually confirms payment
-        // paymentStatus = 'PROCESSING' means waiting for customer to dial code
-        // paymentStatus = 'COMPLETED' means customer confirmed and money withdrawn
-        if (result.success && result.paymentStatus === 'COMPLETED') {
-          console.log('[PAYMENT MODAL] Payment COMPLETED by customer! Redirecting...')
+        // CRITICAL: Check both paymentStatus and orderStatus
+        // Backend sets COMPLETED when customer confirms payment
+        // Also check orderStatus === 'CONFIRMED' in case backend polling confirmed it
+        if (result.success && (result.paymentStatus === 'COMPLETED' || result.orderStatus === 'CONFIRMED')) {
+          console.log('[PAYMENT MODAL] Payment COMPLETED! Payment status:', result.paymentStatus, 'Order status:', result.orderStatus)
           // Set success status first to show success UI
           setPaymentStatus('success')
           // Wait 2 seconds to let user see success message, then redirect

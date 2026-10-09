@@ -73,6 +73,20 @@ export async function GET(
       })
     }
 
+    // CRITICAL FIX: If order is already CONFIRMED, don't revert it!
+    // The backend polling service may have already confirmed this order
+    if (order.paymentStatus === 'COMPLETED' && order.status === 'CONFIRMED') {
+      console.log('[PAYMENT STATUS] Order already confirmed by backend polling, keeping status')
+      return NextResponse.json({
+        success: true,
+        paymentStatus: 'COMPLETED',
+        orderStatus: 'CONFIRMED',
+        orderNumber: order.orderNumber,
+        message: 'Payment already confirmed',
+        data,
+      })
+    }
+
     // Map PayWithCamsol refill state to our payment status
     // PayWithCamsol returns status in data.status field
     const refillState = data.data?.status || data.data?.refillState || data.status
@@ -81,6 +95,7 @@ export async function GET(
 
     console.log('[PAYMENT STATUS] Refill state from PayWithCamsol:', refillState)
     console.log('[PAYMENT STATUS] Full data.data:', JSON.stringify(data.data, null, 2))
+    console.log('[PAYMENT STATUS] Current order status:', order.status, 'Current payment status:', order.paymentStatus)
 
     // CRITICAL: Only treat as COMPLETED when PayWithCamsol confirms payment
     // 'Pending' (capital P) = waiting for customer to confirm on phone
@@ -101,11 +116,12 @@ export async function GET(
     } else if (refillState === 'Pending' || refillState === 'pending' || refillState === 'PENDING') {
       // Still waiting for customer to dial code and confirm
       paymentStatus = 'PROCESSING'
-      orderStatus = 'PENDING' // CRITICAL: Order should NOT be confirmed yet
+      // ONLY set to PENDING if order is not already CONFIRMED
+      orderStatus = order.status === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING'
     } else {
-      // Unknown status, keep as pending
-      paymentStatus = 'PENDING'
-      orderStatus = 'PENDING' // CRITICAL: Order should NOT be confirmed yet
+      // Unknown status, keep current status
+      paymentStatus = order.paymentStatus || 'PENDING'
+      orderStatus = order.status
     }
 
     console.log('[PAYMENT STATUS] Mapped status:', { paymentStatus, orderStatus })

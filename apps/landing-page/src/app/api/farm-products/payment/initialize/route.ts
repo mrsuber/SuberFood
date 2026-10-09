@@ -109,9 +109,9 @@ export async function POST(req: NextRequest) {
 
     // Handle different response structures from PayWithCamsol
     // The actual data might be in result.data or directly in result
-    const paymentData = result.data || result
-    const reference = paymentData.reference || paymentData.transaction_id || paymentData.id
-    const paymentUrl = paymentData.payment_url || paymentData.authorization_url || paymentData.url
+    const responseData = result.data || result
+    const reference = responseData.reference || responseData.transaction_id || responseData.id
+    const paymentUrl = responseData.payment_url || responseData.authorization_url || responseData.url
 
     console.log('[PAYMENT INIT] Extracted reference:', reference)
     console.log('[PAYMENT INIT] Extracted payment URL:', paymentUrl)
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       data: {
         paymentReference: reference,
         paymentStatus: 'PROCESSING',
-        paymentDetails: paymentData,
+        paymentDetails: responseData,
       },
     })
 

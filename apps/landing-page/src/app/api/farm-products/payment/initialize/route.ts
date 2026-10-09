@@ -56,9 +56,21 @@ export async function POST(req: NextRequest) {
 
     // Initialize payment with PayWithCamsol using balance/refill endpoint
     // This endpoint triggers mobile money prompt directly
+
+    // Format phone number for Cameroon - add country code if not present
+    let phoneNumber = customerPhone || order.guestPhone
+    // Remove any spaces, dashes, or parentheses
+    phoneNumber = phoneNumber.replace(/[\s\-()]/g, '')
+    // Add 237 country code if not present
+    if (!phoneNumber.startsWith('237') && !phoneNumber.startsWith('+237')) {
+      phoneNumber = '237' + phoneNumber
+    }
+    // Remove + if present
+    phoneNumber = phoneNumber.replace(/^\+/, '')
+
     const paymentData = {
       amount: Math.round(parseFloat(amount.toString())), // Ensure it's an integer
-      accountNumber: customerPhone || order.guestPhone, // Phone number for mobile money
+      accountNumber: phoneNumber, // Phone number for mobile money with country code
     }
 
     console.log('[PAYMENT INIT] Payment data:', JSON.stringify(paymentData, null, 2))

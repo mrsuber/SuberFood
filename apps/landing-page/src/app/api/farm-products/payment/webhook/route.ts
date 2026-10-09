@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { stopPolling } from '@/services/paymentPollingService'
 
 export const dynamic = 'force-dynamic'
 
@@ -178,6 +179,10 @@ async function handleSuccessfulPayment(order: any, data: WebhookPayload['data'])
     }
 
     console.log('[PAYMENT WEBHOOK] Order confirmed successfully:', order.orderNumber)
+
+    // Stop backend polling since webhook confirmed the payment
+    stopPolling(order.id)
+    console.log('[PAYMENT WEBHOOK] Stopped backend polling for order:', order.id)
 
     // TODO: Send order confirmation email/SMS to customer
     // TODO: Notify admin of new confirmed order

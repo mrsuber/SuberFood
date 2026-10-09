@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { startPaymentPolling } from '@/services/paymentPollingService'
 
 export const dynamic = 'force-dynamic'
 
@@ -126,6 +127,20 @@ export async function POST(req: NextRequest) {
         paymentReference: refillId,
         paymentStatus: 'PROCESSING',
         paymentDetails: responseData,
+      },
+    })
+
+    // START BACKEND POLLING - This runs on the server and continues even if user closes browser
+    console.log('[PAYMENT INIT] Starting backend polling service for order:', orderId)
+    startPaymentPolling(orderId, refillId, {
+      onSuccess: (orderId) => {
+        console.log('[PAYMENT INIT] Backend polling SUCCESS for order:', orderId)
+      },
+      onFailure: (orderId, reason) => {
+        console.error('[PAYMENT INIT] Backend polling FAILED for order:', orderId, 'Reason:', reason)
+      },
+      onTimeout: (orderId) => {
+        console.warn('[PAYMENT INIT] Backend polling TIMEOUT for order:', orderId, '- Relying on webhook')
       },
     })
 

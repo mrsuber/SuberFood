@@ -85,7 +85,9 @@ export function PaymentModal({
     }
   }
 
-  // Poll for payment status
+  // Poll for payment status (UX ENHANCEMENT - Backend is also polling independently)
+  // Frontend polling provides real-time updates to the user
+  // Backend polling ensures payment completes even if user closes browser
   const pollPaymentStatus = async (refillId: string) => {
     let attempts = 0
     const maxAttempts = 30 // Poll for up to 90 seconds (30 * 3 seconds)
@@ -128,9 +130,11 @@ export function PaymentModal({
           console.log(`[PAYMENT MODAL] Still pending, continuing to poll (attempt ${attempts}/${maxAttempts})...`)
           setTimeout(checkStatus, pollInterval) // Check again in 3 seconds
         } else {
-          console.log('[PAYMENT MODAL] Max polling attempts reached')
-          setPaymentStatus('error')
-          setErrorMessage('Payment is taking longer than expected. Please check your order status or contact support.')
+          console.log('[PAYMENT MODAL] Frontend polling timeout - backend polling and webhook will handle completion')
+          // Don't show error - backend is still polling and webhook is active
+          setPaymentStatus('pending')
+          // Inform user that payment is being processed
+          setErrorMessage('Payment is being processed. You can safely close this window. Check your order status page for updates.')
         }
       } catch (error) {
         console.error('[PAYMENT MODAL] Error checking payment status:', error)

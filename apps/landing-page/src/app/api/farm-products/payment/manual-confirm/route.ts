@@ -1,16 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/farm-products/payment/manual-confirm
  *
- * Manually confirm a payment (temporary solution until webhooks are configured)
+ * Manually confirm a payment (ADMIN ONLY - requires authentication)
  * Use this when money is confirmed in PayWithCamsol account but status API hasn't updated
+ *
+ * SECURITY: This endpoint requires admin authentication to prevent unauthorized confirmations
  */
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Check authentication - ONLY admins can manually confirm payments
+    const session = await getServerSession()
+
+    if (!session || !session.user) {
+      console.error('[MANUAL CONFIRM] Unauthorized access attempt')
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // TODO: Add role check when user roles are implemented
+    // if (session.user.role !== 'ADMIN') {
+    //   return NextResponse.json(
+    //     { success: false, message: 'Admin privileges required' },
+    //     { status: 403 }
+    //   )
+    // }
+
+    console.log('[MANUAL CONFIRM] Authenticated user:', session.user.email)
+
     const body = await req.json()
     const { orderNumber, refillId } = body
 

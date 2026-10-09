@@ -29,6 +29,8 @@ interface WebhookPayload {
  * Webhook endpoint for PayWithCamsol payment notifications
  * This endpoint is called by PayWithCamsol when payment status changes
  */
+const WEBHOOK_SECRET = process.env.PAYWITHCAMSOL_WEBHOOK_SECRET
+
 export async function POST(request: NextRequest) {
   try {
     // Get raw body for signature verification
@@ -43,9 +45,34 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     })
 
-    // Verify webhook signature (if secret is configured)
+    // SECURITY: Verify webhook signature to prevent fake webhooks
     const signature = request.headers.get('X-PayWithCamsol-Signature') || request.headers.get('X-SuberPay-Signature')
-    // TODO: Implement signature verification when secret is available
+
+    if (WEBHOOK_SECRET && signature) {
+      // Verify signature using HMAC SHA256
+      const crypto = require('crypto')
+      const expectedSignature = crypto
+        .createHmac('sha256', WEBHOOK_SECRET)
+        .update(rawBody)
+        .digest('hex')
+
+      if (signature !== expectedSignature) {
+        console.error('[PAYMENT WEBHOOK] Invalid signature!')
+        return NextResponse.json(
+          { success: false, message: 'Invalid webhook signature' },
+          { status: 401 }
+        )
+      }
+      console.log('[PAYMENT WEBHOOK] Signature verified successfully')
+    } else if (WEBHOOK_SECRET && !signature) {
+      console.warn('[PAYMENT WEBHOOK] Webhook secret configured but no signature provided')
+      return NextResponse.json(
+        { success: false, message: 'Missing webhook signature' },
+        { status: 401 }
+      )
+    } else {
+      console.warn('[PAYMENT WEBHOOK] No webhook secret configured - accepting unsigned webhooks')
+    }
 
     // Find the order with this refillId
     const order = await prisma.farmOrder.findFirst({
@@ -103,6 +130,13 @@ export async function POST(request: NextRequest) {
 async function handleSuccessfulPayment(order: any, data: WebhookPayload['data']) {
   try {
     console.log('[PAYMENT WEBHOOK] Processing successful payment for order:', order.orderNumber)
+    console.log('[PAYMENT WEBHOOK] Current order status:', order.status, 'Payment status:', order.paymentStatus)
+
+    // CRITICAL: Check if payment was already confirmed to prevent double processing
+    if (order.paymentStatus === 'COMPLETED' && order.status === 'CONFIRMED') {
+      console.log('[PAYMENT WEBHOOK] Payment already confirmed, skipping to prevent double processing')
+      return
+    }
 
     // Update order status
     await prisma.farmOrder.update({
@@ -124,18 +158,23 @@ async function handleSuccessfulPayment(order: any, data: WebhookPayload['data'])
       },
     })
 
-    // Decrease product stock
-    console.log('[PAYMENT WEBHOOK] Decreasing stock for order items')
-    for (const item of order.items) {
-      await prisma.farmProduct.update({
-        where: { id: item.productId },
-        data: {
-          stockQuantity: {
-            decrement: item.quantity,
+    // Decrease product stock ONLY if order wasn't already confirmed
+    // This prevents race condition between webhook and polling endpoint
+    if (order.status !== 'CONFIRMED') {
+      console.log('[PAYMENT WEBHOOK] Decreasing stock for order items')
+      for (const item of order.items) {
+        await prisma.farmProduct.update({
+          where: { id: item.productId },
+          data: {
+            stockQuantity: {
+              decrement: item.quantity,
+            },
           },
-        },
-      })
-      console.log(`[PAYMENT WEBHOOK] Decreased stock for product ${item.productId} by ${item.quantity}`)
+        })
+        console.log(`[PAYMENT WEBHOOK] Decreased stock for product ${item.productId} by ${item.quantity}`)
+      }
+    } else {
+      console.log('[PAYMENT WEBHOOK] Stock already decremented, skipping')
     }
 
     console.log('[PAYMENT WEBHOOK] Order confirmed successfully:', order.orderNumber)

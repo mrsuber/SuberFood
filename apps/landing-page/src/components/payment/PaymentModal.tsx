@@ -89,7 +89,8 @@ export function PaymentModal({
   // Poll for payment status
   const pollPaymentStatus = async (refillId: string) => {
     let attempts = 0
-    const maxAttempts = 60 // Poll for up to 5 minutes (60 * 5 seconds)
+    const maxAttempts = 30 // Poll for up to 90 seconds (30 * 3 seconds)
+    const pollInterval = 3000 // 3 seconds - more aggressive polling like camsol_management_system
 
     const checkStatus = async () => {
       try {
@@ -98,11 +99,34 @@ export function PaymentModal({
         const result = await response.json()
 
         console.log('[PAYMENT MODAL] Status check result:', result)
+        console.log('[PAYMENT MODAL] Raw status data:', {
+          paymentStatus: result.paymentStatus,
+          orderStatus: result.orderStatus,
+          dataStatus: result.data?.data?.status,
+          dataRefillState: result.data?.data?.refillState,
+          fullData: result.data
+        })
 
-        // Consider payment successful if COMPLETED or if status changed to CONFIRMED
-        // (Processing status means money was withdrawn from customer)
-        if (result.success && (result.paymentStatus === 'COMPLETED' || result.orderStatus === 'CONFIRMED')) {
-          console.log('[PAYMENT MODAL] Payment completed! Redirecting to confirmation page')
+        // Check for successful payment - matching camsol_management_system logic
+        // PROCESSING status means money was withdrawn from customer (in pending balance)
+        const rawStatus = result.data?.data?.status || result.data?.data?.refillState
+        const isPaymentSuccess = result.success && (
+          result.paymentStatus === 'COMPLETED' ||
+          result.paymentStatus === 'PROCESSING' ||
+          result.orderStatus === 'CONFIRMED' ||
+          rawStatus === 'PROCESSING' ||
+          rawStatus === 'Processing' ||
+          rawStatus === 'processing' ||
+          rawStatus === 'Completed' ||
+          rawStatus === 'completed' ||
+          rawStatus === 'SUCCESS' ||
+          rawStatus === 'Success' ||
+          rawStatus === 'success'
+        )
+
+        if (isPaymentSuccess) {
+          console.log('[PAYMENT MODAL] Payment completed! Status:', rawStatus, 'PaymentStatus:', result.paymentStatus)
+          console.log('[PAYMENT MODAL] Redirecting to confirmation page')
           // Payment completed - redirect to order confirmation
           window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`
           return true // Stop polling
@@ -113,19 +137,24 @@ export function PaymentModal({
           return true // Stop polling
         }
 
-        // Continue polling if still pending/processing
+        // Continue polling if still pending
         attempts++
         if (attempts < maxAttempts) {
-          setTimeout(checkStatus, 5000) // Check again in 5 seconds
+          console.log(`[PAYMENT MODAL] Still pending, continuing to poll (attempt ${attempts}/${maxAttempts})...`)
+          setTimeout(checkStatus, pollInterval) // Check again in 3 seconds
         } else {
           console.log('[PAYMENT MODAL] Max polling attempts reached')
-          setErrorMessage('Payment is taking longer than expected. Please check your order status.')
+          setPaymentStatus('error')
+          setErrorMessage('Payment is taking longer than expected. Please check your order status or contact support.')
         }
       } catch (error) {
         console.error('[PAYMENT MODAL] Error checking payment status:', error)
         attempts++
         if (attempts < maxAttempts) {
-          setTimeout(checkStatus, 5000) // Retry
+          setTimeout(checkStatus, pollInterval) // Retry
+        } else {
+          setPaymentStatus('error')
+          setErrorMessage('Unable to verify payment status. Please contact support with your order number.')
         }
       }
     }

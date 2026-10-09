@@ -82,29 +82,28 @@ export async function GET(
     console.log('[PAYMENT STATUS] Refill state from PayWithCamsol:', refillState)
     console.log('[PAYMENT STATUS] Full data.data:', JSON.stringify(data.data, null, 2))
 
-    switch (refillState?.toLowerCase()) {
-      case 'completed':
-      case 'success':
-      case 'successful':
-      case 'processing':  // Money withdrawn from customer, treat as completed!
-        paymentStatus = 'COMPLETED'
-        orderStatus = 'CONFIRMED'
-        break
-      case 'failed':
-      case 'error':
-        paymentStatus = 'FAILED'
-        orderStatus = 'CANCELLED'
-        break
-      case 'cancelled':
-      case 'canceled':
-        paymentStatus = 'CANCELLED'
-        orderStatus = 'CANCELLED'
-        break
-      case 'pending':
-        paymentStatus = 'PROCESSING'  // Still waiting for customer to confirm
-        break
-      default:
-        paymentStatus = 'PENDING'
+    // CRITICAL: Only treat as COMPLETED when PayWithCamsol confirms payment
+    // 'Pending' (capital P) = waiting for customer to confirm on phone
+    // 'Processing' (capital P) or 'Completed' = customer confirmed, money withdrawn
+    // Match the exact logic from working camsol_management_system
+    if (refillState === 'Completed' ||
+        refillState === 'PROCESSING' ||
+        refillState === 'Processing') {
+      // Payment confirmed by customer!
+      paymentStatus = 'COMPLETED'
+      orderStatus = 'CONFIRMED'
+    } else if (refillState === 'Failed' || refillState === 'FAILED' || refillState === 'failed') {
+      paymentStatus = 'FAILED'
+      orderStatus = 'CANCELLED'
+    } else if (refillState === 'Cancelled' || refillState === 'CANCELED' || refillState === 'Canceled') {
+      paymentStatus = 'CANCELLED'
+      orderStatus = 'CANCELLED'
+    } else if (refillState === 'Pending' || refillState === 'pending' || refillState === 'PENDING') {
+      // Still waiting for customer to dial code and confirm
+      paymentStatus = 'PROCESSING'
+    } else {
+      // Unknown status, keep as pending
+      paymentStatus = 'PENDING'
     }
 
     console.log('[PAYMENT STATUS] Mapped status:', { paymentStatus, orderStatus })

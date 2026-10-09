@@ -98,33 +98,15 @@ export function PaymentModal({
         const result = await response.json()
 
         console.log('[PAYMENT MODAL] Status check result:', result)
-        console.log('[PAYMENT MODAL] Raw status data:', {
-          paymentStatus: result.paymentStatus,
-          orderStatus: result.orderStatus,
-          dataStatus: result.data?.data?.status,
-          dataRefillState: result.data?.data?.refillState,
-          fullData: result.data
-        })
+        console.log('[PAYMENT MODAL] Payment status:', result.paymentStatus, 'Order status:', result.orderStatus)
+        console.log('[PAYMENT MODAL] Raw PayWithCamsol data:', result.data?.data)
 
-        // Check for successful payment - matching camsol_management_system logic
-        // PROCESSING status means money was withdrawn from customer (in pending balance)
-        const rawStatus = result.data?.data?.status || result.data?.data?.refillState
-        const isPaymentSuccess = result.success && (
-          result.paymentStatus === 'COMPLETED' ||
-          result.paymentStatus === 'PROCESSING' ||
-          result.orderStatus === 'CONFIRMED' ||
-          rawStatus === 'PROCESSING' ||
-          rawStatus === 'Processing' ||
-          rawStatus === 'processing' ||
-          rawStatus === 'Completed' ||
-          rawStatus === 'completed' ||
-          rawStatus === 'SUCCESS' ||
-          rawStatus === 'Success' ||
-          rawStatus === 'success'
-        )
-
-        if (isPaymentSuccess) {
-          console.log('[PAYMENT MODAL] Payment completed! Status:', rawStatus, 'PaymentStatus:', result.paymentStatus)
+        // CRITICAL: Only trust the backend's paymentStatus mapping
+        // Backend only sets COMPLETED when customer actually confirms payment
+        // paymentStatus = 'PROCESSING' means waiting for customer to dial code
+        // paymentStatus = 'COMPLETED' means customer confirmed and money withdrawn
+        if (result.success && result.paymentStatus === 'COMPLETED') {
+          console.log('[PAYMENT MODAL] Payment COMPLETED by customer! Redirecting...')
           // Set success status first to show success UI
           setPaymentStatus('success')
           // Wait 2 seconds to let user see success message, then redirect

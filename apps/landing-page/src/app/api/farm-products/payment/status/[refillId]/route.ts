@@ -74,11 +74,13 @@ export async function GET(
     }
 
     // Map PayWithCamsol refill state to our payment status
-    const refillState = data.data?.refillState || data.status
+    // PayWithCamsol returns status in data.status field
+    const refillState = data.data?.status || data.data?.refillState || data.status
     let paymentStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' = 'PENDING'
     let orderStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED' = order.status
 
     console.log('[PAYMENT STATUS] Refill state from PayWithCamsol:', refillState)
+    console.log('[PAYMENT STATUS] Full data.data:', JSON.stringify(data.data, null, 2))
 
     switch (refillState?.toLowerCase()) {
       case 'completed':

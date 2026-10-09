@@ -101,9 +101,11 @@ export async function GET(
     } else if (refillState === 'Pending' || refillState === 'pending' || refillState === 'PENDING') {
       // Still waiting for customer to dial code and confirm
       paymentStatus = 'PROCESSING'
+      orderStatus = 'PENDING' // CRITICAL: Order should NOT be confirmed yet
     } else {
       // Unknown status, keep as pending
       paymentStatus = 'PENDING'
+      orderStatus = 'PENDING' // CRITICAL: Order should NOT be confirmed yet
     }
 
     console.log('[PAYMENT STATUS] Mapped status:', { paymentStatus, orderStatus })

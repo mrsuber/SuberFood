@@ -55,26 +55,26 @@ export async function POST(req: NextRequest) {
     const cancelUrl = `${baseUrl}/distribution/farm-products/checkout?failed=true`
 
     // Initialize payment with PayWithCamsol
+    // PayWithCamsol expects snake_case parameters
     const paymentData = {
-      api_key: PAYWITHCAMSOL_API_KEY,
       amount: Math.round(parseFloat(amount.toString())), // Ensure it's an integer
       currency: 'XAF',
       description: `Farm Products Order ${order.orderNumber}`,
       reference: order.orderNumber,
-      customer: {
-        name: customerName || order.guestName,
-        email: customerEmail || order.guestEmail || undefined,
-        phone: customerPhone || order.guestPhone,
-      },
+      customer_name: customerName || order.guestName,
+      customer_email: customerEmail || order.guestEmail || undefined,
+      customer_phone: customerPhone || order.guestPhone,
+      callback_url: callbackUrl,
+      return_url: returnUrl,
+      cancel_url: cancelUrl,
       metadata: {
         orderId: order.id,
         orderNumber: order.orderNumber,
         type: 'farm_products',
       },
-      callback_url: callbackUrl,
-      return_url: returnUrl,
-      cancel_url: cancelUrl,
     }
+
+    console.log('[PAYMENT INIT] Payment data:', JSON.stringify(paymentData, null, 2))
 
     // Call PayWithCamsol API
     // Correct endpoint: /api/v1/payments/initiate

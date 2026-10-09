@@ -70,6 +70,13 @@ export function PaymentModal({
       console.log('[PAYMENT MODAL] Payment initiated successfully! Showing success message')
       setPaymentStatus('success')
 
+      // Start polling for payment status
+      const refillId = result.data?.refillId || result.data?.reference
+      if (refillId) {
+        console.log('[PAYMENT MODAL] Starting payment status polling for refillId:', refillId)
+        pollPaymentStatus(refillId)
+      }
+
       // Don't redirect immediately - let user see the success message
       // and check their phone for the payment prompt
     } catch (error) {
@@ -77,6 +84,52 @@ export function PaymentModal({
       setPaymentStatus('error')
       setErrorMessage(error instanceof Error ? error.message : 'Failed to process payment')
     }
+  }
+
+  // Poll for payment status
+  const pollPaymentStatus = async (refillId: string) => {
+    let attempts = 0
+    const maxAttempts = 60 // Poll for up to 5 minutes (60 * 5 seconds)
+
+    const checkStatus = async () => {
+      try {
+        console.log(`[PAYMENT MODAL] Checking payment status (attempt ${attempts + 1}/${maxAttempts})`)
+        const response = await fetch(`/api/farm-products/payment/status/${refillId}`)
+        const result = await response.json()
+
+        console.log('[PAYMENT MODAL] Status check result:', result)
+
+        if (result.success && result.paymentStatus === 'COMPLETED') {
+          console.log('[PAYMENT MODAL] Payment completed! Redirecting to confirmation page')
+          // Payment completed - redirect to order confirmation
+          window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`
+          return true // Stop polling
+        } else if (result.paymentStatus === 'FAILED' || result.paymentStatus === 'CANCELLED') {
+          console.log('[PAYMENT MODAL] Payment failed or cancelled')
+          setPaymentStatus('error')
+          setErrorMessage('Payment was not completed. Please try again.')
+          return true // Stop polling
+        }
+
+        // Continue polling if still pending/processing
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000) // Check again in 5 seconds
+        } else {
+          console.log('[PAYMENT MODAL] Max polling attempts reached')
+          setErrorMessage('Payment is taking longer than expected. Please check your order status.')
+        }
+      } catch (error) {
+        console.error('[PAYMENT MODAL] Error checking payment status:', error)
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000) // Retry
+        }
+      }
+    }
+
+    // Start polling after 3 seconds (give user time to see the success message)
+    setTimeout(checkStatus, 3000)
   }
 
   return (

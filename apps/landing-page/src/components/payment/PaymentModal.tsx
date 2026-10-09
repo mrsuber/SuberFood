@@ -16,7 +16,7 @@ interface PaymentModalProps {
   customerEmail?: string
 }
 
-type PaymentStatus = 'idle' | 'processing' | 'success' | 'error'
+type PaymentStatus = 'idle' | 'processing' | 'pending' | 'success' | 'error'
 
 export function PaymentModal({
   isOpen,
@@ -66,19 +66,18 @@ export function PaymentModal({
         throw new Error(result.message || 'Failed to initialize payment')
       }
 
-      // Payment initiated successfully - show success message
-      console.log('[PAYMENT MODAL] Payment initiated successfully! Showing success message')
-      setPaymentStatus('success')
+      // Payment initiated successfully - now wait for customer to confirm on phone
+      console.log('[PAYMENT MODAL] Payment initiated successfully! Waiting for customer confirmation')
+      setPaymentStatus('pending') // Set to 'pending' not 'success' - we're waiting for payment
 
       // Start polling for payment status
       const refillId = result.data?.refillId || result.data?.reference
       if (refillId) {
         console.log('[PAYMENT MODAL] Starting payment status polling for refillId:', refillId)
         pollPaymentStatus(refillId)
+      } else {
+        throw new Error('No refillId received from payment gateway')
       }
-
-      // Don't redirect immediately - let user see the success message
-      // and check their phone for the payment prompt
     } catch (error) {
       console.error('[PAYMENT MODAL] Payment error:', error)
       setPaymentStatus('error')
@@ -126,9 +125,13 @@ export function PaymentModal({
 
         if (isPaymentSuccess) {
           console.log('[PAYMENT MODAL] Payment completed! Status:', rawStatus, 'PaymentStatus:', result.paymentStatus)
-          console.log('[PAYMENT MODAL] Redirecting to confirmation page')
-          // Payment completed - redirect to order confirmation
-          window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`
+          // Set success status first to show success UI
+          setPaymentStatus('success')
+          // Wait 2 seconds to let user see success message, then redirect
+          setTimeout(() => {
+            console.log('[PAYMENT MODAL] Redirecting to confirmation page')
+            window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`
+          }, 2000)
           return true // Stop polling
         } else if (result.paymentStatus === 'FAILED' || result.paymentStatus === 'CANCELLED') {
           console.log('[PAYMENT MODAL] Payment failed or cancelled')
@@ -164,7 +167,13 @@ export function PaymentModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Don't allow closing the modal while payment is pending or processing
+      if (!open && (paymentStatus === 'pending' || paymentStatus === 'processing')) {
+        return // Prevent closing
+      }
+      onClose()
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -186,24 +195,31 @@ export function PaymentModal({
             </div>
           )}
 
+          {paymentStatus === 'pending' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600 mb-3" />
+              <p className="text-blue-900 font-bold text-lg mb-2">Waiting for Payment Confirmation</p>
+              <div className="bg-white rounded-lg p-4 mb-4 text-left">
+                <p className="text-sm text-blue-800 mb-2 font-semibold">📱 Check your phone now:</p>
+                <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                  <li>You should receive a payment prompt on your phone</li>
+                  <li>Enter your Mobile Money PIN to confirm the payment</li>
+                  <li>We'll automatically detect when payment is complete</li>
+                </ol>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-sm text-blue-700">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Checking payment status...</span>
+              </div>
+            </div>
+          )}
+
           {paymentStatus === 'success' && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
               <CheckCircle className="h-12 w-12 mx-auto text-green-600 mb-3" />
-              <p className="text-green-900 font-bold text-lg mb-2">Payment Request Sent!</p>
-              <div className="bg-white rounded-lg p-4 mb-4 text-left">
-                <p className="text-sm text-green-800 mb-2 font-semibold">📱 Check your phone now:</p>
-                <ol className="text-xs text-green-700 space-y-1 list-decimal list-inside">
-                  <li>You'll receive a payment prompt on your phone</li>
-                  <li>Enter your Mobile Money PIN to confirm</li>
-                  <li>Your order will be confirmed once payment is complete</li>
-                </ol>
-              </div>
-              <Button
-                onClick={() => window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                Go to Order Confirmation
-              </Button>
+              <p className="text-green-900 font-bold text-lg mb-2">Payment Successful!</p>
+              <p className="text-sm text-green-700 mt-2">Your order has been confirmed.</p>
+              <p className="text-xs text-green-600 mt-1">Redirecting to order confirmation...</p>
             </div>
           )}
 

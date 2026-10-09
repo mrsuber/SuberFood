@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { orderId, amount, customerEmail, customerPhone, customerName } = body
+    const { orderId, amount, customerEmail, customerPhone, customerName, paymentMethod } = body
 
     // Validate required fields
     if (!orderId || !amount) {
@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
       customer_name: customerName || order.guestName,
       customer_email: customerEmail || order.guestEmail || undefined,
       customer_phone: customerPhone || order.guestPhone,
+      payment_method: paymentMethod || 'MTN', // MTN or ORANGE
       callback_url: callbackUrl,
       return_url: returnUrl,
       cancel_url: cancelUrl,

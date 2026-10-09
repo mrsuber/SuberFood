@@ -54,6 +54,7 @@ export function PaymentModal({
           customerEmail,
           customerPhone: phoneNumber,
           customerName,
+          paymentMethod, // MTN or ORANGE
         }),
       })
 

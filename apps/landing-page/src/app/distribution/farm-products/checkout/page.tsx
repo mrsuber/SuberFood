@@ -112,12 +112,13 @@ export default function CheckoutPage() {
   const balanceAfterWallet = finalTotal - walletAmount
   const needsAdditionalPayment = balanceAfterWallet > 0
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty (but NOT if payment modal is showing)
   useEffect(() => {
-    if (items.length === 0) {
+    if (items.length === 0 && !showPaymentModal && !createdOrderId) {
+      console.log('[CHECKOUT] Cart is empty and no payment modal - redirecting to products')
       router.push('/distribution/farm-products')
     }
-  }, [items.length, router])
+  }, [items.length, router, showPaymentModal, createdOrderId])
 
   // Fetch delivery zones on mount
   useEffect(() => {
@@ -365,21 +366,27 @@ export default function CheckoutPage() {
       const orderId = result.data.id
       const orderNumber = result.data.orderNumber
 
-      // Clear cart
-      clearCart()
+      console.log('[CHECKOUT] Order created:', { orderId, orderNumber, balanceAfterWallet, paymentMethod })
 
       // Handle payment based on wallet balance and selected method
       if (balanceAfterWallet === 0) {
-        // Fully paid with wallet - redirect to confirmation
+        console.log('[CHECKOUT] Fully paid with wallet - clearing cart and redirecting')
+        // Fully paid with wallet - clear cart and redirect to confirmation
+        clearCart()
         router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`)
       } else if (paymentMethod === 'online') {
-        // Online payment - show payment modal
+        console.log('[CHECKOUT] Online payment selected - showing payment modal')
+        console.log('[CHECKOUT] Setting modal state:', { orderId, orderNumber })
+        // Online payment - show payment modal (DON'T clear cart yet - do it after payment)
         setCreatedOrderId(orderId)
         setCreatedOrderNumber(orderNumber)
         setProcessing(false)
         setShowPaymentModal(true)
+        console.log('[CHECKOUT] Payment modal should now be visible')
       } else {
-        // Cash payment - redirect to order confirmation
+        console.log('[CHECKOUT] Cash payment - clearing cart and redirecting')
+        // Cash payment - clear cart and redirect to order confirmation
+        clearCart()
         router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`)
       }
     } catch (error) {

@@ -33,11 +33,15 @@ export function PaymentModal({
   const [errorMessage, setErrorMessage] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'MTN' | 'ORANGE'>('MTN')
 
+  console.log('[PAYMENT MODAL] Rendered with:', { isOpen, orderId, orderNumber, amount, paymentStatus })
+
   const handlePayment = async () => {
+    console.log('[PAYMENT MODAL] handlePayment called')
     setPaymentStatus('processing')
     setErrorMessage('')
 
     try {
+      console.log('[PAYMENT MODAL] Initializing payment with:', { orderId, amount, phoneNumber, paymentMethod })
       // Initialize payment with PayWithCamsol
       const response = await fetch('/api/farm-products/payment/initialize', {
         method: 'POST',
@@ -54,18 +58,21 @@ export function PaymentModal({
       })
 
       const result = await response.json()
+      console.log('[PAYMENT MODAL] Payment API response:', result)
 
       if (!result.success) {
+        console.error('[PAYMENT MODAL] Payment initialization failed:', result)
         throw new Error(result.message || 'Failed to initialize payment')
       }
 
       // Payment initiated successfully - show success message
+      console.log('[PAYMENT MODAL] Payment initiated successfully! Showing success message')
       setPaymentStatus('success')
 
       // Don't redirect immediately - let user see the success message
       // and check their phone for the payment prompt
     } catch (error) {
-      console.error('Payment error:', error)
+      console.error('[PAYMENT MODAL] Payment error:', error)
       setPaymentStatus('error')
       setErrorMessage(error instanceof Error ? error.message : 'Failed to process payment')
     }

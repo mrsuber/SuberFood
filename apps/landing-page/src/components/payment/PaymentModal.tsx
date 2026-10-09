@@ -99,7 +99,9 @@ export function PaymentModal({
 
         console.log('[PAYMENT MODAL] Status check result:', result)
 
-        if (result.success && result.paymentStatus === 'COMPLETED') {
+        // Consider payment successful if COMPLETED or if status changed to CONFIRMED
+        // (Processing status means money was withdrawn from customer)
+        if (result.success && (result.paymentStatus === 'COMPLETED' || result.orderStatus === 'CONFIRMED')) {
           console.log('[PAYMENT MODAL] Payment completed! Redirecting to confirmation page')
           // Payment completed - redirect to order confirmation
           window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`

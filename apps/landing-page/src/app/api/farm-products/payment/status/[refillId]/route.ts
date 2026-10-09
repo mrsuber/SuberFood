@@ -86,6 +86,7 @@ export async function GET(
       case 'completed':
       case 'success':
       case 'successful':
+      case 'processing':  // Money withdrawn from customer, treat as completed!
         paymentStatus = 'COMPLETED'
         orderStatus = 'CONFIRMED'
         break
@@ -100,8 +101,7 @@ export async function GET(
         orderStatus = 'CANCELLED'
         break
       case 'pending':
-      case 'processing':
-        paymentStatus = 'PROCESSING'
+        paymentStatus = 'PROCESSING'  // Still waiting for customer to confirm
         break
       default:
         paymentStatus = 'PENDING'

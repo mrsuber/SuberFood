@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { Decimal } from '@prisma/client/runtime/library'
 
 const PAYWITHCAMSOL_API_URL = process.env.NEXT_PUBLIC_PAYWITHCAMSOL_API_URL || 'https://paywithcamsol.com/api/v1'
 const PAYWITHCAMSOL_SECRET_KEY = process.env.PAYWITHCAMSOL_SECRET_KEY || ''
@@ -296,6 +297,147 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
       console.log('[PAYMENT POLLING SERVICE] ✅ Stock decremented for all items')
     } else {
       console.log('⚠️ [PAYMENT POLLING SERVICE] Stock already decremented, skipping')
+    }
+
+    // Handle referral commission if order has referral
+    if (order.referredById && currentOrder?.status !== 'CONFIRMED') {
+      console.log('[PAYMENT POLLING SERVICE] 💰 Processing referral commission...')
+      console.log('[PAYMENT POLLING SERVICE] Referrer ID:', order.referredById)
+
+      try {
+        // Calculate commission (50% of profit)
+        const orderTotal = Number(order.totalAmount)
+        const orderCost = Number(order.totalCost || 0)
+        const profitAmount = orderTotal - orderCost
+        const commissionAmount = profitAmount * 0.5 // 50% of profit
+
+        console.log('[PAYMENT POLLING SERVICE] Order Total:', orderTotal, 'XAF')
+        console.log('[PAYMENT POLLING SERVICE] Order Cost:', orderCost, 'XAF')
+        console.log('[PAYMENT POLLING SERVICE] Profit:', profitAmount, 'XAF')
+        console.log('[PAYMENT POLLING SERVICE] Commission (50%):', commissionAmount, 'XAF')
+
+        // Find referral relationship
+        const referral = await prisma.referral.findFirst({
+          where: {
+            referralCodeId: order.referralCodeId,
+            refereeId: order.userId || undefined,
+            status: 'ACTIVE',
+          },
+          include: {
+            referralCode: true,
+          },
+        })
+
+        if (referral && commissionAmount > 0) {
+          console.log('[PAYMENT POLLING SERVICE] Found active referral:', referral.id)
+
+          // Create referral earning record
+          await prisma.referralEarning.create({
+            data: {
+              referralId: referral.id,
+              orderId: order.id,
+              orderTotal: new Decimal(orderTotal),
+              orderCost: new Decimal(orderCost),
+              profitAmount: new Decimal(profitAmount),
+              commissionRate: new Decimal(50), // 50% commission rate
+              commissionAmount: new Decimal(commissionAmount),
+              isPaid: false, // Set to false - will be paid via withdrawal
+              paidAt: null,
+            },
+          })
+
+          console.log('[PAYMENT POLLING SERVICE] ✅ Referral earning record created')
+
+          // Credit referrer wallet
+          const referrerWallet = await prisma.wallet.findUnique({
+            where: { userId: order.referredById },
+          })
+
+          if (referrerWallet) {
+            const newBalance = referrerWallet.balance.add(new Decimal(commissionAmount))
+
+            await prisma.walletTransaction.create({
+              data: {
+                walletId: referrerWallet.id,
+                type: 'REFERRAL_REWARD',
+                amount: new Decimal(commissionAmount),
+                balanceBefore: referrerWallet.balance,
+                balanceAfter: newBalance,
+                description: `Referral commission from order ${order.orderNumber}`,
+                referenceType: 'FARM_ORDER',
+                referenceId: order.id,
+              },
+            })
+
+            await prisma.wallet.update({
+              where: { id: referrerWallet.id },
+              data: {
+                balance: newBalance,
+                totalEarned: referrerWallet.totalEarned.add(new Decimal(commissionAmount)),
+              },
+            })
+
+            console.log('[PAYMENT POLLING SERVICE] ✅ Referrer wallet credited:', commissionAmount, 'XAF')
+            console.log('[PAYMENT POLLING SERVICE] New wallet balance:', Number(newBalance), 'XAF')
+          } else {
+            // Create wallet for referrer if it doesn't exist
+            const newWallet = await prisma.wallet.create({
+              data: {
+                userId: order.referredById,
+                balance: new Decimal(commissionAmount),
+                totalEarned: new Decimal(commissionAmount),
+              },
+            })
+
+            await prisma.walletTransaction.create({
+              data: {
+                walletId: newWallet.id,
+                type: 'REFERRAL_REWARD',
+                amount: new Decimal(commissionAmount),
+                balanceBefore: new Decimal(0),
+                balanceAfter: new Decimal(commissionAmount),
+                description: `Referral commission from order ${order.orderNumber}`,
+                referenceType: 'FARM_ORDER',
+                referenceId: order.id,
+              },
+            })
+
+            console.log('[PAYMENT POLLING SERVICE] ✅ New wallet created and credited:', commissionAmount, 'XAF')
+          }
+
+          // Update referral code stats
+          await prisma.referralCode.update({
+            where: { id: referral.referralCodeId },
+            data: {
+              totalEarnings: {
+                increment: new Decimal(commissionAmount),
+              },
+              lifetimeEarnings: {
+                increment: new Decimal(commissionAmount),
+              },
+            },
+          })
+
+          console.log('[PAYMENT POLLING SERVICE] ✅ Referral code stats updated')
+        } else {
+          if (!referral) {
+            console.log('[PAYMENT POLLING SERVICE] ⚠️ No active referral found for this order')
+          }
+          if (commissionAmount <= 0) {
+            console.log('[PAYMENT POLLING SERVICE] ⚠️ Commission amount is 0 or negative')
+          }
+        }
+      } catch (referralError) {
+        console.error('[PAYMENT POLLING SERVICE] ❌ Error processing referral commission:', referralError)
+        // Don't fail the entire order confirmation if referral fails
+      }
+    } else {
+      if (!order.referredById) {
+        console.log('[PAYMENT POLLING SERVICE] No referral for this order')
+      }
+      if (currentOrder?.status === 'CONFIRMED') {
+        console.log('[PAYMENT POLLING SERVICE] Order already confirmed, skipping referral commission')
+      }
     }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')

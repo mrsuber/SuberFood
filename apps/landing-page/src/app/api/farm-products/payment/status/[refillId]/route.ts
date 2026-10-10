@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Decimal } from '@prisma/client/runtime/library'
 
 export const dynamic = 'force-dynamic'
 
@@ -150,7 +151,7 @@ export async function GET(
         },
       })
 
-      // If payment completed, decrease product stock
+      // If payment completed, decrease product stock and handle referral commission
       if (paymentStatus === 'COMPLETED' && order.status !== 'CONFIRMED') {
         console.log('[PAYMENT STATUS] Payment completed! Decreasing stock for order items')
         for (const item of order.items) {
@@ -163,6 +164,125 @@ export async function GET(
             },
           })
           console.log(`[PAYMENT STATUS] Decreased stock for product ${item.productId} by ${item.quantity}`)
+        }
+
+        // Handle referral commission if order has referral
+        if (order.referredById) {
+          console.log('[PAYMENT STATUS] 💰 Processing referral commission for referrer:', order.referredById)
+
+          try {
+            // Calculate commission (50% of profit)
+            const orderTotal = Number(order.totalAmount)
+            const orderCost = Number(order.totalCost || 0)
+            const profitAmount = orderTotal - orderCost
+            const commissionAmount = profitAmount * 0.5 // 50% of profit
+
+            console.log('[PAYMENT STATUS] Commission calculation:', {
+              orderTotal,
+              orderCost,
+              profitAmount,
+              commissionAmount
+            })
+
+            // Find referral relationship
+            const referral = await prisma.referral.findFirst({
+              where: {
+                referralCodeId: order.referralCodeId,
+                refereeId: order.userId || undefined,
+                status: 'ACTIVE',
+              },
+            })
+
+            if (referral && commissionAmount > 0) {
+              // Create referral earning record
+              await prisma.referralEarning.create({
+                data: {
+                  referralId: referral.id,
+                  orderId: order.id,
+                  orderTotal: new Decimal(orderTotal),
+                  orderCost: new Decimal(orderCost),
+                  profitAmount: new Decimal(profitAmount),
+                  commissionRate: new Decimal(50), // 50% commission rate
+                  commissionAmount: new Decimal(commissionAmount),
+                  isPaid: false, // Set to false - will be paid via withdrawal
+                },
+              })
+
+              // Credit referrer wallet
+              const referrerWallet = await prisma.wallet.findUnique({
+                where: { userId: order.referredById },
+              })
+
+              if (referrerWallet) {
+                const newBalance = referrerWallet.balance.add(new Decimal(commissionAmount))
+
+                await prisma.walletTransaction.create({
+                  data: {
+                    walletId: referrerWallet.id,
+                    type: 'REFERRAL_REWARD',
+                    amount: new Decimal(commissionAmount),
+                    balanceBefore: referrerWallet.balance,
+                    balanceAfter: newBalance,
+                    description: `Referral commission from order ${order.orderNumber}`,
+                    referenceType: 'FARM_ORDER',
+                    referenceId: order.id,
+                  },
+                })
+
+                await prisma.wallet.update({
+                  where: { id: referrerWallet.id },
+                  data: {
+                    balance: newBalance,
+                    totalEarned: referrerWallet.totalEarned.add(new Decimal(commissionAmount)),
+                  },
+                })
+
+                console.log(`[PAYMENT STATUS] ✅ Referrer wallet credited: ${commissionAmount} XAF`)
+              } else {
+                // Create wallet for referrer if it doesn't exist
+                const newWallet = await prisma.wallet.create({
+                  data: {
+                    userId: order.referredById,
+                    balance: new Decimal(commissionAmount),
+                    totalEarned: new Decimal(commissionAmount),
+                  },
+                })
+
+                await prisma.walletTransaction.create({
+                  data: {
+                    walletId: newWallet.id,
+                    type: 'REFERRAL_REWARD',
+                    amount: new Decimal(commissionAmount),
+                    balanceBefore: new Decimal(0),
+                    balanceAfter: new Decimal(commissionAmount),
+                    description: `Referral commission from order ${order.orderNumber}`,
+                    referenceType: 'FARM_ORDER',
+                    referenceId: order.id,
+                  },
+                })
+
+                console.log(`[PAYMENT STATUS] ✅ New wallet created and credited: ${commissionAmount} XAF`)
+              }
+
+              // Update referral code stats
+              await prisma.referralCode.update({
+                where: { id: referral.referralCodeId },
+                data: {
+                  totalEarnings: {
+                    increment: new Decimal(commissionAmount),
+                  },
+                  lifetimeEarnings: {
+                    increment: new Decimal(commissionAmount),
+                  },
+                },
+              })
+
+              console.log('[PAYMENT STATUS] ✅ Referral commission processing complete')
+            }
+          } catch (referralError) {
+            console.error('[PAYMENT STATUS] ❌ Error processing referral commission:', referralError)
+            // Don't fail the entire payment confirmation if referral fails
+          }
         }
       }
     } else {

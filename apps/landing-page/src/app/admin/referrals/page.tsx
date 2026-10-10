@@ -19,7 +19,10 @@ import {
   UserCheck,
   AlertCircle,
   ShoppingCart,
+  ShieldAlert,
+  Ban,
 } from 'lucide-react'
+import Link from 'next/link'
 
 interface ReferralStats {
   totalReferralCodes: number
@@ -162,6 +165,16 @@ export default function AdminReferralsPage() {
       <AdminHeader title="Referral Management" />
 
       <div className="p-8">
+        {/* Quick Links */}
+        <div className="mb-6 flex gap-4">
+          <Link href="/admin/fraud-logs">
+            <Button variant="outline" className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Fraud Logs
+            </Button>
+          </Link>
+        </div>
+
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#15803D] mx-auto"></div>

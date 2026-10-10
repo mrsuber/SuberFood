@@ -7,6 +7,10 @@
 
 import { prisma } from '@/lib/prisma'
 import { Decimal } from '@prisma/client/runtime/library'
+import {
+  sendOrderConfirmationNotification,
+  sendReferralCommissionNotification,
+} from '@/lib/notifications'
 
 const PAYWITHCAMSOL_API_URL = process.env.NEXT_PUBLIC_PAYWITHCAMSOL_API_URL || 'https://paywithcamsol.com/api/v1'
 const PAYWITHCAMSOL_SECRET_KEY = process.env.PAYWITHCAMSOL_SECRET_KEY || ''
@@ -379,6 +383,27 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
 
             console.log('[PAYMENT POLLING SERVICE] ✅ Referrer wallet credited:', commissionAmount, 'XAF')
             console.log('[PAYMENT POLLING SERVICE] New wallet balance:', Number(newBalance), 'XAF')
+
+            // Send commission notification to referrer
+            try {
+              const referrerUser = await prisma.user.findUnique({
+                where: { id: order.referredById },
+              })
+
+              if (referrerUser) {
+                await sendReferralCommissionNotification({
+                  referrerName: referrerUser.name || referrerUser.email || 'Referrer',
+                  referrerEmail: referrerUser.email || undefined,
+                  referrerPhone: referrerUser.phone || undefined,
+                  orderNumber: order.orderNumber,
+                  commissionAmount,
+                  newWalletBalance: Number(newBalance),
+                })
+              }
+            } catch (notificationError) {
+              console.error('[PAYMENT POLLING SERVICE] ❌ Error sending commission notification:', notificationError)
+              // Don't fail commission processing if notification fails
+            }
           } else {
             // Create wallet for referrer if it doesn't exist
             const newWallet = await prisma.wallet.create({
@@ -403,6 +428,27 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
             })
 
             console.log('[PAYMENT POLLING SERVICE] ✅ New wallet created and credited:', commissionAmount, 'XAF')
+
+            // Send commission notification to referrer
+            try {
+              const referrerUser = await prisma.user.findUnique({
+                where: { id: order.referredById },
+              })
+
+              if (referrerUser) {
+                await sendReferralCommissionNotification({
+                  referrerName: referrerUser.name || referrerUser.email || 'Referrer',
+                  referrerEmail: referrerUser.email || undefined,
+                  referrerPhone: referrerUser.phone || undefined,
+                  orderNumber: order.orderNumber,
+                  commissionAmount,
+                  newWalletBalance: commissionAmount,
+                })
+              }
+            } catch (notificationError) {
+              console.error('[PAYMENT POLLING SERVICE] ❌ Error sending commission notification:', notificationError)
+              // Don't fail commission processing if notification fails
+            }
           }
 
           // Update referral code stats
@@ -447,7 +493,26 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
     console.log('[PAYMENT POLLING SERVICE] Payment: COMPLETED')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
-    // TODO: Send order confirmation email/SMS
+    // Send order confirmation notification
+    try {
+      await sendOrderConfirmationNotification({
+        customerName: order.guestName,
+        customerEmail: order.guestEmail || undefined,
+        customerPhone: order.guestPhone,
+        orderNumber: order.orderNumber,
+        orderTotal: Number(order.totalAmount),
+        orderStatus: 'CONFIRMED',
+        deliveryAddress: order.deliveryAddress || undefined,
+        items: order.items.map((item: any) => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: Number(item.price),
+        })),
+      })
+    } catch (notificationError) {
+      console.error('[PAYMENT POLLING SERVICE] ❌ Error sending order confirmation notification:', notificationError)
+      // Don't fail order confirmation if notification fails
+    }
   } catch (error) {
     console.error('[PAYMENT POLLING SERVICE] Error confirming order:', error)
     throw error

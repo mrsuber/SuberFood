@@ -241,6 +241,60 @@ export default function FinancialLedgerPage() {
               </CardContent>
             </Card>
 
+            {/* Referral Commission Breakdown */}
+            {stats && stats.totalReferrerCommissions > 0 && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    Referral Commission Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                      <p className="text-sm font-medium text-purple-600">Total Commissions Paid</p>
+                      <p className="text-2xl font-bold text-purple-700 mt-1">
+                        {(stats.totalReferrerCommissions || 0).toLocaleString()} XAF
+                      </p>
+                      <p className="text-xs text-purple-600 mt-1">
+                        {((stats.totalReferrerCommissions / stats.totalRevenue) * 100).toFixed(1)}% of revenue
+                      </p>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <p className="text-sm font-medium text-green-600">Net Profit After Commissions</p>
+                      <p className="text-2xl font-bold text-green-700 mt-1">
+                        {(stats.totalProfit || 0).toLocaleString()} XAF
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        50% profit share model
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <p className="text-sm font-medium text-blue-600">Orders with Referrals</p>
+                      <p className="text-2xl font-bold text-blue-700 mt-1">
+                        {filteredTransactions.filter(tx => Number(tx.referrerCommission) > 0).length}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        of {filteredTransactions.length} total orders
+                      </p>
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <p className="text-sm font-medium text-orange-600">Avg Commission per Order</p>
+                      <p className="text-2xl font-bold text-orange-700 mt-1">
+                        {filteredTransactions.filter(tx => Number(tx.referrerCommission) > 0).length > 0
+                          ? (stats.totalReferrerCommissions / filteredTransactions.filter(tx => Number(tx.referrerCommission) > 0).length).toLocaleString(undefined, { maximumFractionDigits: 0 })
+                          : '0'} XAF
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Per referred order
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Transactions Table */}
             <Card>
               <CardHeader>

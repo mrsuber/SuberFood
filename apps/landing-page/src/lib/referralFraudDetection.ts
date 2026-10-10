@@ -46,6 +46,25 @@ export async function detectReferralFraud(params: FraudCheckParams): Promise<Fra
   let fraudScore = 0
   const maxScore = 100
 
+  // LAYER 0: Check if referral code is already banned/suspended
+  const referralCode = await prisma.referralCode.findFirst({
+    where: { userId: referrerUserId },
+    select: { isSuspended: true, isActive: true, fraudAttempts: true, autoBannedAt: true, autoBanReason: true }
+  })
+
+  if (referralCode?.isSuspended || !referralCode?.isActive) {
+    return {
+      isFraudulent: true,
+      reason: referralCode.autoBanReason || 'Referral code is suspended or inactive',
+      confidence: 'CERTAIN',
+      details: [
+        referralCode.autoBannedAt
+          ? `Code auto-banned on ${referralCode.autoBannedAt.toLocaleDateString()} after ${referralCode.fraudAttempts} fraud attempts`
+          : 'Referral code has been deactivated'
+      ],
+    }
+  }
+
   // LAYER 1: Direct User ID Match (for authenticated users)
   if (refereeUserId && refereeUserId === referrerUserId) {
     return {
@@ -220,7 +239,7 @@ export async function detectReferralFraud(params: FraudCheckParams): Promise<Fra
  * Normalize phone number for comparison
  * Removes spaces, dashes, and country codes
  */
-function normalizePhoneNumber(phone: string): string {
+export function normalizePhoneNumber(phone: string): string {
   // Remove all non-digit characters
   let normalized = phone.replace(/\D/g, '')
 
@@ -259,25 +278,107 @@ function extractBaseEmail(email: string): string {
 }
 
 /**
- * Log fraud attempt for analysis
+ * Log fraud attempt to database and implement 3-strike system
+ * After 3 fraud attempts, the referral code is automatically banned
  */
 export async function logFraudAttempt(
-  params: FraudCheckParams & { orderId?: string; fraudResult: FraudCheckResult }
-): Promise<void> {
+  params: FraudCheckParams & { orderId?: string; fraudResult: FraudCheckResult; orderAttemptData?: any }
+): Promise<{ strikeNumber: number; autoBanned: boolean }> {
   try {
-    // You could create a FraudLog table to track these
-    console.log('🚨 [FRAUD DETECTION] Potential fraud detected:')
-    console.log('  Referrer:', params.referrerUserId)
+    // Get the referral code
+    const referralCode = await prisma.referralCode.findFirst({
+      where: { userId: params.referrerUserId },
+      select: { id: true, fraudAttempts: true, code: true }
+    })
+
+    if (!referralCode) {
+      console.error('[FRAUD DETECTION] Referral code not found for user:', params.referrerUserId)
+      return { strikeNumber: 0, autoBanned: false }
+    }
+
+    // Increment fraud attempts (strike counter)
+    const newFraudAttempts = referralCode.fraudAttempts + 1
+    const isThirdStrike = newFraudAttempts >= 3
+    const now = new Date()
+
+    // Map confidence to enum
+    const confidenceMap: Record<string, 'LOW' | 'MEDIUM' | 'HIGH' | 'CERTAIN'> = {
+      'LOW': 'LOW',
+      'MEDIUM': 'MEDIUM',
+      'HIGH': 'HIGH',
+      'CERTAIN': 'CERTAIN'
+    }
+
+    // Calculate fraud score from confidence if not provided
+    let fraudScore = 0
+    if (params.fraudResult.confidence === 'CERTAIN') fraudScore = 90
+    else if (params.fraudResult.confidence === 'HIGH') fraudScore = 70
+    else if (params.fraudResult.confidence === 'MEDIUM') fraudScore = 50
+    else fraudScore = 30
+
+    // Use transaction to update both ReferralCode and create FraudLog atomically
+    await prisma.$transaction(async (tx) => {
+      // Create fraud log entry
+      await tx.fraudLog.create({
+        data: {
+          referrerUserId: params.referrerUserId,
+          referralCodeId: referralCode.id,
+          guestPhone: params.guestPhone || null,
+          guestEmail: params.guestEmail || null,
+          refereeUserId: params.refereeUserId || null,
+          ipAddress: params.ipAddress || null,
+          userAgent: params.userAgent || null,
+          fraudScore,
+          confidence: confidenceMap[params.fraudResult.confidence] || 'MEDIUM',
+          reason: params.fraudResult.reason || 'Fraud detected',
+          details: params.fraudResult.details,
+          wasBlocked: params.fraudResult.isFraudulent,
+          strikeNumber: newFraudAttempts,
+          causedAutoBan: isThirdStrike,
+          orderAttemptData: params.orderAttemptData || null,
+        }
+      })
+
+      // Update referral code with new strike count
+      await tx.referralCode.update({
+        where: { id: referralCode.id },
+        data: {
+          fraudAttempts: newFraudAttempts,
+          lastFraudAttemptAt: now,
+          // Auto-ban after 3 strikes
+          ...(isThirdStrike ? {
+            isSuspended: true,
+            isActive: false,
+            autoBannedAt: now,
+            autoBanReason: `Automatically banned after 3 fraud attempts. Last attempt: ${params.fraudResult.reason}`,
+          } : {})
+        }
+      })
+    })
+
+    // Console logging
+    console.log('🚨 [FRAUD DETECTION] Fraud attempt logged:')
+    console.log('  Referral Code:', referralCode.code)
+    console.log('  Strike Number:', newFraudAttempts, '/ 3')
     console.log('  Guest Phone:', params.guestPhone)
     console.log('  Guest Email:', params.guestEmail)
     console.log('  Confidence:', params.fraudResult.confidence)
     console.log('  Reason:', params.fraudResult.reason)
     console.log('  Details:', params.fraudResult.details.join(', '))
 
-    // Future: Store in database for admin review
-    // await prisma.fraudLog.create({ ... })
+    if (isThirdStrike) {
+      console.log('⚠️  [FRAUD DETECTION] 🔴 REFERRAL CODE AUTO-BANNED (3 STRIKES)')
+      console.log('  Code:', referralCode.code)
+      console.log('  User ID:', params.referrerUserId)
+    }
+
+    return {
+      strikeNumber: newFraudAttempts,
+      autoBanned: isThirdStrike
+    }
   } catch (error) {
     console.error('[FRAUD DETECTION] Error logging fraud attempt:', error)
+    return { strikeNumber: 0, autoBanned: false }
   }
 }
 

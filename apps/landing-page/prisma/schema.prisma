@@ -49,16 +49,20 @@ enum UserStatus {
 
 model User {
   id            String     @id @default(cuid())
-  email         String     @unique
-  password      String? // Made optional for OAuth users
+  email         String?    @unique // Made optional to allow phone-only accounts
+  password      String? // Made optional for OAuth users and phone-only accounts
   firstName     String? // Made optional for OAuth
   lastName      String? // Made optional for OAuth
   name          String? // Full name for OAuth
-  phone         String?
+  phone         String?    @unique // Made unique to enable phone-based account creation
   role          UserRole   @default(CUSTOMER)
   status        UserStatus @default(ACTIVE) // Changed default to ACTIVE for easier onboarding
   emailVerified DateTime?
+  phoneVerified Boolean    @default(false) // Track phone verification status
   image         String?
+
+  // Account completion tracking
+  isAccountComplete Boolean @default(false) // True when user has set password and verified email
 
   // Phase 1: Customer preferences
   favoriteMenuItems   String[] // Menu item IDs
@@ -310,6 +314,12 @@ model ReferralCode {
   isVerified            Boolean             @default(false)
   verification          UserVerification?
 
+  // Fraud Prevention: 3-Strike System
+  fraudAttempts         Int                 @default(0) // Counter for fraud attempts
+  lastFraudAttemptAt    DateTime?                       // When last fraud was detected
+  autoBannedAt          DateTime?                       // When auto-banned (after 3 strikes)
+  autoBanReason         String?                         // Reason for auto-ban
+
   // Stats
   totalReferrals        Int                 @default(0)
   activeReferrals       Int                 @default(0) // Customers who made at least 1 order
@@ -319,6 +329,7 @@ model ReferralCode {
   // Relationships
   referrals             Referral[]          @relation("ReferrerReferrals")
   earnings              ReferralEarning[]
+  fraudLogs             FraudLog[]          @relation("ReferralCodeFraudLogs")
 
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
@@ -431,6 +442,58 @@ model UserVerification {
   @@index([userId])
   @@index([status])
   @@map("user_verifications")
+}
+
+// ========================================
+// FRAUD DETECTION & LOGGING
+// ========================================
+
+enum FraudConfidence {
+  LOW       // 0-39 points
+  MEDIUM    // 40-59 points
+  HIGH      // 60-79 points
+  CERTAIN   // 80-100 points
+}
+
+model FraudLog {
+  id                  String            @id @default(cuid())
+
+  // Referral information
+  referrerUserId      String
+  referralCodeId      String
+  referralCode        ReferralCode      @relation("ReferralCodeFraudLogs", fields: [referralCodeId], references: [id])
+
+  // Attempted order information
+  guestPhone          String?
+  guestEmail          String?
+  refereeUserId       String?          // If authenticated user
+
+  // Technical tracking
+  ipAddress           String?
+  userAgent           String?
+
+  // Fraud detection results
+  fraudScore          Int              // 0-100
+  confidence          FraudConfidence
+  reason              String           // Main reason for fraud detection
+  details             Json             // Array of all detection indicators
+
+  // Action taken
+  wasBlocked          Boolean          @default(true)
+  strikeNumber        Int?             // Which strike this was (1, 2, or 3)
+  causedAutoBan       Boolean          @default(false) // Did this trigger the 3-strike ban?
+
+  // Metadata
+  orderAttemptData    Json?            // Snapshot of order data for investigation
+
+  createdAt           DateTime         @default(now())
+
+  @@index([referralCodeId])
+  @@index([referrerUserId])
+  @@index([guestPhone])
+  @@index([guestEmail])
+  @@index([createdAt])
+  @@map("fraud_logs")
 }
 
 // ========================================

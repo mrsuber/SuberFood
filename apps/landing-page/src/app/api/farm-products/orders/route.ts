@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Decimal } from '@prisma/client/runtime/library'
 import { detectReferralFraud, logFraudAttempt } from '@/lib/referralFraudDetection'
+import { createOrGetPhoneAccount } from '@/lib/phoneAccountCreation'
 
 export const dynamic = 'force-dynamic'
 

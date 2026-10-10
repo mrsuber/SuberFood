@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createOrGetPhoneAccount } from '@/lib/phoneAccountCreation'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,6 +94,38 @@ export async function POST(req: NextRequest) {
           note: 'Payment received successfully',
         },
       })
+
+      // AUTOMATIC PHONE-BASED ACCOUNT CREATION
+      // If this was a guest order (no userId), create phone-based account
+      if (order.isGuest && order.guestPhone && order.guestName) {
+        try {
+          const phoneAccountResult = await createOrGetPhoneAccount({
+            phone: order.guestPhone,
+            fullName: order.guestName,
+            email: order.guestEmail || null,
+          })
+
+          // Link the order to the newly created/found account
+          if (phoneAccountResult.userId) {
+            await prisma.farmOrder.update({
+              where: { id: order.id },
+              data: {
+                userId: phoneAccountResult.userId,
+                isGuest: false, // No longer a guest, now has an account
+              }
+            })
+
+            console.log('✅ [ORDER] Guest order linked to phone-based account:', {
+              orderId: order.id,
+              userId: phoneAccountResult.userId,
+              isNewAccount: phoneAccountResult.isNewAccount
+            })
+          }
+        } catch (error) {
+          // Don't fail the payment callback if account creation fails
+          console.error('[ORDER] Failed to create phone-based account:', error)
+        }
+      }
 
       // TODO: Send order confirmation email/SMS to customer
       // TODO: Notify admin of new order

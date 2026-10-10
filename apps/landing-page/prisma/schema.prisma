@@ -1738,7 +1738,9 @@ model FarmProduct {
   reorderPoint       Decimal?
 
   // Traceability
-  farmSource  String? // Farm name/location
+  farmSource  String? // Farm name/location (legacy - use farmer relationship instead)
+  farmerId    String? // Link to Farmer
+  farmer      Farmer? @relation(fields: [farmerId], references: [id], onDelete: SetNull)
   harvestDate DateTime?
   expiryDate  DateTime?
   batchNumber String?
@@ -1771,6 +1773,7 @@ model FarmProduct {
   orderItems     FarmOrderItem[]
   reviews        FarmProductReview[]
   restockHistory StockRestock[]
+  supplies       FarmSupply[] // Supplies from farmers
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -2239,6 +2242,150 @@ model FinancialSummary {
 
   @@index([date])
   @@map("financial_summaries")
+}
+
+// ============================================
+// FARMER MANAGEMENT
+// ============================================
+
+enum FarmerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum FarmerType {
+  INDIVIDUAL      // Individual farmer
+  COOPERATIVE     // Farmer cooperative
+  COMMERCIAL_FARM // Commercial farming operation
+  ORGANIC_FARM    // Certified organic farm
+}
+
+model Farmer {
+  id String @id @default(cuid())
+
+  // Basic Information
+  name              String
+  businessName      String? // For cooperatives/commercial farms
+  farmerType        FarmerType @default(INDIVIDUAL)
+  registrationNumber String?   @unique // Business registration number
+  taxId             String?   @unique
+
+  // Contact Information
+  email       String?
+  phone       String
+  alternatePhone String?
+  address     String
+  region      String  // Bafoussam, Bamenda, Buea, etc.
+  district    String?
+  village     String?
+
+  // GPS Location
+  latitude  Float?
+  longitude Float?
+  gpsCoordinates String? // Formatted coordinates
+
+  // Farm Details
+  farmSize      Decimal? @db.Decimal(10, 2) // In hectares
+  farmSizeUnit  String?  @default("hectares")
+  mainCrops     String[] // ["Tomatoes", "Potatoes", "Beans"]
+
+  // Certifications
+  isOrganic       Boolean @default(false)
+  isCertified     Boolean @default(false)
+  certifications  String[] // ["Organic", "Fair Trade", etc.]
+  certificationDocs String[] // URLs to certification documents
+
+  // Financial Information
+  bankName          String?
+  bankAccountNumber String?
+  mobileMoneyNumber String?
+  mobileMoneyProvider String? // MTN, Orange
+
+  // Performance Metrics
+  totalSupplied     Decimal @default(0) @db.Decimal(10, 2) // Total kg/units supplied
+  totalRevenue      Decimal @default(0) @db.Decimal(10, 2) // Total XAF earned
+  averageQualityRating Decimal? @db.Decimal(3, 2) // 1.00-5.00
+  onTimeDeliveryRate   Decimal? @db.Decimal(5, 2) // Percentage
+
+  // Status & Verification
+  status        FarmerStatus @default(PENDING_VERIFICATION)
+  isVerified    Boolean      @default(false)
+  verifiedAt    DateTime?
+  verifiedBy    String?      // Admin user ID
+
+  // Notes
+  notes         String? // Admin notes
+  specialties   String? // What they're particularly good at growing
+
+  // Relationships
+  products      FarmProduct[] // Products supplied by this farmer
+  supplies      FarmSupply[]  // Supply transactions/deliveries
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  // Admin user ID
+
+  @@index([status])
+  @@index([region])
+  @@index([farmerType])
+  @@index([phone])
+  @@map("farmers")
+}
+
+// Track supplies/deliveries from farmers
+model FarmSupply {
+  id String @id @default(cuid())
+
+  // Farmer & Product
+  farmerId  String
+  farmer    Farmer      @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  productId String
+  product   FarmProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Supply Details
+  quantity       Decimal @db.Decimal(10, 2)
+  unit           String  // kg, bags, crates
+  pricePerUnit   Decimal @db.Decimal(10, 2) // Price paid to farmer per unit
+  totalCost      Decimal @db.Decimal(10, 2) // Total amount paid to farmer
+
+  // Quality Assessment
+  qualityRating  Int?    // 1-5 stars
+  qualityNotes   String?
+
+  // Delivery Information
+  deliveryDate   DateTime
+  receivedDate   DateTime?
+  receivedBy     String?  // Staff member who received it
+
+  // Batch/Traceability
+  batchNumber    String?
+  harvestDate    DateTime?
+  expiryDate     DateTime?
+
+  // Payment
+  paymentStatus  String   @default("PENDING") // PENDING, PAID, PARTIAL
+  paidAmount     Decimal  @default(0) @db.Decimal(10, 2)
+  paidAt         DateTime?
+  paymentMethod  String?  // CASH, MOBILE_MONEY, BANK_TRANSFER
+  paymentReference String?
+
+  // Status
+  status         String   @default("RECEIVED") // ORDERED, RECEIVED, QUALITY_CHECK, APPROVED, REJECTED
+  notes          String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  // Admin user ID
+
+  @@index([farmerId])
+  @@index([productId])
+  @@index([deliveryDate])
+  @@index([status])
+  @@map("farm_supplies")
 }
 
 // ============================================

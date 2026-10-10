@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Decimal } from '@prisma/client/runtime/library'
+import { detectReferralFraud, logFraudAttempt } from '@/lib/referralFraudDetection'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,13 +87,52 @@ export async function POST(req: NextRequest) {
       // Deduct from wallet (will be done in transaction below)
     }
 
-    // Handle referral code
+    // Handle referral code with fraud detection
     if (referralCode) {
       const referralCodeData = await prisma.referralCode.findUnique({
         where: { code: referralCode },
       })
 
       if (referralCodeData) {
+        // FRAUD DETECTION: Check for self-referral attempts
+        const fraudCheck = await detectReferralFraud({
+          referrerUserId: referralCodeData.userId,
+          guestPhone: contactInfo.phone,
+          guestEmail: contactInfo.email || null,
+          refereeUserId: session?.user?.id || null,
+          ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || null,
+          userAgent: req.headers.get('user-agent') || null,
+        })
+
+        if (fraudCheck.isFraudulent) {
+          // Log the fraud attempt
+          await logFraudAttempt({
+            referrerUserId: referralCodeData.userId,
+            guestPhone: contactInfo.phone,
+            guestEmail: contactInfo.email || null,
+            refereeUserId: session?.user?.id || null,
+            ipAddress: req.headers.get('x-forwarded-for') || null,
+            userAgent: req.headers.get('user-agent') || null,
+            fraudResult: fraudCheck,
+          })
+
+          console.log('🚨 [ORDER] Referral fraud detected and blocked')
+          console.log('   Reason:', fraudCheck.reason)
+          console.log('   Confidence:', fraudCheck.confidence)
+          console.log('   Details:', fraudCheck.details)
+
+          // Block the order or remove referral benefits
+          return NextResponse.json(
+            {
+              success: false,
+              message: 'Unable to process referral code. Please contact support if you believe this is an error.',
+              errorCode: 'REFERRAL_FRAUD_DETECTED',
+            },
+            { status: 403 }
+          )
+        }
+
+        // Fraud check passed, proceed with referral
         referrerId = referralCodeData.userId
 
         // Check if user is authenticated and create referral relationship if it doesn't exist
@@ -115,6 +155,8 @@ export async function POST(req: NextRequest) {
             })
           }
         }
+
+        console.log('✅ [ORDER] Referral code validated - No fraud detected')
       }
     }
 

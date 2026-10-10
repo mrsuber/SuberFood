@@ -1370,6 +1370,8 @@ model Staff {
   ordersAsChef   OrderPreparation[] @relation("ChefAssignments")
   ordersAsWaiter Order[]            @relation("WaiterAssignments")
   deliveries     Delivery[]
+  farmDeliveries FarmDelivery[]
+  farmDeliveryLocationUpdates FarmDeliveryLocationUpdate[]
 
   @@map("staff")
 }
@@ -2007,6 +2009,9 @@ model FarmOrder {
   orderReceipt        OrderReceipt?
   financialTransactions FinancialTransaction[]
 
+  // NEW: Farm delivery tracking
+  farmDelivery        FarmDelivery?
+
   // Notes
   customerNotes String?
   adminNotes    String?
@@ -2403,4 +2408,153 @@ model SystemConfiguration {
 
   @@index([key])
   @@map("system_configurations")
+}
+
+// ============================================
+// FARM DELIVERY TRACKING & GPS
+// ============================================
+
+enum FarmDeliveryStatus {
+  PENDING         // Order confirmed, awaiting driver assignment
+  ASSIGNED        // Driver assigned, not started
+  PICKED_UP       // Driver picked up order
+  IN_TRANSIT      // On the way to customer
+  ARRIVED         // Driver arrived at location
+  DELIVERED       // Successfully delivered
+  FAILED          // Delivery attempt failed
+  CANCELLED       // Delivery cancelled
+}
+
+// Farm Delivery Tracking
+model FarmDelivery {
+  id              String               @id @default(cuid())
+
+  // Order Link
+  orderId         String               @unique
+  order           FarmOrder            @relation(fields: [orderId], references: [id])
+
+  // Driver Assignment (reusing Staff table which has delivery drivers)
+  driverId        String?
+  driver          Staff?               @relation(fields: [driverId], references: [id])
+
+  // Status
+  status          FarmDeliveryStatus   @default(PENDING)
+
+  // Delivery Details
+  pickupAddress   String
+  pickupLatitude  Float?
+  pickupLongitude Float?
+
+  deliveryAddress      String
+  deliveryLatitude     Float
+  deliveryLongitude    Float
+  deliveryInstructions String?
+
+  // Timing
+  estimatedPickupTime   DateTime?
+  estimatedDeliveryTime DateTime?
+  actualPickupTime      DateTime?
+  actualDeliveryTime    DateTime?
+
+  // Distance & Duration
+  estimatedDistance Float?       // km
+  estimatedDuration Int?         // minutes
+  actualDistance    Float?       // km
+  actualDuration    Int?         // minutes
+
+  // Delivery Fee
+  deliveryFee     Decimal        @db.Decimal(10, 2)
+  driverEarnings  Decimal?       @db.Decimal(10, 2)
+
+  // Customer Interaction
+  customerRating  Int?           // 1-5 stars
+  customerFeedback String?
+
+  // Proof of Delivery
+  deliveryPhotoUrl String?
+  signatureUrl     String?
+  receivedBy       String?       // Name of person who received
+
+  // Failure/Issues
+  failureReason   String?
+  failureNotes    String?
+
+  // Live Tracking URL
+  trackingCode    String         @unique
+  publicTrackingUrl String?
+
+  // Status History
+  statusUpdates   FarmDeliveryStatusUpdate[]
+  locationUpdates FarmDeliveryLocationUpdate[]
+
+  // Notes
+  driverNotes     String?
+  adminNotes      String?
+
+  // Timestamps
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  assignedAt      DateTime?
+  cancelledAt     DateTime?
+
+  @@index([orderId])
+  @@index([driverId])
+  @@index([status])
+  @@index([trackingCode])
+  @@map("farm_deliveries")
+}
+
+// Farm Delivery Status Updates
+model FarmDeliveryStatusUpdate {
+  id          String               @id @default(cuid())
+
+  deliveryId  String
+  delivery    FarmDelivery         @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  status      FarmDeliveryStatus
+  note        String?
+
+  // Location at time of update
+  latitude    Float?
+  longitude   Float?
+
+  // Who made the update
+  updatedBy   String?        // Driver ID or Admin ID
+
+  createdAt   DateTime       @default(now())
+
+  @@index([deliveryId])
+  @@index([status])
+  @@map("farm_delivery_status_updates")
+}
+
+// Real-time Farm Delivery Location Updates
+model FarmDeliveryLocationUpdate {
+  id          String       @id @default(cuid())
+
+  driverId    String
+  driver      Staff        @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  deliveryId  String?
+  delivery    FarmDelivery? @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  // GPS Coordinates
+  latitude    Float
+  longitude   Float
+  accuracy    Float?    // meters
+  altitude    Float?    // meters
+
+  // Speed and direction
+  speed       Float?    // km/h
+  heading     Float?    // degrees (0-360)
+
+  // Battery level (for monitoring driver's device)
+  batteryLevel Int?     // percentage
+
+  createdAt   DateTime  @default(now())
+
+  @@index([driverId])
+  @@index([deliveryId])
+  @@index([createdAt])
+  @@map("farm_delivery_location_updates")
 }

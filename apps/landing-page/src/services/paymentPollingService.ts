@@ -15,12 +15,14 @@ import {
 const PAYWITHCAMSOL_API_URL = process.env.NEXT_PUBLIC_PAYWITHCAMSOL_API_URL || 'https://paywithcamsol.com/api/v1'
 const PAYWITHCAMSOL_SECRET_KEY = process.env.PAYWITHCAMSOL_SECRET_KEY || ''
 
+type PaymentType = 'FARM_ORDER' | 'WALLET_REFILL'
+
 interface PollingConfig {
   maxAttempts: number
   intervalMs: number
-  onSuccess?: (orderId: string) => void
-  onFailure?: (orderId: string, reason: string) => void
-  onTimeout?: (orderId: string) => void
+  onSuccess?: (recordId: string) => void
+  onFailure?: (recordId: string, reason: string) => void
+  onTimeout?: (recordId: string) => void
 }
 
 const DEFAULT_CONFIG: PollingConfig = {
@@ -30,7 +32,7 @@ const DEFAULT_CONFIG: PollingConfig = {
 
 /**
  * Active polling jobs
- * Key: orderId, Value: timeout/interval IDs for cleanup
+ * Key: recordId, Value: timeout/interval IDs for cleanup
  */
 const activePollingJobs = new Map<string, NodeJS.Timeout>()
 
@@ -39,17 +41,18 @@ const activePollingJobs = new Map<string, NodeJS.Timeout>()
  * This runs independently of the frontend
  */
 export async function startPaymentPolling(
-  orderId: string,
   refillId: string,
+  paymentType: PaymentType,
+  recordId: string,
   config: Partial<PollingConfig> = {}
 ): Promise<void> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config }
 
-  console.log('[PAYMENT POLLING SERVICE] Starting backend polling for order:', orderId, 'refillId:', refillId)
+  console.log(`[PAYMENT POLLING SERVICE] Starting backend polling for ${paymentType}:`, recordId, 'refillId:', refillId)
 
-  // Check if already polling this order
-  if (activePollingJobs.has(orderId)) {
-    console.log('[PAYMENT POLLING SERVICE] Already polling order:', orderId)
+  // Check if already polling this record
+  if (activePollingJobs.has(recordId)) {
+    console.log(`[PAYMENT POLLING SERVICE] Already polling ${paymentType}:`, recordId)
     return
   }
 
@@ -58,33 +61,61 @@ export async function startPaymentPolling(
   const poll = async () => {
     try {
       attempts++
-      console.log(`[PAYMENT POLLING SERVICE] Polling attempt ${attempts}/${finalConfig.maxAttempts} for order ${orderId}`)
+      console.log(`[PAYMENT POLLING SERVICE] Polling attempt ${attempts}/${finalConfig.maxAttempts} for ${paymentType} ${recordId}`)
 
-      // Fetch order from database to check current status
-      const order = await prisma.farmOrder.findUnique({
-        where: { id: orderId },
-        include: {
-          items: {
-            include: {
-              product: true,
+      // Check if already completed based on payment type
+      if (paymentType === 'FARM_ORDER') {
+        const order = await prisma.farmOrder.findUnique({
+          where: { id: recordId },
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
             },
           },
-        },
-      })
+        })
 
-      if (!order) {
-        console.error('[PAYMENT POLLING SERVICE] Order not found:', orderId)
-        stopPolling(orderId)
-        finalConfig.onFailure?.(orderId, 'Order not found')
-        return
-      }
+        if (!order) {
+          console.error('[PAYMENT POLLING SERVICE] Order not found:', recordId)
+          stopPolling(recordId)
+          finalConfig.onFailure?.(recordId, 'Order not found')
+          return
+        }
 
-      // If already confirmed, stop polling (webhook or frontend might have completed it)
-      if (order.paymentStatus === 'COMPLETED' && order.status === 'CONFIRMED') {
-        console.log('[PAYMENT POLLING SERVICE] Payment already confirmed for order:', orderId)
-        stopPolling(orderId)
-        finalConfig.onSuccess?.(orderId)
-        return
+        // If already confirmed, stop polling
+        if (order.paymentStatus === 'COMPLETED' && order.status === 'CONFIRMED') {
+          console.log('[PAYMENT POLLING SERVICE] Payment already confirmed for order:', recordId)
+          stopPolling(recordId)
+          finalConfig.onSuccess?.(recordId)
+          return
+        }
+      } else if (paymentType === 'WALLET_REFILL') {
+        const refillRecord = await prisma.walletRefill.findUnique({
+          where: { id: recordId },
+          include: {
+            wallet: {
+              include: {
+                user: true
+              }
+            }
+          }
+        })
+
+        if (!refillRecord) {
+          console.error('[PAYMENT POLLING SERVICE] Wallet refill record not found:', recordId)
+          stopPolling(recordId)
+          finalConfig.onFailure?.(recordId, 'Refill record not found')
+          return
+        }
+
+        // If already completed, stop polling
+        if (refillRecord.status === 'COMPLETED') {
+          console.log('[PAYMENT POLLING SERVICE] Wallet refill already completed:', recordId)
+          stopPolling(recordId)
+          finalConfig.onSuccess?.(recordId)
+          return
+        }
       }
 
       // Check payment status from PayWithCamsol
@@ -111,13 +142,41 @@ export async function startPaymentPolling(
         paymentStatus.status === 'Processing'
       ) {
         console.log('🎉 [PAYMENT POLLING SERVICE] ✅ PAYMENT CONFIRMED BY CUSTOMER!')
-        console.log('[PAYMENT POLLING SERVICE] Order to confirm:', orderId)
+        console.log(`[PAYMENT POLLING SERVICE] ${paymentType} to confirm:`, recordId)
 
-        // Update order in database
-        await confirmOrder(order, paymentStatus)
+        // Update record based on payment type
+        if (paymentType === 'FARM_ORDER') {
+          const order = await prisma.farmOrder.findUnique({
+            where: { id: recordId },
+            include: {
+              items: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          })
+          if (order) {
+            await confirmOrder(order, paymentStatus)
+          }
+        } else if (paymentType === 'WALLET_REFILL') {
+          const refillRecord = await prisma.walletRefill.findUnique({
+            where: { id: recordId },
+            include: {
+              wallet: {
+                include: {
+                  user: true
+                }
+              }
+            }
+          })
+          if (refillRecord) {
+            await confirmWalletRefill(refillRecord, paymentStatus)
+          }
+        }
 
-        stopPolling(orderId)
-        finalConfig.onSuccess?.(orderId)
+        stopPolling(recordId)
+        finalConfig.onSuccess?.(recordId)
         return
       }
 
@@ -128,19 +187,30 @@ export async function startPaymentPolling(
         paymentStatus.status === 'Cancelled'
       ) {
         console.log('❌ [PAYMENT POLLING SERVICE] PAYMENT FAILED/CANCELLED')
-        console.log('[PAYMENT POLLING SERVICE] Order:', orderId)
+        console.log(`[PAYMENT POLLING SERVICE] ${paymentType}:`, recordId)
         console.log('[PAYMENT POLLING SERVICE] Failure status:', paymentStatus.status)
 
-        await prisma.farmOrder.update({
-          where: { id: orderId },
-          data: {
-            paymentStatus: 'FAILED',
-            status: 'CANCELLED',
-          },
-        })
+        if (paymentType === 'FARM_ORDER') {
+          await prisma.farmOrder.update({
+            where: { id: recordId },
+            data: {
+              paymentStatus: 'FAILED',
+              status: 'CANCELLED',
+            },
+          })
+        } else if (paymentType === 'WALLET_REFILL') {
+          await prisma.walletRefill.update({
+            where: { id: recordId },
+            data: {
+              status: 'FAILED',
+              failedAt: new Date(),
+              failureReason: `Payment ${paymentStatus.status}`,
+            },
+          })
+        }
 
-        stopPolling(orderId)
-        finalConfig.onFailure?.(orderId, `Payment ${paymentStatus.status}`)
+        stopPolling(recordId)
+        finalConfig.onFailure?.(recordId, `Payment ${paymentStatus.status}`)
         return
       }
 
@@ -157,14 +227,14 @@ export async function startPaymentPolling(
 
   const scheduleNextPoll = () => {
     if (attempts >= finalConfig.maxAttempts) {
-      console.warn('[PAYMENT POLLING SERVICE] Max polling attempts reached for order:', orderId)
-      stopPolling(orderId)
-      finalConfig.onTimeout?.(orderId)
+      console.warn(`[PAYMENT POLLING SERVICE] Max polling attempts reached for ${paymentType}:`, recordId)
+      stopPolling(recordId)
+      finalConfig.onTimeout?.(recordId)
       return
     }
 
     const timeoutId = setTimeout(poll, finalConfig.intervalMs)
-    activePollingJobs.set(orderId, timeoutId)
+    activePollingJobs.set(recordId, timeoutId)
   }
 
   // Start first poll immediately
@@ -172,14 +242,14 @@ export async function startPaymentPolling(
 }
 
 /**
- * Stop polling for an order
+ * Stop polling for a record
  */
-export function stopPolling(orderId: string): void {
-  const timeoutId = activePollingJobs.get(orderId)
+export function stopPolling(recordId: string): void {
+  const timeoutId = activePollingJobs.get(recordId)
   if (timeoutId) {
     clearTimeout(timeoutId)
-    activePollingJobs.delete(orderId)
-    console.log('[PAYMENT POLLING SERVICE] Stopped polling for order:', orderId)
+    activePollingJobs.delete(recordId)
+    console.log('[PAYMENT POLLING SERVICE] Stopped polling for record:', recordId)
   }
 }
 
@@ -515,6 +585,89 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
     }
   } catch (error) {
     console.error('[PAYMENT POLLING SERVICE] Error confirming order:', error)
+    throw error
+  }
+}
+
+/**
+ * Confirm wallet refill after successful payment
+ */
+async function confirmWalletRefill(refillRecord: any, paymentStatus: any): Promise<void> {
+  try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('💾 [PAYMENT POLLING SERVICE] STARTING WALLET REFILL CONFIRMATION')
+    console.log('[PAYMENT POLLING SERVICE] Refill ID:', refillRecord.refillId)
+    console.log('[PAYMENT POLLING SERVICE] Refill Record ID:', refillRecord.id)
+    console.log('[PAYMENT POLLING SERVICE] Amount:', Number(refillRecord.amount), 'XAF')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+    // Double-check to prevent race condition
+    const currentRefill = await prisma.walletRefill.findUnique({
+      where: { id: refillRecord.id },
+    })
+
+    console.log('[PAYMENT POLLING SERVICE] Current DB state BEFORE update:')
+    console.log('  - status:', currentRefill?.status)
+
+    if (currentRefill?.status === 'COMPLETED') {
+      console.log('⚠️ [PAYMENT POLLING SERVICE] Wallet refill already completed (likely by frontend)')
+      console.log('[PAYMENT POLLING SERVICE] Skipping duplicate confirmation')
+      return
+    }
+
+    // Credit the wallet
+    console.log('[PAYMENT POLLING SERVICE] 💰 Crediting wallet:', refillRecord.walletId)
+
+    const wallet = refillRecord.wallet
+    const newBalance = wallet.balance.add(refillRecord.amount)
+    const newTotalDeposits = wallet.totalDeposits.add(refillRecord.amount)
+
+    // Create wallet transaction
+    await prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: 'DEPOSIT',
+        amount: refillRecord.amount,
+        balanceBefore: wallet.balance,
+        balanceAfter: newBalance,
+        description: `Wallet deposit via Mobile Money - ${refillRecord.phoneNumber}`,
+        referenceType: 'WALLET_REFILL',
+        referenceId: refillRecord.id,
+      },
+    })
+
+    // Update wallet balance
+    await prisma.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        balance: newBalance,
+        totalDeposits: newTotalDeposits,
+      },
+    })
+
+    console.log(`[PAYMENT POLLING SERVICE] ✅ Wallet credited: ${Number(refillRecord.amount)} XAF (New balance: ${Number(newBalance)} XAF)`)
+
+    // Update refill record status
+    console.log('[PAYMENT POLLING SERVICE] 📝 Updating refill record status to COMPLETED')
+    await prisma.walletRefill.update({
+      where: { id: refillRecord.id },
+      data: {
+        status: 'COMPLETED',
+        metadata: paymentStatus.data,
+        completedAt: new Date(),
+      },
+    })
+
+    console.log('✅ [PAYMENT POLLING SERVICE] Refill record updated successfully!')
+
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('🎉 [PAYMENT POLLING SERVICE] ✅✅✅ WALLET REFILL CONFIRMATION COMPLETE! ✅✅✅')
+    console.log('[PAYMENT POLLING SERVICE] Refill ID:', refillRecord.refillId)
+    console.log('[PAYMENT POLLING SERVICE] Amount Credited:', Number(refillRecord.amount), 'XAF')
+    console.log('[PAYMENT POLLING SERVICE] New Wallet Balance:', Number(newBalance), 'XAF')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  } catch (error) {
+    console.error('[PAYMENT POLLING SERVICE] Error confirming wallet refill:', error)
     throw error
   }
 }

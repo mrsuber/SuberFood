@@ -218,14 +218,27 @@ export function WalletPaymentModal({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Payment Method
                 </label>
-                <div className="p-3 border-2 border-yellow-500 bg-yellow-50 rounded-lg">
-                  <div className="text-center">
-                    <div className="bg-yellow-500 text-white rounded px-2 py-1 text-xs font-bold mb-1 inline-block">
-                      MTN
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 border-2 border-yellow-500 bg-yellow-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="bg-yellow-500 text-white rounded px-2 py-1 text-xs font-bold mb-1 inline-block">
+                        MTN
+                      </div>
+                      <p className="text-xs text-gray-600">Mobile Money</p>
                     </div>
-                    <p className="text-xs text-gray-600">Mobile Money</p>
+                  </div>
+                  <div className="p-3 border-2 border-orange-500 bg-orange-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="bg-orange-500 text-white rounded px-2 py-1 text-xs font-bold mb-1 inline-block">
+                        ORANGE
+                      </div>
+                      <p className="text-xs text-gray-600">Money</p>
+                    </div>
                   </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Both MTN and Orange Mobile Money supported
+                </p>
               </div>
 
               {/* Phone Number Input */}
@@ -239,10 +252,10 @@ export function WalletPaymentModal({
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D] text-lg"
-                  placeholder="671234567"
+                  placeholder="6XX XXX XXX"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter your MTN Mobile Money number to receive payment prompt
+                  Enter your MTN or Orange Mobile Money number
                 </p>
               </div>
 

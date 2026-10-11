@@ -256,9 +256,9 @@ export default function WalletPage() {
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-900 font-semibold mb-1">Payment via MTN Mobile Money</p>
+                <p className="text-sm text-blue-900 font-semibold mb-1">Payment via Mobile Money</p>
                 <p className="text-xs text-blue-700">
-                  You'll receive a USSD prompt on your phone to complete the payment
+                  Supports MTN and Orange Mobile Money. You'll receive a USSD prompt on your phone.
                 </p>
               </div>
 

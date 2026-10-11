@@ -99,12 +99,15 @@ export async function GET(request: NextRequest) {
           bulkQtyPerUnit: true,
           bulkMinOrder: true,
           stockQuantity: true,
+          preOrderedQuantity: true,
+          availableQuantity: true,
           stockUnit: true,
           lowStockThreshold: true,
           isOrganic: true,
           isCertified: true,
           isInSeason: true,
           isFeatured: true,
+          isBookable: true,
           status: true,
           isAvailable: true,
           createdAt: true,
@@ -114,18 +117,21 @@ export async function GET(request: NextRequest) {
       prisma.farmProduct.count({ where }),
     ])
 
-    // Add stock status to each product
+    // Add stock status and available quantity to each product
     const productsWithStockStatus = products.map(product => {
+      const availableQty = product.stockQuantity - product.preOrderedQuantity
+
       const stockStatus =
-        product.stockQuantity <= 0
+        availableQty <= 0
           ? 'out_of_stock'
           : product.lowStockThreshold &&
-            product.stockQuantity <= product.lowStockThreshold
+            availableQty <= product.lowStockThreshold
           ? 'low_stock'
           : 'in_stock'
 
       return {
         ...product,
+        availableQuantity: availableQty,
         stockStatus,
       }
     })

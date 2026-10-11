@@ -45,6 +45,8 @@ interface ProductDetail {
   bulkQtyPerUnit: string | null
   bulkMinOrder: number | null
   stockQuantity: string
+  preOrderedQuantity: string
+  availableQuantity: string
   stockUnit: string
   lowStockThreshold: string | null
   farmSource: string | null
@@ -55,6 +57,7 @@ interface ProductDetail {
   isCertified: boolean
   isInSeason: boolean
   isFeatured: boolean
+  isBookable: boolean
   weight: string | null
   weightUnit: string | null
   status: string
@@ -115,11 +118,41 @@ export default function ProductDetailPage() {
     })
   }
 
+  const getOrderBreakdown = () => {
+    if (!product) return { inStock: 0, preOrder: 0, isPreOrderNeeded: false }
+
+    const availableQty = parseFloat(product.availableQuantity)
+    const orderedQty = quantity
+
+    if (availableQty >= orderedQty) {
+      return { inStock: orderedQty, preOrder: 0, isPreOrderNeeded: false }
+    }
+
+    return {
+      inStock: Math.max(0, availableQty),
+      preOrder: orderedQty - Math.max(0, availableQty),
+      isPreOrderNeeded: true
+    }
+  }
+
   const getStockMessage = () => {
     if (!product) return null
-    const qty = parseFloat(product.stockQuantity)
+    const availableQty = parseFloat(product.availableQuantity)
+    const totalQty = parseFloat(product.stockQuantity)
+    const preOrdered = parseFloat(product.preOrderedQuantity)
 
-    if (product.stockStatus === 'out_of_stock' || qty === 0) {
+    if (product.stockStatus === 'out_of_stock' || availableQty === 0) {
+      if (product.isBookable) {
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-orange-600">
+              <Package className="h-5 w-5" />
+              <span className="font-semibold">Pre-Order Only</span>
+            </div>
+            <p className="text-sm text-gray-600">This item is currently out of stock but available for pre-order. You'll receive it when stock arrives.</p>
+          </div>
+        )
+      }
       return (
         <div className="flex items-center gap-2 text-red-600">
           <AlertCircle className="h-5 w-5" />
@@ -127,18 +160,43 @@ export default function ProductDetailPage() {
         </div>
       )
     }
+
+    if (preOrdered > 0) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-5 w-5" />
+            <span className="font-semibold">Limited Stock Available</span>
+          </div>
+          <div className="text-sm space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Available now:</span>
+              <span className="font-medium text-green-600">{availableQty} {product.stockUnit}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Reserved (pre-orders):</span>
+              <span className="font-medium text-gray-500">{preOrdered} {product.stockUnit}</span>
+            </div>
+            {product.isBookable && (
+              <p className="text-xs text-orange-600 mt-2">Additional quantities available for pre-order</p>
+            )}
+          </div>
+        </div>
+      )
+    }
+
     if (product.stockStatus === 'low_stock') {
       return (
         <div className="flex items-center gap-2 text-yellow-600">
           <AlertCircle className="h-5 w-5" />
-          <span className="font-semibold">Only {qty} {product.stockUnit} left!</span>
+          <span className="font-semibold">Only {availableQty} {product.stockUnit} left!</span>
         </div>
       )
     }
     return (
       <div className="flex items-center gap-2 text-green-600">
         <CheckCircle2 className="h-5 w-5" />
-        <span className="font-semibold">In Stock ({qty} {product.stockUnit} available)</span>
+        <span className="font-semibold">In Stock ({availableQty} {product.stockUnit} available)</span>
       </div>
     )
   }
@@ -416,6 +474,64 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
+              {/* Order Breakdown */}
+              {(() => {
+                const breakdown = getOrderBreakdown()
+                const unit = selectedPriceType === 'retail' ? product.retailUnit : product.stockUnit
+
+                return (
+                  <Card className="mb-6 border-2 border-dashed">
+                    <CardContent className="p-4">
+                      <h4 className="font-semibold text-sm mb-3 text-gray-700">📦 Your Order Summary</h4>
+
+                      {breakdown.isPreOrderNeeded ? (
+                        <div className="space-y-2">
+                          {breakdown.inStock > 0 && (
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                <span className="text-sm text-gray-700">Available Now:</span>
+                              </div>
+                              <span className="font-semibold text-green-600">
+                                {breakdown.inStock} {unit}
+                              </span>
+                            </div>
+                          )}
+
+                          {breakdown.preOrder > 0 && (
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4 text-orange-600" />
+                                <span className="text-sm text-gray-700">Pre-Order:</span>
+                              </div>
+                              <span className="font-semibold text-orange-600">
+                                {breakdown.preOrder} {unit}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="pt-2 mt-2 border-t border-gray-200">
+                            <p className="text-xs text-orange-600">
+                              ⚠️ Part of your order will be fulfilled when stock arrives
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-gray-700">All items in stock</span>
+                          </div>
+                          <span className="font-semibold text-green-600">
+                            {breakdown.inStock} {unit}
+                          </span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })()}
+
               {/* Total Price */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <div className="flex justify-between items-center">
@@ -427,14 +543,14 @@ export default function ProductDetailPage() {
               {/* Add to Cart Button */}
               <Button
                 className="w-full bg-[#15803D] hover:bg-[#166534] h-14 text-lg"
-                disabled={!product.isAvailable || addingToCart}
+                disabled={(!product.isAvailable && !product.isBookable) || addingToCart}
                 onClick={handleAddToCart}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 {addingToCart
                   ? 'Adding to Cart...'
-                  : product.isAvailable
-                  ? 'Add to Cart'
+                  : (product.isAvailable || product.isBookable)
+                  ? (getOrderBreakdown().isPreOrderNeeded ? 'Add to Cart (Mixed Order)' : 'Add to Cart')
                   : 'Out of Stock'}
               </Button>
             </div>

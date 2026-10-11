@@ -50,12 +50,15 @@ export async function GET(
           product.reviews.length
         : 0
 
-    // Check stock status
+    // Calculate available quantity (stock minus pre-orders)
+    const availableQty = product.stockQuantity - product.preOrderedQuantity
+
+    // Check stock status based on available quantity
     const stockStatus =
-      product.stockQuantity <= 0
+      availableQty <= 0
         ? 'out_of_stock'
         : product.lowStockThreshold &&
-          product.stockQuantity <= product.lowStockThreshold
+          availableQty <= product.lowStockThreshold
         ? 'low_stock'
         : 'in_stock'
 
@@ -63,6 +66,7 @@ export async function GET(
       success: true,
       data: {
         ...product,
+        availableQuantity: availableQty, // Override with calculated value
         averageRating: parseFloat(averageRating.toFixed(1)),
         reviewCount: product.reviews.length,
         stockStatus,

@@ -181,6 +181,11 @@ const navigationSections: NavSection[] = [
         icon: MapPin,
       },
       {
+        name: 'Farmers',
+        href: '/admin/farmers',
+        icon: Users,
+      },
+      {
         name: 'Customers',
         href: '/admin/customers',
         icon: Users,
@@ -282,6 +287,11 @@ const navigationSections: NavSection[] = [
       {
         name: 'Payment Transactions',
         href: '/admin/payment-transactions',
+        icon: CreditCard,
+      },
+      {
+        name: 'Withdrawals',
+        href: '/admin/withdrawals',
         icon: CreditCard,
       },
       {

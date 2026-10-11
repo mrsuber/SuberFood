@@ -54,15 +54,18 @@ model User {
   firstName     String? // Made optional for OAuth
   lastName      String? // Made optional for OAuth
   name          String? // Full name for OAuth
-  phone         String?    @unique // Made unique to enable phone-based account creation
+  phone         String?    @unique // PRIMARY phone number (kept for backwards compatibility)
   role          UserRole   @default(CUSTOMER)
   status        UserStatus @default(ACTIVE) // Changed default to ACTIVE for easier onboarding
   emailVerified DateTime?
-  phoneVerified Boolean    @default(false) // Track phone verification status
+  phoneVerified Boolean    @default(false) // Track primary phone verification status
   image         String?
 
   // Account completion tracking
   isAccountComplete Boolean @default(false) // True when user has set password and verified email
+
+  // Multiple phone numbers support (NEW)
+  phoneNumbers  UserPhoneNumber[]
 
   // Phase 1: Customer preferences
   favoriteMenuItems   String[] // Menu item IDs
@@ -112,7 +115,83 @@ model User {
   reliability             CustomerReliability?
   redFlagIncidents        RedFlagIncident[]
 
+  // NEW: Account claims
+  accountClaims           AccountClaim[]
+
   @@map("users")
+}
+
+// ========================================
+// MULTIPLE PHONE NUMBERS SUPPORT
+// ========================================
+
+model UserPhoneNumber {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phoneNumber     String    @unique // Normalized phone number
+  isPrimary       Boolean   @default(false) // One phone must be primary
+  isVerified      Boolean   @default(false)
+  verifiedAt      DateTime?
+  verificationMethod String? // "PAYMENT", "SMS", "ADMIN"
+
+  // Metadata
+  label           String?   // "Personal", "Work", "Business"
+  addedAt         DateTime  @default(now())
+  lastUsedAt      DateTime?
+
+  @@index([userId])
+  @@index([phoneNumber])
+  @@map("user_phone_numbers")
+}
+
+// ========================================
+// ACCOUNT CLAIM SYSTEM
+// ========================================
+
+enum AccountClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  UNDER_REVIEW
+}
+
+model AccountClaim {
+  id                String              @id @default(cuid())
+
+  // Claim information
+  phoneNumber       String              // Phone number being claimed
+  newEmail          String?             // New email if changing
+  fullName          String              // Claimer's name
+  reason            String              // Why they're claiming
+
+  // Proof documents
+  idDocumentUrl     String?             // Upload ID card/passport
+  proofOfOwnership  String?             // Phone bill, etc.
+  additionalNotes   String?
+
+  // Current account (if found)
+  existingUserId    String?
+  existingUser      User?               @relation(fields: [existingUserId], references: [id])
+  currentEmail      String?             // Current email on account
+
+  // Status
+  status            AccountClaimStatus  @default(PENDING)
+
+  // Admin review
+  reviewedBy        String?             // Admin user ID
+  reviewedAt        DateTime?
+  reviewNotes       String?
+  rejectionReason   String?
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([phoneNumber])
+  @@index([status])
+  @@index([existingUserId])
+  @@map("account_claims")
 }
 
 // Account model for OAuth providers

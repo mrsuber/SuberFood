@@ -75,7 +75,7 @@ export async function detectReferralFraud(params: FraudCheckParams): Promise<Fra
     }
   }
 
-  // LAYER 2: Phone Number Matching
+  // LAYER 2: Phone Number Matching - CHECK ALL PHONE NUMBERS
   if (guestPhone) {
     const normalizedPhone = normalizePhoneNumber(guestPhone)
 
@@ -85,9 +85,22 @@ export async function detectReferralFraud(params: FraudCheckParams): Promise<Fra
       select: { phone: true, email: true },
     })
 
+    // Check primary phone
     if (referrerUser?.phone && normalizePhoneNumber(referrerUser.phone) === normalizedPhone) {
       fraudScore += 80 // Very high confidence
-      details.push('Phone number matches referrer account')
+      details.push('Phone number matches referrer primary phone')
+    }
+
+    // CRITICAL: Check ALL phone numbers in UserPhoneNumber table
+    const referrerPhones = await prisma.userPhoneNumber.findMany({
+      where: { userId: referrerUserId },
+      select: { phoneNumber: true, label: true }
+    })
+
+    const phoneMatch = referrerPhones.find(p => p.phoneNumber === normalizedPhone)
+    if (phoneMatch && fraudScore < 80) { // Only add if not already matched primary
+      fraudScore += 80
+      details.push(`Phone number matches referrer's ${phoneMatch.label || 'registered'} phone number`)
     }
 
     // Check recent orders with same phone from different referrals

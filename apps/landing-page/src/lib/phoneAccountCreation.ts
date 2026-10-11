@@ -34,7 +34,7 @@ export async function createOrGetPhoneAccount(
   const normalizedPhone = normalizePhoneNumber(phone)
 
   try {
-    // Check if account already exists with this phone
+    // Check if account already exists with this phone (primary phone)
     const existingUser = await prisma.user.findUnique({
       where: { phone: normalizedPhone },
       select: { id: true }
@@ -43,6 +43,20 @@ export async function createOrGetPhoneAccount(
     if (existingUser) {
       return {
         userId: existingUser.id,
+        isNewAccount: false,
+        accountExists: true
+      }
+    }
+
+    // CRITICAL: Also check UserPhoneNumber table for multiple phones
+    const existingPhoneNumber = await prisma.userPhoneNumber.findUnique({
+      where: { phoneNumber: normalizedPhone },
+      select: { userId: true }
+    })
+
+    if (existingPhoneNumber) {
+      return {
+        userId: existingPhoneNumber.userId,
         isNewAccount: false,
         accountExists: true
       }
@@ -62,7 +76,16 @@ export async function createOrGetPhoneAccount(
           where: { id: emailUser.id },
           data: {
             phone: normalizedPhone,
-            phoneVerified: true // Phone verified by payment
+            phoneVerified: true, // Phone verified by payment
+            phoneNumbers: {
+              create: {
+                phoneNumber: normalizedPhone,
+                isPrimary: true,
+                isVerified: true,
+                verificationMethod: 'PAYMENT',
+                label: 'Primary',
+              }
+            }
           }
         })
 
@@ -74,7 +97,7 @@ export async function createOrGetPhoneAccount(
       }
     }
 
-    // Create new phone-based account
+    // Create new phone-based account with phone number entry
     const newUser = await prisma.user.create({
       data: {
         phone: normalizedPhone,
@@ -88,6 +111,16 @@ export async function createOrGetPhoneAccount(
         isAccountComplete: false, // User needs to set password and verify email
         role: 'CUSTOMER',
         status: 'ACTIVE',
+        // CRITICAL: Create phone number entry
+        phoneNumbers: {
+          create: {
+            phoneNumber: normalizedPhone,
+            isPrimary: true,
+            isVerified: true, // Verified by payment
+            verificationMethod: 'PAYMENT',
+            label: 'Primary',
+          }
+        }
       }
     })
 

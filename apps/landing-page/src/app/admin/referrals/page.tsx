@@ -21,6 +21,7 @@ import {
   ShoppingCart,
   ShieldAlert,
   Ban,
+  FileText,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -171,6 +172,12 @@ export default function AdminReferralsPage() {
             <Button variant="outline" className="flex items-center gap-2">
               <ShieldAlert className="h-4 w-4" />
               Fraud Logs
+            </Button>
+          </Link>
+          <Link href="/admin/account-claims">
+            <Button variant="outline" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Account Claims
             </Button>
           </Link>
         </div>

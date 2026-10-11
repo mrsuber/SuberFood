@@ -6,7 +6,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Lock, User, AlertCircle, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, Loader2, CheckCircle2, Eye, EyeOff, Phone, ShieldAlert } from 'lucide-react';
+
+interface ExistingAccount {
+  email?: string
+  name?: string
+  isComplete?: boolean
+}
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -14,6 +20,7 @@ export default function SignUpPage() {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
   });
@@ -22,6 +29,10 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phoneOwnershipModal, setPhoneOwnershipModal] = useState<{
+    show: boolean
+    existingAccount: ExistingAccount | null
+  }>({ show: false, existingAccount: null });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -32,8 +43,8 @@ export default function SignUpPage() {
   };
 
   const validateForm = () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-      setError('All fields are required');
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password) {
+      setError('All fields are required including phone number');
       return false;
     }
 
@@ -50,6 +61,13 @@ export default function SignUpPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address');
+      return false;
+    }
+
+    // Basic phone validation (at least 9 digits)
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 9) {
+      setError('Please enter a valid phone number');
       return false;
     }
 
@@ -76,6 +94,7 @@ export default function SignUpPage() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
+          phone: formData.phone,
           password: formData.password,
         }),
       });
@@ -83,6 +102,15 @@ export default function SignUpPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Check if it's a phone ownership issue
+        if (data.error === 'PHONE_ALREADY_EXISTS' && data.requiresConfirmation) {
+          setPhoneOwnershipModal({
+            show: true,
+            existingAccount: data.existingAccount
+          });
+          setIsLoading(false);
+          return;
+        }
         throw new Error(data.error || 'Registration failed');
       }
 
@@ -101,6 +129,38 @@ export default function SignUpPage() {
       setError(error.message || 'An error occurred during registration');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePhoneOwnershipConfirm = () => {
+    // User confirms they own the account - redirect to login
+    setPhoneOwnershipModal({ show: false, existingAccount: null });
+    router.push('/auth/signin?message=Please log in to your existing account');
+  };
+
+  const handlePhoneOwnershipReport = async () => {
+    // User reports phone as stolen/incorrect - create account claim
+    try {
+      const response = await fetch('/api/account-claims', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: formData.phone,
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          newEmail: formData.email,
+          reason: 'Phone number conflict during registration - user reports not their account',
+          additionalNotes: 'User attempted to register but phone number already exists'
+        })
+      });
+
+      if (response.ok) {
+        alert('Your report has been submitted. An admin will review your case shortly.');
+        setPhoneOwnershipModal({ show: false, existingAccount: null });
+      } else {
+        alert('Failed to submit report. Please try again.');
+      }
+    } catch (error) {
+      alert('Failed to submit report. Please try again.');
     }
   };
 
@@ -252,6 +312,27 @@ export default function SignUpPage() {
             </div>
 
             <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="+237 6XX XXX XXX"
+                  disabled={isLoading}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Required for account security and order notifications</p>
+            </div>
+
+            <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
@@ -337,6 +418,67 @@ export default function SignUpPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Phone Ownership Verification Modal */}
+      {phoneOwnershipModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <ShieldAlert className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <CardTitle>Phone Number Already Registered</CardTitle>
+                  <CardDescription>This phone number is already associated with an account</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <p className="text-sm text-gray-700 mb-2">
+                  <strong>Phone:</strong> {formData.phone}
+                </p>
+                {phoneOwnershipModal.existingAccount?.email && (
+                  <p className="text-sm text-gray-700 mb-2">
+                    <strong>Email:</strong> {phoneOwnershipModal.existingAccount.email}
+                  </p>
+                )}
+                {phoneOwnershipModal.existingAccount?.name && (
+                  <p className="text-sm text-gray-700">
+                    <strong>Name:</strong> {phoneOwnershipModal.existingAccount.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">
+                  Is this your account?
+                </p>
+
+                <Button
+                  onClick={handlePhoneOwnershipConfirm}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  Yes, this is my account - Take me to login
+                </Button>
+
+                <Button
+                  onClick={handlePhoneOwnershipReport}
+                  variant="outline"
+                  className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  No, report this phone number
+                </Button>
+
+                <p className="text-xs text-gray-500 text-center">
+                  If this is not your phone number, reporting it will notify admins for review.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

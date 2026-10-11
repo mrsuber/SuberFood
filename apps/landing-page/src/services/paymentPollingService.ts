@@ -258,7 +258,7 @@ export function stopPolling(recordId: string): void {
  */
 async function checkPaymentStatus(refillId: string): Promise<{ status: string; data?: any } | null> {
   try {
-    const url = `${PAYWITHCAMSOL_API_URL}/balance/refill/${refillId}/status`
+    const url = `${PAYWITHCAMSOL_API_URL}/api/v1/balance/refill/${refillId}/status`
     console.log('[PAYMENT POLLING SERVICE] Checking status at URL:', url)
     console.log('[PAYMENT POLLING SERVICE] Using API Key:', PAYWITHCAMSOL_SECRET_KEY ? `${PAYWITHCAMSOL_SECRET_KEY.substring(0, 10)}...` : 'NOT SET')
 

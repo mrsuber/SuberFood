@@ -25,6 +25,7 @@ interface FarmProduct {
   bulkUnit: string | null
   stockQuantity: string
   stockUnit: string
+  stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock'
   farmSource: string | null
   isOrganic: boolean
   isCertified: boolean
@@ -85,12 +86,11 @@ export default function FarmProductsPage() {
     return `${parseInt(price).toLocaleString()} XAF${unit ? `/${unit}` : ''}`
   }
 
-  const getStockBadge = (quantity: string, status: string) => {
-    const qty = parseFloat(quantity)
-    if (status === 'OUT_OF_STOCK' || qty === 0) {
+  const getStockBadge = (stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock') => {
+    if (stockStatus === 'out_of_stock') {
       return <Badge variant="destructive">Out of Stock</Badge>
     }
-    if (qty < 20) {
+    if (stockStatus === 'low_stock') {
       return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Low Stock</Badge>
     }
     return <Badge variant="secondary" className="bg-green-100 text-green-800">In Stock</Badge>
@@ -235,7 +235,7 @@ export default function FarmProductsPage() {
                             </h3>
                             <p className="text-sm text-gray-500">{product.category.replace(/_/g, ' ')}</p>
                           </div>
-                          {getStockBadge(product.stockQuantity, product.status)}
+                          {getStockBadge(product.stockStatus)}
                         </div>
 
                         {product.description && (

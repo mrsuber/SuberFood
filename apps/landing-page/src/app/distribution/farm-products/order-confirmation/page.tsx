@@ -97,6 +97,99 @@ export default function OrderConfirmationPage() {
     fetchOrder()
   }, [orderNumber, clearCart])
 
+  const handleDownloadReceipt = () => {
+    if (!order) return
+
+    // Create receipt HTML
+    const receiptHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Order Receipt - ${order.orderNumber}</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #15803D; padding-bottom: 20px; }
+          .header h1 { color: #15803D; margin: 0; }
+          .order-info { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+          .order-info p { margin: 5px 0; }
+          .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          .items-table th, .items-table td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+          .items-table th { background: #15803D; color: white; }
+          .totals { text-align: right; margin-top: 20px; }
+          .totals p { margin: 5px 0; }
+          .total-amount { font-size: 1.2em; font-weight: bold; color: #15803D; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>SuberFood</h1>
+          <p>Order Receipt</p>
+        </div>
+
+        <div class="order-info">
+          <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+          <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
+          <p><strong>Customer:</strong> ${order.guestName}</p>
+          <p><strong>Phone:</strong> ${order.guestPhone}</p>
+          ${order.guestEmail ? `<p><strong>Email:</strong> ${order.guestEmail}</p>` : ''}
+          <p><strong>Fulfillment:</strong> ${order.fulfillmentType === 'DELIVERY' ? 'Home Delivery' : 'Pickup'}</p>
+          ${order.deliveryAddress ? `<p><strong>Delivery Address:</strong> ${order.deliveryAddress}, ${order.deliveryCity || ''}, ${order.deliveryState || ''}</p>` : ''}
+          ${order.pickupLocation ? `<p><strong>Pickup Location:</strong> ${order.pickupLocation}</p>` : ''}
+          <p><strong>Payment Status:</strong> ${order.paymentStatus}</p>
+          <p><strong>Order Status:</strong> ${order.status}</p>
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Type</th>
+              <th>Quantity</th>
+              <th>Price/Unit</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items.map(item => `
+              <tr>
+                <td>${item.productName}</td>
+                <td>${item.purchaseType}</td>
+                <td>${item.quantity} ${item.unit}</td>
+                <td>${item.pricePerUnit.toLocaleString()} XAF</td>
+                <td>${item.totalPrice.toLocaleString()} XAF</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <p>Subtotal: ${order.subtotal.toLocaleString()} XAF</p>
+          ${order.deliveryFee > 0 ? `<p>Delivery Fee: ${order.deliveryFee.toLocaleString()} XAF</p>` : ''}
+          <p class="total-amount">Total Amount: ${order.totalAmount.toLocaleString()} XAF</p>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for shopping with SuberFood!</p>
+          <p>For questions or concerns, please contact us at support@suberfood.com</p>
+        </div>
+      </body>
+      </html>
+    `
+
+    // Create a Blob and download
+    const blob = new Blob([receiptHTML], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `SuberFood-Receipt-${order.orderNumber}.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const formatPrice = (price: number) => {
     return `${price.toLocaleString()} XAF`
   }
@@ -387,7 +480,11 @@ export default function OrderConfirmationPage() {
                 Continue Shopping
               </Button>
             </Link>
-            <Button className="flex-1 bg-[#15803D] hover:bg-[#166534]">
+            <Button
+              onClick={handleDownloadReceipt}
+              disabled={!order}
+              className="flex-1 bg-[#15803D] hover:bg-[#166534]"
+            >
               <Download className="h-4 w-4 mr-2" />
               Download Receipt
             </Button>

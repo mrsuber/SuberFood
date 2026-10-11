@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
           bulkMinOrder: true,
           stockQuantity: true,
           stockUnit: true,
+          lowStockThreshold: true,
           isOrganic: true,
           isCertified: true,
           isInSeason: true,
@@ -113,6 +114,22 @@ export async function GET(request: NextRequest) {
       prisma.farmProduct.count({ where }),
     ])
 
+    // Add stock status to each product
+    const productsWithStockStatus = products.map(product => {
+      const stockStatus =
+        product.stockQuantity <= 0
+          ? 'out_of_stock'
+          : product.lowStockThreshold &&
+            product.stockQuantity <= product.lowStockThreshold
+          ? 'low_stock'
+          : 'in_stock'
+
+      return {
+        ...product,
+        stockStatus,
+      }
+    })
+
     // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / limit)
     const hasNextPage = page < totalPages
@@ -120,7 +137,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: products,
+      data: productsWithStockStatus,
       pagination: {
         page,
         limit,

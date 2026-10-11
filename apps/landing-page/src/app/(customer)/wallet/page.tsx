@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { WalletPaymentModal } from '@/components/payment/WalletPaymentModal';
 
 interface WalletData {
   id: string;
@@ -50,9 +51,7 @@ export default function WalletPage() {
 
   // Deposit form
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositMethod, setDepositMethod] = useState('MTN_MOMO');
-  const [depositPhone, setDepositPhone] = useState('');
-  const [depositLoading, setDepositLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Withdrawal form
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
@@ -91,40 +90,27 @@ export default function WalletPage() {
     }
   };
 
-  const handleDeposit = async (e: React.FormEvent) => {
+  const handleDeposit = (e: React.FormEvent) => {
     e.preventDefault();
-    setDepositLoading(true);
     setError('');
 
-    try {
-      // Initialize payment with PayWithCamsol
-      const res = await fetch('/api/wallet/payment/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: parseFloat(depositAmount),
-          phoneNumber: depositPhone,
-          method: depositMethod,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        // Show success message that USSD was sent
-        alert(`Payment request sent to ${depositPhone}. Please check your phone and enter your PIN to complete the payment.`);
-
-        // Redirect to status page to poll for payment
-        router.push(`/wallet/payment-status?refillId=${data.refillId}`);
-      } else {
-        setError(data.message || 'Failed to initialize payment');
-      }
-    } catch (err) {
-      setError('Failed to initialize payment');
-      console.error(err);
-    } finally {
-      setDepositLoading(false);
+    // Validate amount
+    const amount = parseFloat(depositAmount);
+    if (!amount || amount < 100) {
+      setError('Minimum deposit amount is 100 XAF');
+      return;
     }
+
+    // Show payment modal
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    // Refresh wallet data
+    fetchWallet();
+    // Reset form
+    setDepositAmount('');
+    setError('');
   };
 
   const handleWithdraw = async (e: React.FormEvent) => {
@@ -264,41 +250,20 @@ export default function WalletPage() {
                   onChange={(e) => setDepositAmount(e.target.value)}
                   required
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="depositMethod">Payment Method</Label>
-                <select
-                  id="depositMethod"
-                  value={depositMethod}
-                  onChange={(e) => setDepositMethod(e.target.value)}
-                  className="w-full border rounded p-2"
-                  disabled
-                >
-                  <option value="MTN_MOMO">MTN Mobile Money</option>
-                </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  USSD payment request will be sent to your phone
+                  Minimum deposit: 100 XAF
                 </p>
               </div>
 
-              <div>
-                <Label htmlFor="depositPhone">Mobile Money Number</Label>
-                <Input
-                  id="depositPhone"
-                  type="tel"
-                  placeholder="671234567"
-                  value={depositPhone}
-                  onChange={(e) => setDepositPhone(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter your MTN Mobile Money number
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-900 font-semibold mb-1">Payment via MTN Mobile Money</p>
+                <p className="text-xs text-blue-700">
+                  You'll receive a USSD prompt on your phone to complete the payment
                 </p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={depositLoading}>
-                {depositLoading ? 'Processing...' : 'Deposit'}
+              <Button type="submit" className="w-full">
+                Continue to Payment
               </Button>
             </form>
           </CardContent>
@@ -467,6 +432,14 @@ export default function WalletPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment Modal */}
+      <WalletPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={handlePaymentSuccess}
+        amount={parseFloat(depositAmount) || 0}
+      />
     </div>
   );
 }

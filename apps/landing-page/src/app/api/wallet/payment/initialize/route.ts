@@ -91,28 +91,39 @@ export async function POST(req: NextRequest) {
     })
 
     const result = await response.json()
-    console.log('[WALLET PAYMENT INIT] PayWithCamsol response:', JSON.stringify(result, null, 2))
+    console.log('[WALLET PAYMENT INIT] PayWithCamsol response status:', response.status)
+    console.log('[WALLET PAYMENT INIT] PayWithCamsol response body:', JSON.stringify(result, null, 2))
 
-    if (!response.ok || !result.success) {
+    if (!response.ok) {
       console.error('[WALLET PAYMENT INIT] Payment initialization failed:', result)
       return NextResponse.json(
         {
           success: false,
-          message: result.message || 'Failed to initialize payment',
+          message: result?.message || result?.error || 'Failed to initialize payment',
+          details: result
         },
-        { status: response.status || 500 }
+        { status: response.status }
       )
     }
 
-    // Extract refill ID from response
-    const refillId = result.data?.id
+    // Handle balance/refill response structure
+    // Response format: { success: true, data: { refillId: "...", ... } }
+    // Try multiple possible field names for the refill ID
+    const responseData = result.data || result
+    const refillId = responseData.refillId || responseData.id || responseData.reference
+
+    console.log('[WALLET PAYMENT INIT] Extracted refillId:', refillId)
+    console.log('[WALLET PAYMENT INIT] Response data:', JSON.stringify(responseData, null, 2))
 
     if (!refillId) {
-      console.error('[WALLET PAYMENT INIT] No refill ID returned from PayWithCamsol')
+      console.error('[WALLET PAYMENT INIT] No refill ID found in response')
+      console.error('[WALLET PAYMENT INIT] Tried: refillId, id, reference')
+      console.error('[WALLET PAYMENT INIT] Full response:', JSON.stringify(result, null, 2))
       return NextResponse.json(
         {
           success: false,
           message: 'Payment initialization failed - no transaction ID',
+          details: result
         },
         { status: 500 }
       )

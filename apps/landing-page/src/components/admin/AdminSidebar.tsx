@@ -30,6 +30,9 @@ import {
   Wallet,
   CreditCard,
   Receipt,
+  Gift,
+  ShieldAlert,
+  FileText,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -186,6 +189,21 @@ const navigationSections: NavSection[] = [
         name: 'Verifications',
         href: '/admin/verifications',
         icon: ShieldCheck,
+      },
+      {
+        name: 'Referrals',
+        href: '/admin/referrals',
+        icon: Gift,
+      },
+      {
+        name: 'Fraud Logs',
+        href: '/admin/fraud-logs',
+        icon: ShieldAlert,
+      },
+      {
+        name: 'Account Claims',
+        href: '/admin/account-claims',
+        icon: FileText,
       },
     ]
   },

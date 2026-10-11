@@ -297,6 +297,7 @@ model Wallet {
   // Relationships
   transactions            WalletTransaction[]
   withdrawalRequests      WithdrawalRequest[]
+  refills                 WalletRefill[]
 
   createdAt               DateTime            @default(now())
   updatedAt               DateTime            @updatedAt
@@ -373,6 +374,49 @@ model WithdrawalRequest {
   @@index([walletId, status])
   @@index([status, createdAt])
   @@map("withdrawal_requests")
+}
+
+enum WalletRefillStatus {
+  PENDING       // Payment initialized, waiting for user to pay via USSD
+  PROCESSING    // Payment being processed by PayWithCamsol
+  COMPLETED     // Payment successful, wallet credited
+  FAILED        // Payment failed
+  CANCELLED     // Payment cancelled
+  EXPIRED       // Payment request expired (timeout)
+}
+
+model WalletRefill {
+  id                String             @id @default(cuid())
+  walletId          String
+  wallet            Wallet             @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  // PayWithCamsol reference
+  refillId          String             @unique // ID from PayWithCamsol API
+
+  // Payment details
+  amount            Decimal            @db.Decimal(12, 2)
+  phoneNumber       String             // Phone number used for payment
+  method            String             @default("MTN_MOMO") // Payment method
+
+  // Status tracking
+  status            WalletRefillStatus @default(PENDING)
+
+  // PayWithCamsol response data
+  metadata          Json?              // Full response from PayWithCamsol
+
+  // Completion tracking
+  completedAt       DateTime?
+  failedAt          DateTime?
+  failureReason     String?
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([walletId])
+  @@index([refillId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("wallet_refills")
 }
 
 // ========================================

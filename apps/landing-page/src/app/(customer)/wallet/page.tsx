@@ -50,7 +50,8 @@ export default function WalletPage() {
 
   // Deposit form
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositMethod, setDepositMethod] = useState('CASH');
+  const [depositMethod, setDepositMethod] = useState('MTN_MOMO');
+  const [depositPhone, setDepositPhone] = useState('');
   const [depositLoading, setDepositLoading] = useState(false);
 
   // Withdrawal form
@@ -96,11 +97,13 @@ export default function WalletPage() {
     setError('');
 
     try {
-      const res = await fetch('/api/wallet/deposit', {
+      // Initialize payment with PayWithCamsol
+      const res = await fetch('/api/wallet/payment/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: parseFloat(depositAmount),
+          phoneNumber: depositPhone,
           method: depositMethod,
         }),
       });
@@ -108,14 +111,16 @@ export default function WalletPage() {
       const data = await res.json();
 
       if (data.success) {
-        setDepositAmount('');
-        fetchWallet();
-        alert('Deposit successful!');
+        // Show success message that USSD was sent
+        alert(`Payment request sent to ${depositPhone}. Please check your phone and enter your PIN to complete the payment.`);
+
+        // Redirect to status page to poll for payment
+        router.push(`/wallet/payment-status?refillId=${data.refillId}`);
       } else {
-        setError(data.error || 'Deposit failed');
+        setError(data.message || 'Failed to initialize payment');
       }
     } catch (err) {
-      setError('Deposit failed');
+      setError('Failed to initialize payment');
       console.error(err);
     } finally {
       setDepositLoading(false);
@@ -254,7 +259,7 @@ export default function WalletPage() {
                   type="number"
                   min="100"
                   step="100"
-                  placeholder="5000"
+                  placeholder="100"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
                   required
@@ -268,12 +273,28 @@ export default function WalletPage() {
                   value={depositMethod}
                   onChange={(e) => setDepositMethod(e.target.value)}
                   className="w-full border rounded p-2"
+                  disabled
                 >
-                  <option value="CASH">Cash</option>
                   <option value="MTN_MOMO">MTN Mobile Money</option>
-                  <option value="ORANGE_MOMO">Orange Money</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  USSD payment request will be sent to your phone
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="depositPhone">Mobile Money Number</Label>
+                <Input
+                  id="depositPhone"
+                  type="tel"
+                  placeholder="671234567"
+                  value={depositPhone}
+                  onChange={(e) => setDepositPhone(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter your MTN Mobile Money number
+                </p>
               </div>
 
               <Button type="submit" className="w-full" disabled={depositLoading}>

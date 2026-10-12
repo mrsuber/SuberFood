@@ -97,11 +97,12 @@ export async function POST(req: NextRequest) {
     // Check if PayWithCamsol returned an error response
     if (!response.ok) {
       console.error('[WALLET PAYMENT INIT] Payment initialization failed with HTTP error:', result)
+      // Extract error message from PayWithCamsol response
+      const errorMessage = result?.data?.failureReason || result?.message || result?.error || 'Failed to initialize payment'
       return NextResponse.json(
         {
           success: false,
-          message: result?.message || result?.error || 'Failed to initialize payment',
-          details: result
+          message: errorMessage,
         },
         { status: response.status }
       )
@@ -110,11 +111,11 @@ export async function POST(req: NextRequest) {
     // PayWithCamsol can return 200 OK but with success: false
     if (result.success === false) {
       console.error('[WALLET PAYMENT INIT] PayWithCamsol returned success: false:', result)
+      const errorMessage = result?.data?.failureReason || result?.message || 'Failed to initialize payment'
       return NextResponse.json(
         {
           success: false,
-          message: result.message || 'Failed to initialize payment',
-          details: result
+          message: errorMessage,
         },
         { status: 400 }
       )
@@ -192,11 +193,11 @@ export async function POST(req: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     console.error('[WALLET PAYMENT INIT] Error details:', errorMessage)
 
+    // Return detailed error message to help users understand what went wrong
     return NextResponse.json(
       {
         success: false,
-        message: 'Failed to initialize payment. Please try again.',
-        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        message: errorMessage || 'Failed to initialize payment. Please try again.',
       },
       { status: 500 }
     )

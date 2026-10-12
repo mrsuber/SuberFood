@@ -94,8 +94,9 @@ export async function POST(req: NextRequest) {
     console.log('[WALLET PAYMENT INIT] PayWithCamsol response status:', response.status)
     console.log('[WALLET PAYMENT INIT] PayWithCamsol response body:', JSON.stringify(result, null, 2))
 
+    // Check if PayWithCamsol returned an error response
     if (!response.ok) {
-      console.error('[WALLET PAYMENT INIT] Payment initialization failed:', result)
+      console.error('[WALLET PAYMENT INIT] Payment initialization failed with HTTP error:', result)
       return NextResponse.json(
         {
           success: false,
@@ -103,6 +104,19 @@ export async function POST(req: NextRequest) {
           details: result
         },
         { status: response.status }
+      )
+    }
+
+    // PayWithCamsol can return 200 OK but with success: false
+    if (result.success === false) {
+      console.error('[WALLET PAYMENT INIT] PayWithCamsol returned success: false:', result)
+      return NextResponse.json(
+        {
+          success: false,
+          message: result.message || 'Failed to initialize payment',
+          details: result
+        },
+        { status: 400 }
       )
     }
 
@@ -122,7 +136,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Payment initialization failed - no transaction ID',
+          message: 'Payment initialization failed - no transaction ID received from payment gateway',
           details: result
         },
         { status: 500 }
@@ -130,22 +144,43 @@ export async function POST(req: NextRequest) {
     }
 
     // Create a pending wallet refill record
-    const refillRecord = await prisma.walletRefill.create({
-      data: {
-        walletId: wallet.id,
-        refillId,
-        amount: new Decimal(amount),
-        phoneNumber: formattedPhone,
-        status: 'PENDING',
-        method: method || 'MTN_MOMO',
-        metadata: result.data || {},
-      },
-    })
-
-    console.log('[WALLET PAYMENT INIT] Created refill record:', refillRecord.id)
+    let refillRecord
+    try {
+      refillRecord = await prisma.walletRefill.create({
+        data: {
+          walletId: wallet.id,
+          refillId,
+          amount: new Decimal(amount),
+          phoneNumber: formattedPhone,
+          status: 'PENDING',
+          method: method || 'MTN_MOMO',
+          metadata: result.data || {},
+        },
+      })
+      console.log('[WALLET PAYMENT INIT] Created refill record:', refillRecord.id)
+    } catch (dbError) {
+      console.error('[WALLET PAYMENT INIT] Database error creating refill record:', dbError)
+      // Check if it's a unique constraint violation (refillId already exists)
+      if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+        console.error('[WALLET PAYMENT INIT] Refill ID already exists:', refillId)
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'This payment request has already been processed. Please try again.',
+          },
+          { status: 409 }
+        )
+      }
+      throw dbError // Re-throw to be caught by outer catch
+    }
 
     // Start polling for payment status
-    startPaymentPolling(refillId, 'WALLET_REFILL', refillRecord.id)
+    try {
+      startPaymentPolling(refillId, 'WALLET_REFILL', refillRecord.id)
+    } catch (pollingError) {
+      console.error('[WALLET PAYMENT INIT] Error starting polling service:', pollingError)
+      // Don't fail the request - the frontend can still poll manually
+    }
 
     return NextResponse.json({
       success: true,
@@ -153,11 +188,15 @@ export async function POST(req: NextRequest) {
       message: 'Payment request sent. Please check your phone to complete the payment.',
     })
   } catch (error) {
-    console.error('[WALLET PAYMENT INIT] Error:', error)
+    console.error('[WALLET PAYMENT INIT] Unexpected error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    console.error('[WALLET PAYMENT INIT] Error details:', errorMessage)
+
     return NextResponse.json(
       {
         success: false,
-        message: 'Failed to initialize payment',
+        message: 'Failed to initialize payment. Please try again.',
+        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
       },
       { status: 500 }
     )

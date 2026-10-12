@@ -98,14 +98,17 @@ export async function GET(
     console.log('[PAYMENT STATUS] Full data.data:', JSON.stringify(data.data, null, 2))
     console.log('[PAYMENT STATUS] Current order status:', order.status, 'Current payment status:', order.paymentStatus)
 
-    // CRITICAL: Only treat as COMPLETED when PayWithCamsol confirms payment
-    // 'Pending' (capital P) = waiting for customer to confirm on phone
-    // 'Processing' (capital P) or 'Completed' = customer confirmed, money withdrawn
-    // Match the exact logic from working camsol_management_system
+    // CRITICAL: Correct status mapping from PayWithCamsol
+    // PayWithCamsol statuses:
+    // - 'Initialized' = PayWithCamsol confirming/starting payment → PENDING
+    // - 'Pending' = User has to confirm USSD → PENDING
+    // - 'Processing' = Money successfully withdrawn, in PayWithCamsol balance → COMPLETED
+    // - 'Completed' = Payment fully completed → COMPLETED
+    // - 'Failed' = Payment failed → FAILED
     if (refillState === 'Completed' ||
         refillState === 'PROCESSING' ||
         refillState === 'Processing') {
-      // Payment confirmed by customer!
+      // Payment confirmed by customer! Money withdrawn and in PayWithCamsol balance
       paymentStatus = 'COMPLETED'
       orderStatus = 'CONFIRMED'
     } else if (refillState === 'Failed' || refillState === 'FAILED' || refillState === 'failed') {
@@ -114,9 +117,10 @@ export async function GET(
     } else if (refillState === 'Cancelled' || refillState === 'CANCELED' || refillState === 'Canceled') {
       paymentStatus = 'CANCELLED'
       orderStatus = 'CANCELLED'
-    } else if (refillState === 'Pending' || refillState === 'pending' || refillState === 'PENDING') {
-      // Still waiting for customer to dial code and confirm
-      paymentStatus = 'PROCESSING'
+    } else if (refillState === 'Pending' || refillState === 'pending' || refillState === 'PENDING' ||
+               refillState === 'Initialized' || refillState === 'initialized' || refillState === 'INITIALIZED') {
+      // Still waiting for customer to dial USSD code and confirm payment
+      paymentStatus = 'PENDING'
       // ONLY set to PENDING if order is not already CONFIRMED
       orderStatus = order.status === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING'
     } else {

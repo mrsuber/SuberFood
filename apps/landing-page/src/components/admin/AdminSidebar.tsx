@@ -33,6 +33,7 @@ import {
   Gift,
   ShieldAlert,
   FileText,
+  Inbox,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -62,6 +63,11 @@ const navigationSections: NavSection[] = [
         name: 'Analytics',
         href: '/admin/analytics',
         icon: TrendingUp,
+      },
+      {
+        name: 'Inquiries',
+        href: '/admin/inquiries',
+        icon: Inbox,
       },
     ]
   },
@@ -138,7 +144,6 @@ const navigationSections: NavSection[] = [
         name: 'Orders',
         href: '/admin/orders',
         icon: ShoppingCart,
-        badge: 12,
       },
     ]
   },
@@ -270,6 +275,7 @@ const navigationSections: NavSection[] = [
         href: '/admin/farming/supply',
         icon: Sprout,
         submenu: [
+          { name: 'Record Delivery', href: '/admin/farming/supply' },
           { name: 'Harvests', href: '/admin/farming/harvests' },
           { name: 'Supply Chain', href: '/admin/farming/supply-chain' },
         ]

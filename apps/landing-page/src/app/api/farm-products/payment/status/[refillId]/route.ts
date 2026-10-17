@@ -191,17 +191,23 @@ export async function GET(
             // Find referral relationship
             const referral = await prisma.referral.findFirst({
               where: {
-                referralCodeId: order.referralCodeId,
+                referrerId: order.referredById,
                 refereeId: order.userId || undefined,
                 status: 'ACTIVE',
               },
             })
 
-            if (referral && commissionAmount > 0) {
+            // Pay each order's referral commission at most once
+            const existingEarning = referral
+              ? await prisma.referralEarning.findFirst({ where: { orderId: order.id }, select: { id: true } })
+              : null
+
+            if (referral && commissionAmount > 0 && !existingEarning) {
               // Create referral earning record
               await prisma.referralEarning.create({
                 data: {
                   referralId: referral.id,
+                  referralCodeId: referral.referralCodeId,
                   orderId: order.id,
                   orderTotal: new Decimal(orderTotal),
                   orderCost: new Decimal(orderCost),
@@ -223,7 +229,7 @@ export async function GET(
                 await prisma.walletTransaction.create({
                   data: {
                     walletId: referrerWallet.id,
-                    type: 'REFERRAL_REWARD',
+                    type: 'REFERRAL_EARNING',
                     amount: new Decimal(commissionAmount),
                     balanceBefore: referrerWallet.balance,
                     balanceAfter: newBalance,
@@ -237,7 +243,7 @@ export async function GET(
                   where: { id: referrerWallet.id },
                   data: {
                     balance: newBalance,
-                    totalEarned: referrerWallet.totalEarned.add(new Decimal(commissionAmount)),
+                    totalReferralEarnings: referrerWallet.totalReferralEarnings.add(new Decimal(commissionAmount)),
                   },
                 })
 
@@ -248,14 +254,14 @@ export async function GET(
                   data: {
                     userId: order.referredById,
                     balance: new Decimal(commissionAmount),
-                    totalEarned: new Decimal(commissionAmount),
+                    totalReferralEarnings: new Decimal(commissionAmount),
                   },
                 })
 
                 await prisma.walletTransaction.create({
                   data: {
                     walletId: newWallet.id,
-                    type: 'REFERRAL_REWARD',
+                    type: 'REFERRAL_EARNING',
                     amount: new Decimal(commissionAmount),
                     balanceBefore: new Decimal(0),
                     balanceAfter: new Decimal(commissionAmount),

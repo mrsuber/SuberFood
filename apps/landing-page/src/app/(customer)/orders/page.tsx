@@ -4,9 +4,9 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { Clock, MapPin, User, Phone, Utensils, ShoppingBag, Truck, Store, FileText } from 'lucide-react';
-import { Navbar } from '@/components/navigation/Navbar';
-import { Footer } from '@/components/navigation/Footer';
 import Image from 'next/image';
+import Link from 'next/link';
+import { CalendarCheck, Package, ChevronRight } from 'lucide-react';
 
 async function getOrders(userId: string) {
   const orders = await prisma.order.findMany({
@@ -30,6 +30,128 @@ async function getOrders(userId: string) {
   });
 
   return orders;
+}
+
+async function getFarmOrders(userId: string) {
+  return prisma.farmOrder.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: 30,
+    include: {
+      items: { select: { id: true, productName: true, quantity: true, unit: true } },
+      farmDelivery: { select: { trackingCode: true, status: true } },
+    },
+  });
+}
+
+async function getReservations(userId: string) {
+  return prisma.reservation.findMany({
+    where: { userId },
+    orderBy: { reservationDate: 'desc' },
+    take: 20,
+    include: { restaurant: { select: { name: true, slug: true, city: true } } },
+  });
+}
+
+const farmStatusStyles: Record<string, string> = {
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  CONFIRMED: 'bg-blue-100 text-blue-800',
+  PREPARING: 'bg-orange-100 text-orange-800',
+  READY_FOR_PICKUP: 'bg-green-100 text-green-800',
+  OUT_FOR_DELIVERY: 'bg-purple-100 text-purple-800',
+  DELIVERED: 'bg-gray-100 text-gray-800',
+  COMPLETED: 'bg-gray-100 text-gray-800',
+  CANCELLED: 'bg-red-100 text-red-800',
+};
+
+const reservationStatusStyles: Record<string, string> = {
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  CONFIRMED: 'bg-green-100 text-green-800',
+  SEATED: 'bg-blue-100 text-blue-800',
+  COMPLETED: 'bg-gray-100 text-gray-800',
+  CANCELLED: 'bg-red-100 text-red-800',
+  NO_SHOW: 'bg-red-100 text-red-800',
+};
+
+const humanize = (value: string) => value.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+
+function FarmOrdersSection({ orders }: { orders: Awaited<ReturnType<typeof getFarmOrders>> }) {
+  if (orders.length === 0) return null;
+  return (
+    <section className="mb-12">
+      <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Package className="w-5 h-5 text-green-600" /> Farm shop orders
+      </h2>
+      <div className="space-y-4">
+        {orders.map((order) => (
+          <div key={order.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="font-semibold text-gray-900">{order.orderNumber}</p>
+                <p className="text-sm text-gray-500">
+                  {new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {' · '}
+                  {order.fulfillmentType === 'PICKUP' ? 'Pickup' : 'Delivery'}
+                  {order.orderType === 'BOOKING' && ' · Pre-order'}
+                </p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${farmStatusStyles[order.status] || 'bg-gray-100 text-gray-800'}`}>
+                {humanize(order.status)}
+              </span>
+            </div>
+            <p className="text-sm text-gray-700 mb-3">
+              {order.items.map((i) => `${i.productName} × ${Number(i.quantity)} ${i.unit}`).join(', ')}
+            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
+              <span className="font-bold text-green-700">{Number(order.totalAmount).toLocaleString('fr-FR')} XAF</span>
+              <div className="flex gap-3 text-sm font-medium">
+                {order.farmDelivery?.trackingCode && (
+                  <Link href={`/track/${order.farmDelivery.trackingCode}`} className="text-purple-700 hover:underline">
+                    Track delivery
+                  </Link>
+                )}
+                <Link
+                  href={`/distribution/farm-products/order-confirmation?orderNumber=${order.orderNumber}`}
+                  className="text-green-700 hover:underline inline-flex items-center"
+                >
+                  Details <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReservationsSection({ reservations }: { reservations: Awaited<ReturnType<typeof getReservations>> }) {
+  if (reservations.length === 0) return null;
+  return (
+    <section className="mb-12">
+      <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <CalendarCheck className="w-5 h-5 text-amber-600" /> Table reservations
+      </h2>
+      <div className="grid gap-4 md:grid-cols-2">
+        {reservations.map((r) => (
+          <div key={r.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <p className="font-semibold text-gray-900">{r.restaurant.name}</p>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${reservationStatusStyles[r.status] || 'bg-gray-100 text-gray-800'}`}>
+                {humanize(r.status)}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600">
+              {new Date(r.reservationDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Africa/Douala' })}
+              {' at '}
+              {r.reservationTime} · {r.partySize} {r.partySize === 1 ? 'guest' : 'guests'}
+            </p>
+            <p className="text-sm text-gray-500">{r.restaurant.city}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function OrderTypeIcon({ type }: { type: string }) {
@@ -89,12 +211,15 @@ async function OrdersContent() {
     redirect('/auth/signin');
   }
 
-  const orders = await getOrders(session.user.id);
+  const [orders, farmOrders, reservations] = await Promise.all([
+    getOrders(session.user.id),
+    getFarmOrders(session.user.id),
+    getReservations(session.user.id),
+  ]);
 
-  if (orders.length === 0) {
+  if (orders.length === 0 && farmOrders.length === 0 && reservations.length === 0) {
     return (
       <>
-        <Navbar />
         <div className="min-h-screen bg-gray-50">
           <div className="container mx-auto px-4 py-12">
             <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
@@ -104,27 +229,42 @@ async function OrdersContent() {
                 <ShoppingBag className="w-12 h-12 text-gray-400" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">No orders yet</h2>
-              <p className="text-gray-600 mb-6">Start ordering from your favorite restaurants!</p>
-              <a
-                href="/distribution/restaurants"
-                className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
-              >
-                Browse Restaurants
-              </a>
+              <p className="text-gray-600 mb-6">Fresh produce from the farm shop, or a meal at one of our restaurants?</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  href="/distribution/farm-products"
+                  className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  Shop the farm
+                </Link>
+                <Link
+                  href="/distribution/restaurants"
+                  className="inline-block border-2 border-green-600 text-green-700 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition-colors"
+                >
+                  Browse restaurants
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-        <Footer />
       </>
     );
   }
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+
+          <FarmOrdersSection orders={farmOrders} />
+          <ReservationsSection reservations={reservations} />
+
+          {orders.length > 0 && (
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Utensils className="w-5 h-5 text-blue-600" /> Restaurant orders
+            </h2>
+          )}
 
         <div className="space-y-6">
           {orders.map((order) => (
@@ -135,7 +275,9 @@ async function OrdersContent() {
                   <OrderTypeIcon type={order.type} />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900">Order #{order.id.slice(0, 8)}</h3>
+                      <Link href={`/orders/${order.id}`} className="font-semibold text-gray-900 hover:text-green-700">
+                        Order #{order.orderNumber}
+                      </Link>
                       <OrderTypeBadge type={order.type} />
                     </div>
                     <p className="text-sm text-gray-600">
@@ -271,7 +413,6 @@ async function OrdersContent() {
         </div>
         </div>
       </div>
-      <Footer />
     </>
   );
 }

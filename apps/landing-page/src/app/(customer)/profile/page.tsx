@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { User, Mail, Calendar, Shield, Heart, Settings, ShoppingBag, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Navbar } from '@/components/navigation/Navbar';
-import { Footer } from '@/components/navigation/Footer';
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -26,7 +24,6 @@ export default function ProfilePage() {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -141,7 +138,6 @@ export default function ProfilePage() {
         </Card>
       </div>
     </div>
-    <Footer />
     </>
   );
 }

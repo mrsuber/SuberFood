@@ -69,12 +69,18 @@ export async function POST(
           },
         })
 
-        if (referral) {
+        // Skip if a commission was already paid for this order (e.g. at payment time)
+        const existingEarning = referral
+          ? await tx.referralEarning.findFirst({ where: { orderId: order.id }, select: { id: true } })
+          : null
+
+        if (referral && !existingEarning) {
           // Create referral earning record
           const profitAmount = order.profitAmount ? Number(order.profitAmount) : 0
           await tx.referralEarning.create({
             data: {
               referralId: referral.id,
+              referralCodeId: referral.referralCodeId,
               orderId: order.id,
               orderTotal: order.totalAmount,
               orderCost: order.totalCost || new Decimal(0),

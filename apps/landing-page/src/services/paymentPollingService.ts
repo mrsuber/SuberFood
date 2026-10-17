@@ -393,7 +393,7 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
         // Find referral relationship
         const referral = await prisma.referral.findFirst({
           where: {
-            referralCodeId: order.referralCodeId,
+            referrerId: order.referredById,
             refereeId: order.userId || undefined,
             status: 'ACTIVE',
           },
@@ -402,13 +402,20 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
           },
         })
 
-        if (referral && commissionAmount > 0) {
+        // Pay each order's referral commission at most once (webhook, polling and
+        // the status endpoint can all confirm the same payment)
+        const existingEarning = referral
+          ? await prisma.referralEarning.findFirst({ where: { orderId: order.id }, select: { id: true } })
+          : null
+
+        if (referral && commissionAmount > 0 && !existingEarning) {
           console.log('[PAYMENT POLLING SERVICE] Found active referral:', referral.id)
 
           // Create referral earning record
           await prisma.referralEarning.create({
             data: {
               referralId: referral.id,
+              referralCodeId: referral.referralCodeId,
               orderId: order.id,
               orderTotal: new Decimal(orderTotal),
               orderCost: new Decimal(orderCost),
@@ -433,7 +440,7 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
             await prisma.walletTransaction.create({
               data: {
                 walletId: referrerWallet.id,
-                type: 'REFERRAL_REWARD',
+                type: 'REFERRAL_EARNING',
                 amount: new Decimal(commissionAmount),
                 balanceBefore: referrerWallet.balance,
                 balanceAfter: newBalance,
@@ -447,7 +454,7 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
               where: { id: referrerWallet.id },
               data: {
                 balance: newBalance,
-                totalEarned: referrerWallet.totalEarned.add(new Decimal(commissionAmount)),
+                totalReferralEarnings: referrerWallet.totalReferralEarnings.add(new Decimal(commissionAmount)),
               },
             })
 
@@ -480,14 +487,14 @@ async function confirmOrder(order: any, paymentStatus: any): Promise<void> {
               data: {
                 userId: order.referredById,
                 balance: new Decimal(commissionAmount),
-                totalEarned: new Decimal(commissionAmount),
+                totalReferralEarnings: new Decimal(commissionAmount),
               },
             })
 
             await prisma.walletTransaction.create({
               data: {
                 walletId: newWallet.id,
-                type: 'REFERRAL_REWARD',
+                type: 'REFERRAL_EARNING',
                 amount: new Decimal(commissionAmount),
                 balanceBefore: new Decimal(0),
                 balanceAfter: new Decimal(commissionAmount),

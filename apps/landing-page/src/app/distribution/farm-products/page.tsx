@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
 import { Navbar } from '@/components/navigation/Navbar'
 import { Footer } from '@/components/navigation/Footer'
 import { Button } from '@/components/ui/button'
@@ -43,7 +44,8 @@ interface Category {
 export default function FarmProductsPage() {
   const [products, setProducts] = useState<FarmProduct[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const searchParams = useSearchParams()
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

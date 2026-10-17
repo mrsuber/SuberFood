@@ -113,7 +113,7 @@ export function PaymentModal({
           // Wait 2 seconds to let user see success message, then redirect
           setTimeout(() => {
             console.log('[PAYMENT MODAL] Redirecting to confirmation page')
-            window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`
+            window.location.href = `/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}&ref=${orderId}`
           }, 2000)
           return true // Stop polling
         } else if (result.paymentStatus === 'FAILED' || result.paymentStatus === 'CANCELLED') {

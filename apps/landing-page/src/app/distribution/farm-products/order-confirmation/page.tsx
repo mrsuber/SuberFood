@@ -63,6 +63,7 @@ export default function OrderConfirmationPage() {
   const [error, setError] = useState<string | null>(null)
 
   const orderNumber = searchParams.get('orderNumber')
+  const orderRef = searchParams.get('ref')
 
   useEffect(() => {
     if (!orderNumber) {
@@ -74,7 +75,9 @@ export default function OrderConfirmationPage() {
     // Fetch order details
     const fetchOrder = async () => {
       try {
-        const response = await fetch(`/api/farm-products/orders?orderNumber=${orderNumber}`)
+        const response = await fetch(
+          `/api/farm-products/orders?orderNumber=${encodeURIComponent(orderNumber)}${orderRef ? `&ref=${encodeURIComponent(orderRef)}` : ''}`
+        )
         const result = await response.json()
 
         if (!result.success) {

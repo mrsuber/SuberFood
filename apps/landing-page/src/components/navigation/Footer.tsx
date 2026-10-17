@@ -1,184 +1,145 @@
 import Link from 'next/link'
-import { Mail, Phone, MapPin, Globe } from 'lucide-react'
+import { Mail, Phone, MapPin, Clock } from 'lucide-react'
+import { site } from '@/lib/site'
+
+const columns = [
+  {
+    title: 'Shop & Dine',
+    links: [
+      { name: 'Farm Shop', href: '/distribution/farm-products' },
+      { name: 'Restaurants', href: '/distribution/restaurants' },
+      { name: 'Menu', href: '/distribution/restaurants/menu' },
+      { name: 'Locations', href: '/distribution/restaurants/locations' },
+      { name: 'Book a Table', href: '/distribution/restaurants/reservations' },
+    ],
+  },
+  {
+    title: 'Our Value Chain',
+    links: [
+      { name: 'Farming', href: '/farming' },
+      { name: 'Processing', href: '/processing' },
+      { name: 'Distribution', href: '/distribution' },
+      { name: 'Sustainability', href: '/sustainability' },
+    ],
+  },
+  {
+    title: 'Business',
+    links: [
+      { name: 'B2B Partners', href: '/distribution/partners' },
+      { name: 'Wholesale', href: '/distribution/partners/wholesale' },
+      { name: 'Supply as a Farmer', href: '/distribution/partners/partnerships' },
+      { name: 'Business Inquiries', href: '/distribution/partners/contact' },
+    ],
+  },
+  {
+    title: 'Support',
+    links: [
+      { name: 'Contact Us', href: '/contact' },
+      { name: 'FAQs', href: '/faq' },
+      { name: 'Track Order', href: '/track-order' },
+      { name: 'Returns & Refunds', href: '/returns' },
+    ],
+  },
+]
+
+const companyLinks = [
+  { name: 'About Us', href: '/about' },
+  { name: 'Careers', href: '/careers' },
+  { name: 'Press', href: '/press' },
+  { name: 'Privacy Policy', href: '/privacy' },
+  { name: 'Terms of Service', href: '/terms' },
+  { name: 'Cookie Policy', href: '/cookies' },
+]
+
+const socialLinks = [
+  { name: 'Facebook', href: site.social.facebook },
+  { name: 'Instagram', href: site.social.instagram },
+  { name: 'LinkedIn', href: site.social.linkedin },
+  { name: 'X', href: site.social.x },
+].filter((s) => s.href)
 
 export function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300">
-      {/* Main Footer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {/* Company Info */}
-          <div className="lg:col-span-2">
-            <h3 className="text-white font-display font-bold text-2xl mb-4">SuberFood</h3>
+          <div className="col-span-2">
+            <h3 className="text-white font-display font-bold text-2xl mb-4">{site.name}</h3>
             <p className="text-sm mb-6 text-gray-400">
-              Complete farm-to-table transparency. Experience fresh, sustainable,
-              and traceable food from our integrated supply chain.
+              One connected value chain — our farms, processing lines, delivery network and restaurants —
+              so every meal and every basket can be traced back to where it was grown.
             </p>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-primary-500" />
-                <span>123 Farm Road, Agricultural District</span>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-3">
+                <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
+                <span>
+                  {site.contact.address}, {site.contact.city}, {site.country}
+                </span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="w-4 h-4 text-primary-500" />
-                <span>+1 (555) 123-4567</span>
+              <div className="flex items-center gap-3">
+                <Phone className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                <a href={`tel:${site.contact.phone.replace(/\s/g, '')}`} className="hover:text-primary-400">
+                  {site.contact.phone}
+                </a>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-primary-500" />
-                <span>info@suberfoods.com</span>
+              <div className="flex items-center gap-3">
+                <Mail className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                <a href={`mailto:${site.contact.email}`} className="hover:text-primary-400">
+                  {site.contact.email}
+                </a>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                <span>{site.contact.hours}</span>
               </div>
             </div>
           </div>
 
-          {/* Distribution */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Distribution</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/distribution/restaurants" className="hover:text-primary-400 transition-colors">
-                  Restaurants
-                </Link>
-              </li>
-              <li className="ml-2">
-                <Link href="/distribution/restaurants/menu" className="hover:text-primary-400 transition-colors text-xs">
-                  → Menu
-                </Link>
-              </li>
-              <li className="ml-2">
-                <Link href="/distribution/restaurants/locations" className="hover:text-primary-400 transition-colors text-xs">
-                  → Locations
-                </Link>
-              </li>
-              <li>
-                <Link href="/distribution/retail" className="hover:text-primary-400 transition-colors">
-                  Retail & E-commerce
-                </Link>
-              </li>
-              <li>
-                <Link href="/distribution/partners" className="hover:text-primary-400 transition-colors">
-                  B2B Partners
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Processing */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Processing</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/processing/sardine" className="hover:text-primary-400 transition-colors">
-                  Sardine Processing
-                </Link>
-              </li>
-              <li>
-                <Link href="/processing/milk" className="hover:text-primary-400 transition-colors">
-                  Milk Processing
-                </Link>
-              </li>
-              <li>
-                <Link href="/processing/meat" className="hover:text-primary-400 transition-colors">
-                  Meat Processing
-                </Link>
-              </li>
-              <li>
-                <Link href="/processing/vegetables" className="hover:text-primary-400 transition-colors">
-                  Vegetables
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Farming */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Farming</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/farming/aquaculture" className="hover:text-primary-400 transition-colors">
-                  Fish Farming
-                </Link>
-              </li>
-              <li>
-                <Link href="/farming/poultry" className="hover:text-primary-400 transition-colors">
-                  Poultry
-                </Link>
-              </li>
-              <li>
-                <Link href="/farming/livestock" className="hover:text-primary-400 transition-colors">
-                  Livestock
-                </Link>
-              </li>
-              <li>
-                <Link href="/farming/crops" className="hover:text-primary-400 transition-colors">
-                  Crop Farming
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {columns.map((col) => (
+            <div key={col.title}>
+              <h4 className="text-white font-semibold mb-4">{col.title}</h4>
+              <ul className="space-y-2 text-sm">
+                {col.links.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="hover:text-primary-400 transition-colors">
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        {/* Additional Links */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 pt-8 border-t border-gray-800">
-          {/* Company */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Company</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/about" className="hover:text-primary-400 transition-colors">About Us</Link></li>
-              <li><Link href="/sustainability" className="hover:text-primary-400 transition-colors">Sustainability</Link></li>
-              <li><Link href="/careers" className="hover:text-primary-400 transition-colors">Careers</Link></li>
-              <li><Link href="/press" className="hover:text-primary-400 transition-colors">Press</Link></li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Support</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/contact" className="hover:text-primary-400 transition-colors">Contact Us</Link></li>
-              <li><Link href="/faq" className="hover:text-primary-400 transition-colors">FAQs</Link></li>
-              <li><Link href="/track-order" className="hover:text-primary-400 transition-colors">Track Order</Link></li>
-              <li><Link href="/returns" className="hover:text-primary-400 transition-colors">Returns</Link></li>
-            </ul>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <h4 className="text-white font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/privacy" className="hover:text-primary-400 transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-primary-400 transition-colors">Terms of Service</Link></li>
-              <li><Link href="/cookies" className="hover:text-primary-400 transition-colors">Cookie Policy</Link></li>
-            </ul>
-          </div>
+        <div className="mt-10 pt-8 border-t border-gray-800 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          {companyLinks.map((link) => (
+            <Link key={link.href} href={link.href} className="hover:text-primary-400 transition-colors">
+              {link.name}
+            </Link>
+          ))}
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400">
-              &copy; {new Date().getFullYear()} SuberFood. All rights reserved.
+              &copy; {new Date().getFullYear()} {site.name}. All rights reserved. Proudly built in {site.country}.
             </p>
-
-            {/* Social Links */}
-            <div className="flex items-center gap-4">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
-                 className="hover:text-primary-400 transition-colors text-sm">
-                Facebook
-              </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
-                 className="hover:text-primary-400 transition-colors text-sm">
-                Twitter
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
-                 className="hover:text-primary-400 transition-colors text-sm">
-                Instagram
-              </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-                 className="hover:text-primary-400 transition-colors text-sm">
-                LinkedIn
-              </a>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-gray-500">We accept: {site.paymentMethods.slice(0, 2).join(' · ')}</span>
+              {socialLinks.map((s) => (
+                <a
+                  key={s.name}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary-400 transition-colors"
+                >
+                  {s.name}
+                </a>
+              ))}
             </div>
           </div>
         </div>

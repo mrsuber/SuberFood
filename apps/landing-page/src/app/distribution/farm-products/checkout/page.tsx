@@ -189,37 +189,15 @@ export default function CheckoutPage() {
         setReferralValid(true)
         setReferralMessage(data.message)
 
-        // Calculate discount (5% of farm cost)
-        // Fetch farm costs for all items in cart
-        let totalFarmCost = 0
-        for (const item of items) {
-          try {
-            const productRes = await fetch(`/api/admin/farm-products/products/${item.productId}`)
-            const productData = await productRes.json()
-            if (productData.success) {
-              const product = productData.data
-              let farmCost = item.priceType === 'retail'
-                ? Number(product.farmCostRetail || 0)
-                : Number(product.farmCostBulk || 0)
-
-              // If farm cost is not set, use 70% of selling price as estimate
-              if (farmCost === 0) {
-                farmCost = item.price * 0.7
-              }
-
-              totalFarmCost += farmCost * item.quantity
-            }
-          } catch (error) {
-            console.error('Error fetching product farm cost:', error)
-            // Use fallback: 70% of selling price
-            totalFarmCost += item.price * item.quantity * 0.7
-          }
-        }
+        // Estimate the discount (5% of farm cost). Farm costs are internal, so the
+        // browser assumes ~70% of the selling price; the order API computes the
+        // exact amount from real farm costs when the order is placed.
+        const totalFarmCost = items.reduce((sum, item) => sum + item.price * item.quantity * 0.7, 0)
 
         // 5% discount on total farm cost
         const discount = Math.round(totalFarmCost * 0.05)
         setReferralDiscount(discount)
-        setReferralMessage(`${data.message} - You'll save ${discount.toLocaleString()} XAF!`)
+        setReferralMessage(`${data.message} - You'll save about ${discount.toLocaleString()} XAF!`)
       } else {
         setReferralValid(false)
         setReferralMessage(data.error || 'Invalid referral code')
@@ -373,7 +351,7 @@ export default function CheckoutPage() {
         console.log('[CHECKOUT] Fully paid with wallet - clearing cart and redirecting')
         // Fully paid with wallet - clear cart and redirect to confirmation
         clearCart()
-        router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`)
+        router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}&ref=${orderId}`)
       } else if (paymentMethod === 'online') {
         console.log('[CHECKOUT] Online payment selected - showing payment modal')
         console.log('[CHECKOUT] Setting modal state:', { orderId, orderNumber })
@@ -387,7 +365,7 @@ export default function CheckoutPage() {
         console.log('[CHECKOUT] Cash payment - clearing cart and redirecting')
         // Cash payment - clear cart and redirect to order confirmation
         clearCart()
-        router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}`)
+        router.push(`/distribution/farm-products/order-confirmation?orderNumber=${orderNumber}&ref=${orderId}`)
       }
     } catch (error) {
       console.error('Checkout error:', error)

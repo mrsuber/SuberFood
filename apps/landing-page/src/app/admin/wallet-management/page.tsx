@@ -264,7 +264,7 @@ export default function WalletManagementPage() {
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15803D]"
                   >
                     <option value="all">All Wallets</option>
-                    <option value="active">Active (Balance > 0)</option>
+                    <option value="active">Active (Balance &gt; 0)</option>
                     <option value="empty">Empty (Balance = 0)</option>
                   </select>
                   <Button variant="outline">

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { ChevronDown, Menu, X, ShoppingCart, User, LogOut, Settings, Heart, Package, Wallet, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useFarmCart } from '@/contexts/FarmCartContext'
 
 interface SubNavItem {
   name: string
@@ -60,23 +61,23 @@ const navigationData: NavItem[] = [
         ]
       },
       {
-        name: 'Retail & E-commerce',
+        name: 'Farm Shop',
         href: '/distribution/farm-products',
         submenu: [
           {
             name: 'Shop Online',
             href: '/distribution/farm-products',
-            description: 'Browse our online store'
+            description: 'Fresh produce, fish, meat and dairy from Cameroon farms'
           },
           {
-            name: 'Products',
-            href: '/distribution/farm-products',
-            description: 'Fresh products delivered'
+            name: 'Your Cart',
+            href: '/distribution/farm-products/cart',
+            description: 'Review items and check out'
           },
           {
-            name: 'Delivery',
-            href: '/distribution/farm-products',
-            description: 'Delivery information'
+            name: 'Track an Order',
+            href: '/track-order',
+            description: 'Follow your delivery in real time'
           },
         ]
       },
@@ -164,6 +165,7 @@ export function Navbar() {
   const [activeSubDropdown, setActiveSubDropdown] = useState<string | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const pathname = usePathname()
+  const { itemCount } = useFarmCart()
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   // Close user menu when clicking outside
@@ -229,9 +231,18 @@ export function Navbar() {
 
             {/* Right Side Actions */}
             <div className="hidden lg:flex items-center space-x-4">
-              <Button variant="ghost" size="icon">
+              <Link
+                href="/distribution/farm-products/cart"
+                className="relative p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                aria-label={`Cart (${itemCount} items)`}
+              >
                 <ShoppingCart className="w-5 h-5" />
-              </Button>
+                {itemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[1.25rem] h-5 px-1 rounded-full bg-primary-600 text-white text-xs font-semibold flex items-center justify-center">
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
+              </Link>
 
               {status === 'authenticated' && session?.user ? (
                 <div className="relative" ref={userMenuRef}>
@@ -440,12 +451,44 @@ export function Navbar() {
             </div>
           ))}
           <div className="mt-4 px-4 space-y-2">
-            <Button className="w-full" onClick={() => setMobileMenuOpen(false)}>
-              Shop Now
-            </Button>
-            <Button variant="outline" className="w-full" onClick={() => setMobileMenuOpen(false)}>
-              Sign In
-            </Button>
+            <Link href="/distribution/farm-products" onClick={() => setMobileMenuOpen(false)} className="block">
+              <Button className="w-full">Shop Now</Button>
+            </Link>
+            <Link href="/distribution/farm-products/cart" onClick={() => setMobileMenuOpen(false)} className="block">
+              <Button variant="outline" className="w-full">
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Cart{itemCount > 0 ? ` (${itemCount})` : ''}
+              </Button>
+            </Link>
+            {status === 'authenticated' && session?.user ? (
+              <div className="pt-2 grid grid-cols-2 gap-2 text-sm">
+                {[
+                  { name: 'Profile', href: '/profile' },
+                  { name: 'Orders', href: '/orders' },
+                  { name: 'Wallet', href: '/wallet' },
+                  { name: 'Referrals', href: '/referrals' },
+                ].map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3 py-2 rounded-md bg-gray-50 text-gray-700 hover:bg-primary-50"
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+                <button
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="col-span-2 px-3 py-2 rounded-md text-red-600 hover:bg-red-50 text-left"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)} className="block">
+                <Button variant="ghost" className="w-full">Sign In</Button>
+              </Link>
+            )}
           </div>
         </div>
       )}

@@ -2744,3 +2744,52 @@ model FarmDeliveryLocationUpdate {
   @@index([createdAt])
   @@map("farm_delivery_location_updates")
 }
+
+// ========================================
+// INQUIRIES (contact, B2B, careers, press leads)
+// ========================================
+
+enum InquiryType {
+  GENERAL
+  SUPPORT
+  WHOLESALE
+  PARTNERSHIP
+  FARMER_SUPPLY
+  RESTAURANT
+  EVENTS
+  CAREERS
+  PRESS
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  ARCHIVED
+}
+
+model Inquiry {
+  id      String        @id @default(cuid())
+  type    InquiryType   @default(GENERAL)
+  status  InquiryStatus @default(NEW)
+  name    String
+  email   String?
+  phone   String?
+  company String?
+  city    String?
+  subject String?
+  message String
+  // Form-specific extras, e.g. { volume: "200kg/week", products: [...] }
+  details Json?
+
+  sourcePage String?
+  userId     String?
+  adminNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, status])
+  @@index([createdAt])
+  @@map("inquiries")
+}

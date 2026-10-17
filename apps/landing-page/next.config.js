@@ -24,6 +24,16 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      // "Retail & E-commerce" is the farm shop
+      { source: '/distribution/retail', destination: '/distribution/farm-products', permanent: true },
+      // Legacy admin screens superseded by the distribution/farm-products sections
+      { source: '/admin/restaurants/:path*', destination: '/admin/distribution/restaurants/:path*', permanent: false },
+      { source: '/admin/products', destination: '/admin/farm-products/products', permanent: false },
+      { source: '/admin/products/new', destination: '/admin/farm-products/products/new', permanent: false },
+    ]
+  },
   experimental: {
     missingSuspenseWithCSRBailout: false,
   },

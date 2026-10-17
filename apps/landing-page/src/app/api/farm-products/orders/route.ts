@@ -367,14 +367,34 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET /api/farm-products/orders - Get user's orders (for authenticated users)
+// Internal cost/margin fields that must never reach customers
+function toCustomerOrder(order: any) {
+  if (!order) return order
+  const { costPrice, transportCost, totalCost, profitAmount, ...rest } = order
+  return {
+    ...rest,
+    items: order.items?.map(({ farmCostPerUnit, farmCostTotal, product, ...item }: any) => ({
+      ...item,
+      product: product
+        ? { id: product.id, slug: product.slug, name: product.name, thumbnail: product.thumbnail, images: product.images }
+        : undefined,
+    })),
+  }
+}
+
+// GET /api/farm-products/orders
+// - ?orderNumber=X&ref=<orderId>: a single order, visible to its owner, admins,
+//   or anyone holding the unguessable order id (guest confirmation links)
+// - no params: the signed-in user's own orders
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const orderNumber = searchParams.get('orderNumber')
+    const ref = searchParams.get('ref')
+    const session = await getServerSession(authOptions)
+    const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN'
 
     if (orderNumber) {
-      // Get specific order by order number
       const order = await prisma.farmOrder.findUnique({
         where: { orderNumber },
         include: {
@@ -388,10 +408,14 @@ export async function GET(req: NextRequest) {
               timestamp: 'desc',
             },
           },
+          farmDelivery: { select: { trackingCode: true, status: true } },
         },
       })
 
-      if (!order) {
+      const canView =
+        order && (isAdmin || (session?.user?.id && order.userId === session.user.id) || (ref && ref === order.id))
+
+      if (!order || !canView) {
         return NextResponse.json(
           { success: false, message: 'Order not found' },
           { status: 404 }
@@ -400,24 +424,29 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        data: order,
+        data: toCustomerOrder(order),
       })
     }
 
-    // Get all orders (this would typically be filtered by userId for authenticated users)
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, message: 'Please sign in to view your orders' }, { status: 401 })
+    }
+
     const orders = await prisma.farmOrder.findMany({
+      where: { userId: session.user.id },
       orderBy: {
         createdAt: 'desc',
       },
       take: 50,
       include: {
         items: true,
+        farmDelivery: { select: { trackingCode: true, status: true } },
       },
     })
 
     return NextResponse.json({
       success: true,
-      data: orders,
+      data: orders.map(toCustomerOrder),
     })
   } catch (error) {
     console.error('Error fetching orders:', error)
